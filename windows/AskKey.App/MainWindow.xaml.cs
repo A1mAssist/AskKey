@@ -138,14 +138,42 @@ public partial class MainWindow : Window
         _refreshingGroups = false;
     }
 
-    private static ListBoxItem GroupItem(string label, string tag)
+    private ListBoxItem GroupItem(string label, string tag)
     {
-        return new ListBoxItem
+        var item = new ListBoxItem
         {
             Content = new TextBlock { Text = label, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis },
             Tag = tag,
             Style = (Style)Application.Current.FindResource("NavItem"),
         };
+        if (tag.Length > 0 && tag != "\u0001")
+        {
+            var delete = new MenuItem { Header = Loc.T("Delete group") };
+            delete.Click += (_, _) => DeleteGroup(tag);
+            item.ContextMenu = new ContextMenu { Items = { delete } };
+        }
+        return item;
+    }
+
+    private void DeleteGroup(string group)
+    {
+        var confirm = MessageBox.Show(
+            Loc.F("Delete the group “{0}”? Its credentials will become ungrouped.", group),
+            Loc.T("Delete group"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+        try
+        {
+            var auth = _host.AuthenticateAndBeginManagement("Manage credential groups");
+            _host.Vault.DeleteCredentialGroup(group, auth);
+            RefreshGroups();
+            _host.NotifyCredentialsChanged();
+        }
+        catch (Exception error)
+        {
+            _host.ShowError(error.Message);
+        }
     }
 
     private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -198,11 +226,10 @@ public partial class MainWindow : Window
     {
         var name = PromptDialog.Ask(this, Loc.T("New group"), Loc.T("Group name"));
         if (string.IsNullOrWhiteSpace(name)) return;
-        if (!_host.EnsureManagementSession("Manage credential groups")) return;
         try
         {
-            _host.Vault.CreateCredentialGroup(name.Trim(),
-                _host.ManagementAuthenticator(CredentialManagementCopy.ManageReason));
+            var auth = _host.AuthenticateAndBeginManagement("Manage credential groups");
+            _host.Vault.CreateCredentialGroup(name.Trim(), auth);
             RefreshGroups();
             _host.NotifyCredentialsChanged();
         }

@@ -8,6 +8,8 @@ namespace AskKeyApp;
 
 public partial class SettingsView : UserControl
 {
+    private sealed record AllowanceOption(int Minutes, string Label);
+
     private static string EraseConfirmation => EraseLanguage.ConfirmationText();
     private static LocalVaultEraseLanguage EraseLanguage =>
         Loc.Current == AppLanguage.SimplifiedChinese
@@ -22,7 +24,16 @@ public partial class SettingsView : UserControl
         InitializeComponent();
         _loading = true;
         HotkeyCombo.ItemsSource = HotkeyOption.AllLocalized;
-        AllowanceCombo.ItemsSource = new[] { 5, 15, 30, 60, 120, 240 };
+        AllowanceCombo.ItemsSource = new[]
+        {
+            new AllowanceOption(0, Loc.T("Off")),
+            new AllowanceOption(5, Loc.F("{0} minutes", 5)),
+            new AllowanceOption(15, Loc.F("{0} minutes", 15)),
+            new AllowanceOption(30, Loc.F("{0} minutes", 30)),
+            new AllowanceOption(60, Loc.F("{0} minutes", 60)),
+            new AllowanceOption(120, Loc.F("{0} minutes", 120)),
+            new AllowanceOption(240, Loc.F("{0} minutes", 240)),
+        };
         _loading = false;
         Loaded += (_, _) => Refresh();
     }
@@ -36,7 +47,10 @@ public partial class SettingsView : UserControl
             LaunchCheck.IsChecked = preferences.LaunchAtLogin;
             HotkeyCombo.SelectedItem = HotkeyCombo.Items.OfType<HotkeyOption>()
                 .FirstOrDefault(option => option.Id == preferences.HotkeyShortcut);
-            AllowanceCombo.SelectedItem = preferences.DefaultTimedAllowanceMinutes;
+            AllowanceCombo.SelectedItem = AllowanceCombo.Items.OfType<AllowanceOption>()
+                .FirstOrDefault(option => option.Minutes ==
+                    (preferences.TimedAllowanceEnabled ? preferences.DefaultTimedAllowanceMinutes : 0))
+                ?? AllowanceCombo.Items.OfType<AllowanceOption>().First();
             SelectTag(AppearanceCombo, preferences.AppearanceMode);
             SelectTag(LanguageCombo, preferences.LanguageMode);
             ErasePromptText.Text = Loc.F("Type {0} to confirm", EraseConfirmation);
@@ -95,10 +109,12 @@ public partial class SettingsView : UserControl
 
     private void Allowance_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loading || AllowanceCombo.SelectedItem is not int minutes) return;
-        _host.Preferences.DefaultTimedAllowanceMinutes = minutes;
+        if (_loading || AllowanceCombo.SelectedItem is not AllowanceOption option) return;
+        var enabled = option.Minutes > 0;
+        _host.Preferences.TimedAllowanceEnabled = enabled;
+        if (enabled) _host.Preferences.DefaultTimedAllowanceMinutes = option.Minutes;
         _host.Preferences.Save();
-        _host.Vault.UpdateDefaultTimedAllowanceMinutes(minutes);
+        if (enabled) _host.Vault.UpdateDefaultTimedAllowanceMinutes(option.Minutes);
     }
 
     private void Appearance_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -128,6 +144,24 @@ public partial class SettingsView : UserControl
     {
         if (_loading) return;
         var enabled = ReadAuthCheck.IsChecked == true;
+        if (!enabled)
+        {
+            var warning = MessageBox.Show(
+                Loc.T("Turning this off lets one click release Agent read requests without confirming it is you. Credential changes still require authentication."),
+                Loc.T("Confirm before reading a credential"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (warning != MessageBoxResult.Yes)
+            {
+                ReadAuthCheck.IsChecked = true;
+                return;
+            }
+            if (!_host.ConfirmManagement("Disable system authentication for read approvals"))
+            {
+                ReadAuthCheck.IsChecked = true;
+                return;
+            }
+        }
         _host.Preferences.ReadApprovalAuthenticationEnabled = enabled;
         _host.Preferences.Save();
         _host.Vault.ApprovalRequests.SetReadAuthenticationEnabled(enabled);
@@ -142,9 +176,8 @@ public partial class SettingsView : UserControl
         if (dialog.ShowDialog() != true) return;
         try
         {
-            if (!_host.EnsureManagementSession("Clear Ask Key access records")) return;
-            _host.Vault.ClearCredentialAccessRecords(
-                _host.ManagementAuthenticator("Clear Ask Key access records"));
+            var auth = _host.AuthenticateAndBeginManagement("Clear Ask Key access records");
+            _host.Vault.ClearCredentialAccessRecords(auth);
             _host.NotifyCredentialsChanged();
         }
         catch (Exception error)

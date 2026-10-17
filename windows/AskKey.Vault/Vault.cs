@@ -16,7 +16,7 @@ public sealed partial class Vault : IDisposable
     private static Vault? _shared;
     private static bool _sharedResolved;
 
-    public static TimeSpan ManagementSessionIdleLimit { get; } = TimeSpan.FromMinutes(5);
+    public TimeSpan ManagementSessionIdleLimit { get; set; } = TimeSpan.FromMinutes(5);
 
     public BrokerRequestRegistry BrokerRequests { get; } = new();
     public BrokerApprovalStateMachine ApprovalRequests { get; }

@@ -128,8 +128,8 @@ public partial class CredentialEditorWindow : Window
         if (_existing is null) return;
         try
         {
-            _revealed = _host.Vault.RevealTextCredential(_existing.Id,
-                _host.ManagementAuthenticator(CredentialManagementCopy.RevealReason));
+            var auth = _host.AuthenticateAndBeginManagement(CredentialManagementCopy.RevealReason);
+            _revealed = _host.Vault.RevealTextCredential(_existing.Id, auth);
             _secretsLoaded = true;
             ExistingSecretPanel.Visibility = Visibility.Collapsed;
             if (_revealed.PayloadKind == CredentialPayloadKind.Text)
@@ -277,7 +277,9 @@ public partial class CredentialEditorWindow : Window
             if (name.Length == 0) throw new InvalidOperationException(Loc.T("Enter a credential name."));
             var expiry = ParseExpiry(ExpiryBox.Text);
             var group = string.IsNullOrWhiteSpace(GroupCombo.Text) ? null : GroupCombo.Text.Trim();
-            var auth = _host.ManagementAuthenticator(CredentialManagementCopy.ManageReason);
+            var auth = _host.Vault.StoredCredentialCount() == 0
+                ? ManagementAuthenticator.Allow
+                : _host.AuthenticateAndBeginManagement(CredentialManagementCopy.ManageReason);
 
             if (_existing is not null && !_secretsLoaded)
             {

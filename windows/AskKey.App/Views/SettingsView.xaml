@@ -54,7 +54,7 @@
                            Style="{StaticResource SecondaryText}" Margin="0,3,0,0"/>
               </StackPanel>
               <ComboBox x:Name="AllowanceCombo" Grid.Column="1" Style="{StaticResource FormComboBox}"
-                        SelectionChanged="Allowance_SelectionChanged"/>
+                        DisplayMemberPath="Label" SelectionChanged="Allowance_SelectionChanged"/>
             </Grid>
             <Border Style="{StaticResource ThinSeparator}"/>
             <Grid Margin="16,14">

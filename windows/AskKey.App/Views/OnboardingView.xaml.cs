@@ -21,7 +21,6 @@ public partial class OnboardingView : UserControl
             {
                 _host.Vault.BeginOnboardingCreation();
             }
-            else if (!_host.EnsureManagementSession("Create a credential")) return;
 
             var editor = new CredentialEditorWindow(_host, null) { Owner = Window.GetWindow(this) };
             if (editor.ShowDialog() != true) return;
@@ -42,7 +41,6 @@ public partial class OnboardingView : UserControl
             {
                 _host.Vault.BeginOnboardingCreation();
             }
-            else if (!_host.EnsureManagementSession("Import a credential")) return;
 
             if (Window.GetWindow(this) is MainWindow window)
             {

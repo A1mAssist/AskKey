@@ -112,6 +112,7 @@ public partial class CredentialsView : UserControl
             .Where(credential => query.Length == 0
                 || credential.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
                 || (credential.GroupName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (credential.UsageInstructions?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
                 || credential.PayloadKind.ToString().Contains(query, StringComparison.OrdinalIgnoreCase))
             .Select(credential => new CredentialItem(credential))
             .ToList();
@@ -263,7 +264,6 @@ public partial class CredentialsView : UserControl
 
     private void New_Click(object sender, RoutedEventArgs e)
     {
-        if (!_host.EnsureManagementSession("Create a credential")) return;
         var editor = new CredentialEditorWindow(_host, null) { Owner = Window.GetWindow(this) };
         if (editor.ShowDialog() == true)
         {
@@ -274,7 +274,6 @@ public partial class CredentialsView : UserControl
     private void Edit_Click(object sender, RoutedEventArgs e)
     {
         if (_selected is null) return;
-        if (!_host.EnsureManagementSession("Edit a credential")) return;
         var editor = new CredentialEditorWindow(_host, _selected) { Owner = Window.GetWindow(this) };
         if (editor.ShowDialog() == true) _host.NotifyCredentialsChanged();
     }
@@ -283,7 +282,6 @@ public partial class CredentialsView : UserControl
 
     public void ImportFromDialog(bool onboarding = false)
     {
-        if (!onboarding && !_host.EnsureManagementSession("Import a credential")) return;
         var dialog = new OpenFileDialog
         {
             Title = Loc.T("Import credential material"),
@@ -311,9 +309,8 @@ public partial class CredentialsView : UserControl
         if (_selected is null) return;
         try
         {
-            if (!_host.EnsureManagementSession("Reveal a credential")) return;
-            _revealed = _host.Vault.RevealTextCredential(_selected.Id,
-                _host.ManagementAuthenticator(CredentialManagementCopy.RevealReason));
+            var auth = _host.AuthenticateAndBeginManagement("Reveal a credential");
+            _revealed = _host.Vault.RevealTextCredential(_selected.Id, auth);
             RenderSelection();
             if (_revealed.PayloadKind == CredentialPayloadKind.Text && _revealed.Value is { } value)
             {
@@ -338,9 +335,8 @@ public partial class CredentialsView : UserControl
         if (_selected is null) return;
         try
         {
-            if (!_host.EnsureManagementSession("Copy a credential")) return;
-            var revealed = _host.Vault.RevealTextCredential(_selected.Id,
-                _host.ManagementAuthenticator(CredentialManagementCopy.RevealReason));
+            var auth = _host.AuthenticateAndBeginManagement("Copy a credential");
+            var revealed = _host.Vault.RevealTextCredential(_selected.Id, auth);
             var value = revealed.PayloadKind switch
             {
                 CredentialPayloadKind.Text => revealed.Value,

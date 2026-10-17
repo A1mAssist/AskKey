@@ -226,7 +226,9 @@ public partial class ImportCredentialWindow : Window
             var name = NameBox.Text.Trim();
             if (name.Length == 0) throw new InvalidOperationException(Loc.T("Enter a credential name."));
             var components = _rows.Select(row => row.ToInput()).ToList();
-            var auth = _host.ManagementAuthenticator("Import a credential");
+            var auth = _host.Vault.StoredCredentialCount() == 0
+                ? ManagementAuthenticator.Allow
+                : _host.AuthenticateAndBeginManagement("Import a credential");
             if (_conflict is not null)
             {
                 _host.Vault.ReplaceImportedBundleCredential(_conflict.Id, components, auth);

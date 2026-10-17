@@ -41,6 +41,7 @@ public partial class ApprovalWindow : Window
             : "";
         MappingsText.Text = MappingSummary(request.DisplayValue);
         TimedButton.Visibility = request.Operation == BrokerApprovalOperation.Read
+                                 && _host.Preferences.TimedAllowanceEnabled
             ? Visibility.Visible
             : Visibility.Collapsed;
         TimedButton.Content = Loc.F("Allow for {0} minutes", _host.Preferences.DefaultTimedAllowanceMinutes);

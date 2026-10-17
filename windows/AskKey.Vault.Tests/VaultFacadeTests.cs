@@ -20,7 +20,7 @@ public sealed class VaultFacadeTests
         public Vault Vault { get; }
 
         public Harness(Func<DateTimeOffset>? now = null, VaultConfiguration? configuration = null,
-            IAppKeyStore? keyStore = null)
+            IAppKeyStore? keyStore = null, TimeSpan? idleLimit = null)
         {
             Root = new TestDirectory();
             Key = TestCredentials.Key(40);
@@ -33,6 +33,7 @@ public sealed class VaultFacadeTests
             Vault = new Vault(Store, Key, clock,
                 new BrokerApprovalStateMachine(clock: clock, authenticate: _ => true),
                 Root.Combine("deliveries"), configuration, keyStore);
+            Vault.ManagementSessionIdleLimit = idleLimit ?? TimeSpan.FromMinutes(5);
             Vault.BeginManagementSession(ManagementAuthenticator.Allow);
         }
 
@@ -41,6 +42,17 @@ public sealed class VaultFacadeTests
             Vault.Dispose();
             Root.Dispose();
         }
+    }
+
+    [Fact]
+    public void ManagementSessionHonorsTheConfiguredIdleLimit()
+    {
+        var now = Now;
+        using var harness = new Harness(() => now, idleLimit: TimeSpan.FromSeconds(30));
+
+        now = now.AddSeconds(31);
+
+        Assert.False(harness.Vault.HasActiveManagementSession);
     }
 
     private static AgentTextWriteSubmission Submit(Vault vault, AgentTextWriteRequest request)

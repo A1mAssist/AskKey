@@ -55,7 +55,9 @@ public sealed class AppHost : IDisposable
         try
         {
             Vault.Unlock();
+            Vault.ManagementSessionIdleLimit = TimeSpan.FromSeconds(_preferences.SessionTimeoutSeconds);
             Vault.UpdateDefaultTimedAllowanceMinutes(_preferences.DefaultTimedAllowanceMinutes);
+            Vault.ApprovalRequests.SetReadAuthenticationEnabled(_preferences.ReadApprovalAuthenticationEnabled);
             ConfigureApprovals();
             StartBroker();
             StartTrayAndHotkey();
@@ -171,9 +173,7 @@ public sealed class AppHost : IDisposable
         try
         {
             if (Vault.HasActiveManagementSession) return true;
-            if (Vault.IsLocked) Vault.Unlock();
-            if (!ConfirmManagement(reason)) return false;
-            Vault.BeginManagementSession(new ManagementAuthenticator(_ => true));
+            _ = AuthenticateAndBeginManagement(reason);
             return true;
         }
         catch (Exception error)
@@ -181,6 +181,18 @@ public sealed class AppHost : IDisposable
             ShowError(error.Message);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Performs one identity check and renews the management session. The
+    /// returned authenticator is already satisfied, so the following vault
+    /// call does not ask again.
+    /// </summary>
+    public ManagementAuthenticator AuthenticateAndBeginManagement(string reason)
+    {
+        if (Vault.IsLocked) Vault.Unlock();
+        Vault.BeginManagementSession(ManagementAuthenticator(reason));
+        return new global::AskKey.Vault.ManagementAuthenticator(_ => true);
     }
 
     public void ToggleAgentAccess()
