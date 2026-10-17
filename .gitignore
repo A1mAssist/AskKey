@@ -23,7 +23,6 @@ windows/_*.png
 **/__pycache__/
 **/.DS_Store
 
-# Preserve the original macOS checkout metadata locally
+# The original macOS checkout is kept locally for reference only.
 .askkey-upstream-git/
-AskKey/.git-upstream/
-AskKey/.git/
+AskKey/
