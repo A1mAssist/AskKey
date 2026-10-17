@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using AskKey.Broker.Approval;
 using AskKey.Broker.FileWrite;
 using AskKey.Broker.Protocol;
@@ -24,6 +25,10 @@ public sealed class AppHost : IDisposable
     private BrokerSocketServer? _broker;
     private BrokerFileWriteCoordinator? _fileWrites;
     private BrokerTextRuntime? _textRuntime;
+    private SessionSwitchEventHandler? _sessionSwitchHandler;
+    private ApprovalWindow? _activeApproval;
+    private bool _sessionLocked;
+    private bool _lockedApprovalReminderPosted;
     private bool _disposed;
     private bool _started;
     private int _pendingCount;
@@ -61,6 +66,7 @@ public sealed class AppHost : IDisposable
             ConfigureApprovals();
             StartBroker();
             StartTrayAndHotkey();
+            StartSessionPrivacyMonitor();
             _expiryReminders = new CredentialExpiryReminderHost(
                 Vault, _dispatcher, (title, text) => _tray?.ShowNotification(title, text, ShowCredentials));
             _expiryReminders.Start();
@@ -222,9 +228,61 @@ public sealed class AppHost : IDisposable
     {
         var count = Vault.ApprovalRequests.PendingRequests().Count;
         _pendingCount = count;
+        if (count == 0) _lockedApprovalReminderPosted = false;
         _tray?.UpdatePendingCount(count);
         PendingChanged?.Invoke();
-        if (count > 0) PresentNextApproval();
+        if (count == 0) return;
+        if (_sessionLocked)
+        {
+            ShowLockedApprovalReminder();
+            return;
+        }
+        PresentNextApproval();
+    }
+
+    public BrokerCredentialWriteSummary? FrozenWriteSummary(BrokerPendingApproval pending)
+    {
+        try
+        {
+            return Vault.FrozenAgentWriteSummary(pending.Request.OperationId,
+                pending.RequestId, pending.Capability);
+        }
+        catch (BrokerApprovalException)
+        {
+            return null;
+        }
+        catch (VaultException)
+        {
+            return null;
+        }
+    }
+
+    public BrokerOrganizationSummary? FrozenOrganizationSummary(BrokerPendingApproval pending)
+    {
+        try
+        {
+            return Vault.FrozenAgentOrganizationSummary(pending.Request.OperationId,
+                pending.RequestId, pending.Capability);
+        }
+        catch (BrokerApprovalException)
+        {
+            return null;
+        }
+        catch (VaultException)
+        {
+            return null;
+        }
+    }
+
+    public BrokerFrozenFile RevealFileWrite(BrokerPendingApproval pending)
+        => (_fileWrites ?? throw new BrokerFileWriteException(BrokerFileWriteError.RequestNotFound))
+            .Reveal(pending.RequestId);
+
+    public FrozenCredentialWrite RevealCredentialWrite(BrokerPendingApproval pending)
+    {
+        var authenticator = AuthenticateAndBeginManagement("View the credential change submitted for approval");
+        return Vault.RevealFrozenCredentialWrite(pending.Request.OperationId,
+            pending.RequestId, pending.Capability, authenticator);
     }
 
     public void NotifyCredentialsChanged()
@@ -296,10 +354,9 @@ public sealed class AppHost : IDisposable
             {
                 Vault.ApprovalRequests.Decide(pending.RequestId, pending.Capability, decision);
                 if (decision.Kind != BrokerApprovalDecisionKind.Deny
-                    && _fileWrites is not null
-                    && _fileWrites.Summary(pending.RequestId) is { } summary)
+                    && FileWriteSummary(pending.RequestId) is { } summary)
                 {
-                    _fileWrites.Commit(pending.RequestId, pending.Capability, summary.Digest);
+                    _fileWrites!.Commit(pending.RequestId, pending.Capability, summary.Digest);
                 }
             }
             catch (BrokerApprovalException error) when (error.Error == BrokerApprovalError.AuthenticationFailed)
@@ -326,7 +383,10 @@ public sealed class AppHost : IDisposable
                 ? "Approve this Agent read request"
                 : "Approve this Agent write request"));
         Vault.ApprovalRequests.ConfigureObservers(
-            _ => { },
+            _ => _dispatcher.BeginInvoke(() =>
+            {
+                if (_sessionLocked && _pendingCount > 0) ShowLockedApprovalReminder();
+            }),
             _ => _dispatcher.BeginInvoke(RefreshPendingCount));
         Vault.ApprovalRequests.ConfigureOperationStateChanged((_, _, _) =>
             _dispatcher.BeginInvoke(() =>
@@ -342,14 +402,67 @@ public sealed class AppHost : IDisposable
         if (pending is not null) PresentApproval(pending);
     }
 
-    public void ReviewApproval(BrokerPendingApproval pending) => PresentApproval(pending);
+    public void ReviewApproval(BrokerPendingApproval pending)
+    {
+        if (_sessionLocked)
+        {
+            ShowLockedApprovalReminder();
+            return;
+        }
+        PresentApproval(pending);
+    }
 
     private void PresentApproval(BrokerPendingApproval pending)
     {
+        if (_sessionLocked || _activeApproval is not null) return;
         if (_mainWindow is null) _mainWindow = new MainWindow(this);
         var window = new ApprovalWindow(this, pending);
         window.Owner = _mainWindow.IsVisible ? _mainWindow : null;
-        window.ShowDialog();
+        _activeApproval = window;
+        try
+        {
+            window.ShowDialog();
+        }
+        finally
+        {
+            _activeApproval = null;
+        }
+    }
+
+    private void StartSessionPrivacyMonitor()
+    {
+        _sessionSwitchHandler = (_, args) => _dispatcher.BeginInvoke(() => ApplySessionSwitch(args.Reason));
+        SystemEvents.SessionSwitch += _sessionSwitchHandler;
+    }
+
+    private void ApplySessionSwitch(SessionSwitchReason reason)
+    {
+        if (SessionPrivacyPolicy.HidesDetailedApprovals(reason))
+        {
+            var changed = !_sessionLocked;
+            _sessionLocked = true;
+            if (changed)
+            {
+                _activeApproval?.DismissForPrivacy();
+            }
+            RefreshPendingCount();
+            return;
+        }
+
+        if (!SessionPrivacyPolicy.RestoresDetailedApprovals(reason) || !_sessionLocked) return;
+        _sessionLocked = false;
+        _lockedApprovalReminderPosted = false;
+        RefreshPendingCount();
+    }
+
+    private void ShowLockedApprovalReminder()
+    {
+        if (_lockedApprovalReminderPosted) return;
+        _lockedApprovalReminderPosted = true;
+        _tray?.ShowNotification(
+            Loc.T("Ask Key needs your attention"),
+            Loc.T("Open Ask Key to review pending requests."),
+            ShowPendingRequests);
     }
 
     private void StartBroker()
@@ -512,6 +625,11 @@ public sealed class AppHost : IDisposable
         if (_disposed) return;
         _disposed = true;
         Loc.LanguageChanged -= OnLanguageChanged;
+        if (_sessionSwitchHandler is not null)
+        {
+            SystemEvents.SessionSwitch -= _sessionSwitchHandler;
+            _sessionSwitchHandler = null;
+        }
         _expiryReminders?.Dispose();
         _hotkey?.Dispose();
         _tray?.Dispose();

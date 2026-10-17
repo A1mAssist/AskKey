@@ -28,16 +28,24 @@
   </ItemGroup>
 
   <Target Name="CopyHelperToOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <HelperOutputRoot>$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(HelperTargetFramework)</HelperOutputRoot>
+      <HelperOutputRoot Condition="'$(RuntimeIdentifier)' != ''">$(HelperOutputRoot)\$(RuntimeIdentifier)</HelperOutputRoot>
+    </PropertyGroup>
     <ItemGroup>
-      <HelperOutput Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(HelperTargetFramework)\**\*" />
+      <HelperOutput Include="$(HelperOutputRoot)\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(HelperOutput)" DestinationFolder="$(OutDir)Helpers\%(RecursiveDir)"
           SkipUnchangedFiles="true" />
   </Target>
 
   <Target Name="CopyHelperToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <HelperPublishRoot>$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(HelperTargetFramework)</HelperPublishRoot>
+      <HelperPublishRoot Condition="'$(RuntimeIdentifier)' != ''">$(HelperPublishRoot)\$(RuntimeIdentifier)</HelperPublishRoot>
+    </PropertyGroup>
     <ItemGroup>
-      <HelperPublish Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(HelperTargetFramework)\**\*" />
+      <HelperPublish Include="$(HelperPublishRoot)\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(HelperPublish)" DestinationFolder="$(PublishDir)Helpers\%(RecursiveDir)"
           SkipUnchangedFiles="true" />

@@ -264,11 +264,13 @@ public partial class CredentialsView : UserControl
 
     private void New_Click(object sender, RoutedEventArgs e)
     {
-        var editor = new CredentialEditorWindow(_host, null) { Owner = Window.GetWindow(this) };
-        if (editor.ShowDialog() == true)
-        {
-            _host.NotifyCredentialsChanged();
-        }
+        var chooser = new CredentialTemplateWindow { Owner = Window.GetWindow(this) };
+        if (chooser.ShowDialog() != true || chooser.SelectedTemplate is not { } template) return;
+        var editor = template == CredentialTemplate.Custom
+            ? new CredentialEditorWindow(_host, null)
+            : new CredentialEditorWindow(_host, template);
+        editor.Owner = Window.GetWindow(this);
+        if (editor.ShowDialog() == true) _host.NotifyCredentialsChanged();
     }
 
     private void Edit_Click(object sender, RoutedEventArgs e)

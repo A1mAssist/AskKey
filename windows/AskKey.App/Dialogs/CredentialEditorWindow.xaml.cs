@@ -54,6 +54,27 @@ public partial class CredentialEditorWindow : Window
         UpdatePanelVisibility();
     }
 
+    internal CredentialEditorWindow(AppHost host, CredentialTemplate template)
+        : this(host, null)
+    {
+        ApplyTemplate(template);
+    }
+
+    private void ApplyTemplate(CredentialTemplate template)
+    {
+        Title = Loc.T(CredentialTemplates.EditorTitle(template));
+        TitleText.Text = Title;
+        NameBox.Text = Loc.T(CredentialTemplates.PrototypeTitle(template));
+        var components = CredentialTemplates.Components(template);
+        if (components.Count > 1) SelectTag(TypeCombo, "bundle");
+        foreach (var component in components)
+        {
+            _components.Add(new ComponentDraft(component.Name,
+                component.Kind == CredentialTemplateComponentKind.File, component.IsOptional));
+        }
+        UpdatePanelVisibility();
+    }
+
     private void LoadGroups()
     {
         try
@@ -150,7 +171,8 @@ public partial class CredentialEditorWindow : Window
                 _components.Clear();
                 foreach (var component in _revealed.Components)
                 {
-                    var draft = new ComponentDraft(component.Name)
+                    var draft = new ComponentDraft(component.Name,
+                        component.Value is CredentialComponentValue.File)
                     {
                         Mapping = component.Delivery.Variable ?? "",
                     };
@@ -238,7 +260,7 @@ public partial class CredentialEditorWindow : Window
         try
         {
             var snapshot = FileImport.Freeze(dialog.FileName);
-            var draft = new ComponentDraft(Path.GetFileNameWithoutExtension(dialog.FileName));
+            var draft = new ComponentDraft(Path.GetFileNameWithoutExtension(dialog.FileName), true);
             draft.SetFile(snapshot.OriginalFilename, snapshot.Bytes);
             _components.Add(draft);
         }
@@ -310,9 +332,12 @@ public partial class CredentialEditorWindow : Window
                     break;
 
                 case "bundle":
-                    if (_components.Count == 0)
+                    var components = _components
+                        .Select(draft => draft.ToInput())
+                        .OfType<CredentialComponentInput>()
+                        .ToList();
+                    if (components.Count == 0)
                         throw new InvalidOperationException(Loc.T("Add at least one component."));
-                    var components = _components.Select(draft => draft.ToInput()).ToList();
                     var bundleInput = new BundleCredentialInput
                     {
                         Name = name,
@@ -374,15 +399,22 @@ public partial class CredentialEditorWindow : Window
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
 
-    private sealed class ComponentDraft : INotifyPropertyChanged
+    internal sealed class ComponentDraft : INotifyPropertyChanged
     {
         private string _name;
+        private readonly bool _isFile;
+        private readonly bool _isOptional;
         private string _value = "";
         private string _mapping = "";
         private string? _fileName;
         private byte[]? _bytes;
 
-        public ComponentDraft(string name = "") => _name = name;
+        public ComponentDraft(string name = "", bool isFile = false, bool isOptional = false)
+        {
+            _name = name;
+            _isFile = isFile;
+            _isOptional = isOptional;
+        }
 
         public string Name
         {
@@ -402,8 +434,9 @@ public partial class CredentialEditorWindow : Window
             set { _mapping = value; OnPropertyChanged(); }
         }
 
-        public Visibility TextVisibility => _bytes is null ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility FileVisibility => _bytes is null ? Visibility.Collapsed : Visibility.Visible;
+        public bool HasValue => _isFile ? _bytes is not null : !string.IsNullOrWhiteSpace(Value);
+        public Visibility TextVisibility => _isFile ? Visibility.Collapsed : Visibility.Visible;
+        public Visibility FileVisibility => _isFile ? Visibility.Visible : Visibility.Collapsed;
         public string FileDescription => _bytes is null
             ? Loc.T("No file selected")
             : Loc.F("{0} · {1}", _fileName, FormatBytes(_bytes.Length));
@@ -419,18 +452,21 @@ public partial class CredentialEditorWindow : Window
             OnPropertyChanged(nameof(Name));
         }
 
-        public CredentialComponentInput ToInput()
+        public CredentialComponentInput? ToInput()
         {
             if (string.IsNullOrWhiteSpace(Name)) throw new InvalidOperationException(Loc.T("Every component needs a name."));
-            CredentialComponentValue value = _bytes is null
-                ? new CredentialComponentValue.Text(Value)
-                : new CredentialComponentValue.File(_fileName ?? "file", _bytes);
+            if (_isOptional && !HasValue) return null;
+            if (_isFile && _bytes is null)
+                throw new InvalidOperationException(Loc.F("Choose a file for \"{0}\".", Name.Trim()));
+            CredentialComponentValue value = _isFile
+                ? new CredentialComponentValue.File(_fileName ?? "file", _bytes!)
+                : new CredentialComponentValue.Text(Value);
             var mapping = string.IsNullOrWhiteSpace(Mapping) ? null : Mapping.Trim();
             CredentialComponentDelivery delivery = mapping is null
                 ? CredentialComponentDelivery.None
-                : _bytes is null
-                    ? CredentialComponentDelivery.EnvironmentVariable(mapping)
-                    : CredentialComponentDelivery.TemporaryFile(mapping);
+                : _isFile
+                    ? CredentialComponentDelivery.TemporaryFile(mapping)
+                    : CredentialComponentDelivery.EnvironmentVariable(mapping);
             return new CredentialComponentInput(Name.Trim(), value, delivery);
         }
 
