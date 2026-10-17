@@ -1,0 +1,697 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F6F6F4" />
+      <SolidColorBrush x:Key="ComboBoxForeground" Color="#1C1F23" />
+      <SolidColorBrush x:Key="ComboBoxPlaceHolderForeground" Color="#646B73" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F1F2EF" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#E7EAE7" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#C9CEC8" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#C9CEC8" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="ComboBoxDropDownForeground" Color="#1C1F23" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#E1E3DF" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerOver" Color="#F1F2EF" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerPressed" Color="#E7EAE7" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="#646B73" />
+      <SolidColorBrush x:Key="ComboBoxItemForeground" Color="#1C1F23" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundPointerOver" Color="#1C1F23" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundPressed" Color="#646B73" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#2E6BFF" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedUnfocused" Color="#2E6BFF" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#2E6BFF" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPressed" Color="#2E6BFF" />
+      <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#F1F2EF" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed" Color="#E7EAE7" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#E8EFFF" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused" Color="#E8EFFF" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#DDE8FF" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#D5E2FF" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedUnfocused" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPressed" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemPillFillBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#ECEEEC" />
+      <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#F8F8F6" />
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#F1F2EF" />
+      <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#E7EAE7" />
+      <SolidColorBrush x:Key="SelectedSurfaceBrush" Color="#F7F9FF" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1C1F23" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#646B73" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#8E949A" />
+      <SolidColorBrush x:Key="LineBrush" Color="#E1E3DF" />
+      <SolidColorBrush x:Key="LineStrongBrush" Color="#C9CEC8" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#2E6BFF" />
+      <SolidColorBrush x:Key="AccentSoftBrush" Color="#E8EFFF" />
+      <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="WarningBrush" Color="#C8342C" />
+      <SolidColorBrush x:Key="WarningSoftBrush" Color="#FBEDEC" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#1F7A4D" />
+      <SolidColorBrush x:Key="HoverOverlayBrush" Color="#14000000" />
+      <SolidColorBrush x:Key="TitleBarCloseHoverBrush" Color="#C42B1C" />
+      <SolidColorBrush x:Key="PermissionAllowedSoftBrush" Color="#E7F5EC" />
+      <SolidColorBrush x:Key="PermissionAskSoftBrush" Color="#FFF3D9" />
+      <SolidColorBrush x:Key="PermissionAskTextBrush" Color="#8A5A00" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#151719" />
+      <SolidColorBrush x:Key="ComboBoxForeground" Color="#F2F3F5" />
+      <SolidColorBrush x:Key="ComboBoxPlaceHolderForeground" Color="#AFB5BC" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#2A2E33" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#30353B" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#50575F" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#50575F" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#23262A" />
+      <SolidColorBrush x:Key="ComboBoxDropDownForeground" Color="#F2F3F5" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#3A3F45" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerOver" Color="#2A2E33" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerPressed" Color="#30353B" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="#AFB5BC" />
+      <SolidColorBrush x:Key="ComboBoxItemForeground" Color="#F2F3F5" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundPointerOver" Color="#F2F3F5" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundPressed" Color="#AFB5BC" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#7AA2FF" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedUnfocused" Color="#7AA2FF" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#7AA2FF" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPressed" Color="#7AA2FF" />
+      <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#2A2E33" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed" Color="#30353B" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#243656" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused" Color="#243656" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#2C4169" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#334C7B" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedUnfocused" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPressed" Color="Transparent" />
+      <SolidColorBrush x:Key="ComboBoxItemPillFillBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#1E2124" />
+      <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#1B1E22" />
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#23262A" />
+      <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#2A2E33" />
+      <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#30353B" />
+      <SolidColorBrush x:Key="SelectedSurfaceBrush" Color="#1C2638" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2F3F5" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#AFB5BC" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#818890" />
+      <SolidColorBrush x:Key="LineBrush" Color="#3A3F45" />
+      <SolidColorBrush x:Key="LineStrongBrush" Color="#50575F" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#7AA2FF" />
+      <SolidColorBrush x:Key="AccentSoftBrush" Color="#243656" />
+      <SolidColorBrush x:Key="AccentTextBrush" Color="#0E1526" />
+      <SolidColorBrush x:Key="WarningBrush" Color="#FF766C" />
+      <SolidColorBrush x:Key="WarningSoftBrush" Color="#3A2423" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#54D18C" />
+      <SolidColorBrush x:Key="HoverOverlayBrush" Color="#20FFFFFF" />
+      <SolidColorBrush x:Key="TitleBarCloseHoverBrush" Color="#C42B1C" />
+      <SolidColorBrush x:Key="PermissionAllowedSoftBrush" Color="#1E3A2C" />
+      <SolidColorBrush x:Key="PermissionAskSoftBrush" Color="#3A2F1D" />
+      <SolidColorBrush x:Key="PermissionAskTextBrush" Color="#F2C46D" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <FontFamily x:Key="UiFont">Segoe UI Variable Text, Microsoft YaHei UI, Segoe UI</FontFamily>
+  <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Microsoft YaHei UI, Segoe UI</FontFamily>
+  <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+  <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+  <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+  <Thickness x:Key="ButtonPadding">14,8</Thickness>
+  <Thickness x:Key="PageMargin">30,26,30,22</Thickness>
+  <x:Double x:Key="PageContentMaxWidth">960</x:Double>
+
+  <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="HeadlineStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="BodyTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="SecondaryTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{ThemeResource TextTertiaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{ThemeResource TextTertiaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="MonoTextStyle" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style x:Key="IconGlyphStyle" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style x:Key="CardStyle" TargetType="Border">
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="16" />
+  </Style>
+  <Style x:Key="CardButtonStyle" TargetType="Button">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+                  Control.IsTemplateFocusTarget="True">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.BorderBrush" Value="{ThemeResource LineStrongBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.BorderBrush" Value="{ThemeResource AccentBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.9" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="InsetCardStyle" TargetType="Border">
+    <Setter Property="Background" Value="{ThemeResource SurfaceMutedBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style x:Key="BadgeStyle" TargetType="Border">
+    <Setter Property="Background" Value="{ThemeResource AccentBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="6,2" />
+  </Style>
+
+  <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="{ThemeResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource AccentTextBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style x:Key="GhostButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{ThemeResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="MinHeight" Value="34" />
+  </Style>
+  <Style x:Key="DangerButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{ThemeResource WarningBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource WarningBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style x:Key="DangerSolidButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="{ThemeResource WarningBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderBrush" Value="{ThemeResource WarningBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style x:Key="TitleBarButtonStyle" TargetType="Button">
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="Width" Value="46" />
+    <Setter Property="Height" Value="52" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.72" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="TitleBarCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource TitleBarButtonStyle}">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource TitleBarCloseHoverBrush}" />
+                    <Setter Target="ContentPresenter.Foreground" Value="White" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource TitleBarCloseHoverBrush}" />
+                    <Setter Target="ContentPresenter.Foreground" Value="White" />
+                    <Setter Target="Chrome.Opacity" Value="0.72" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="SidebarFooterButtonStyle" TargetType="Button">
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="9,7" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.72" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="SegmentButtonStyle" TargetType="Button">
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.72" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="SegmentSelectedButtonStyle" TargetType="Button" BasedOn="{StaticResource SegmentButtonStyle}">
+    <Setter Property="Background" Value="{ThemeResource AccentSoftBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource AccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.92" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.8" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="NavListStyle" TargetType="ListView">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="SelectionMode" Value="Single" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+  </Style>
+  <Style x:Key="NavItemStyle" TargetType="ListViewItem">
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListViewItem">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                  CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource HoverOverlayBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.72" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Selected">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource AccentSoftBrush}" />
+                    <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource AccentBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="PointerOverSelected">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource AccentSoftBrush}" />
+                    <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource AccentBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="PressedSelected">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource AccentSoftBrush}" />
+                    <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource AccentBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.8" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+  <Style x:Key="PlainListStyle" TargetType="ListView">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="SelectionMode" Value="Single" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+  </Style>
+  <Style x:Key="CredentialRowStyle" TargetType="ListViewItem">
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="Margin" Value="0,0,0,6" />
+    <Setter Property="Padding" Value="13,11" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListViewItem">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.BorderBrush" Value="{ThemeResource LineStrongBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.BorderBrush" Value="{ThemeResource LineStrongBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.85" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Selected">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource SelectedSurfaceBrush}" />
+                    <Setter Target="Chrome.BorderBrush" Value="{ThemeResource AccentBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="PointerOverSelected">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource SelectedSurfaceBrush}" />
+                    <Setter Target="Chrome.BorderBrush" Value="{ThemeResource AccentBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="PressedSelected">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Background" Value="{ThemeResource SelectedSurfaceBrush}" />
+                    <Setter Target="Chrome.BorderBrush" Value="{ThemeResource AccentBrush}" />
+                    <Setter Target="Chrome.Opacity" Value="0.85" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="34,8,10,8" />
+  </Style>
+  <Style x:Key="FormTextBoxStyle" TargetType="TextBox">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style x:Key="FormPasswordBoxStyle" TargetType="PasswordBox">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style x:Key="FormComboBoxStyle" TargetType="ComboBox">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style x:Key="ContentScrollViewerStyle" TargetType="ScrollViewer">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="HorizontalScrollMode" Value="Disabled" />
+  </Style>
+</ResourceDictionary>

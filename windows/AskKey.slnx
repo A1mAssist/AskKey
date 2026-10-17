@@ -12,4 +12,7 @@
   <Project Path="AskKey.System/AskKey.System.csproj" />
   <Project Path="AskKey.Vault.Tests/AskKey.Vault.Tests.csproj" />
   <Project Path="AskKey.Vault/AskKey.Vault.csproj" />
+  <Project Path="AskKey.WinUI/AskKey.WinUI.csproj">
+    <Platform Project="x64" />
+  </Project>
 </Solution>

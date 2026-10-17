@@ -4,7 +4,7 @@
              xmlns:loc="clr-namespace:AskKeyApp"
              FontFamily="{StaticResource UiFont}">
   <Grid Background="{DynamicResource WindowBackground}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer Style="{StaticResource ContentScrollViewer}">
       <StackPanel Margin="30,26,30,26" MaxWidth="760" HorizontalAlignment="Left">
         <TextBlock loc:Loc.Key="Settings" Style="{StaticResource PageTitle}"/>
         <TextBlock loc:Loc.Key="Choose how Ask Key starts and how much friction Agent access requires."
@@ -162,8 +162,8 @@
         <TextBlock loc:Loc.Key="ABOUT" Style="{StaticResource SectionLabel}" Margin="0,24,0,7"/>
         <Border Style="{StaticResource Card}" Padding="16">
           <StackPanel>
-            <TextBlock loc:Loc.Key="Ask Key for Windows 0.3.1" Style="{StaticResource Headline}" FontSize="13"/>
-            <TextBlock loc:Loc.Key="Credentials are encrypted with Windows DPAPI. The Broker protocol is version 1; MCP uses 2024-11-05."
+            <TextBlock loc:Loc.Key="Ask Key for Windows 0.1.0" Style="{StaticResource Headline}" FontSize="13"/>
+            <TextBlock loc:Loc.Key="Credentials are encrypted with Windows DPAPI. The Broker protocol is version 1; MCP supports 2024-11-05 and 2025-11-25."
                        Style="{StaticResource SecondaryText}" Margin="0,5,0,0"/>
             <TextBlock x:Name="AccessRecordFailureText" Foreground="{DynamicResource Warning}" FontSize="12"
                        TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"/>

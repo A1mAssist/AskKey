@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>AskKeyApp</RootNamespace>
+    <AssemblyName>AskKey</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <UseWindowsForms>false</UseWindowsForms>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <ApplicationIcon>Assets\AskKey.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260709004" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\AskKey.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\AppIcon.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AskKey.Broker\AskKey.Broker.csproj" />
+    <ProjectReference Include="..\AskKey.Helper\AskKey.Helper.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\AskKey.Integrations\AskKey.Integrations.csproj" />
+    <ProjectReference Include="..\AskKey.System\AskKey.System.csproj" />
+    <ProjectReference Include="..\AskKey.Vault\AskKey.Vault.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\AskKey.App\AppPaths.cs" Link="Shared\AppPaths.cs" />
+    <Compile Include="..\AskKey.App\ApprovalDetailsContent.cs" Link="Shared\ApprovalDetailsContent.cs" />
+    <Compile Include="..\AskKey.App\CredentialTemplates.cs" Link="Shared\CredentialTemplates.cs" />
+    <Compile Include="..\AskKey.App\LocalizationCatalog.cs" Link="Shared\LocalizationCatalog.cs" />
+    <Compile Include="..\AskKey.App\Preferences.cs" Link="Shared\Preferences.cs" />
+    <Compile Include="..\AskKey.App\SessionPrivacyPolicy.cs" Link="Shared\SessionPrivacyPolicy.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AskKeyApp.Tests" />
+  </ItemGroup>
+
+  <Target Name="CopyHelperToOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <HelperOutputRoot>$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\net10.0-windows\</HelperOutputRoot>
+      <HelperOutputRoot Condition="'$(RuntimeIdentifier)' != ''">$(HelperOutputRoot)$(RuntimeIdentifier)\</HelperOutputRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <HelperOutput Include="$(HelperOutputRoot)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HelperOutput)" DestinationFolder="$(OutDir)Helpers\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

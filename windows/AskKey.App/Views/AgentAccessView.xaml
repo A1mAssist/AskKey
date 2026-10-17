@@ -4,7 +4,7 @@
              xmlns:loc="clr-namespace:AskKeyApp"
              FontFamily="{StaticResource UiFont}">
   <Grid Background="{DynamicResource WindowBackground}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer Style="{StaticResource ContentScrollViewer}">
       <StackPanel Margin="30,26,30,26" MaxWidth="820" HorizontalAlignment="Left">
         <TextBlock loc:Loc.Key="Agent access" Style="{StaticResource PageTitle}"/>
         <TextBlock loc:Loc.Key="Let a local Agent discover and use only the credentials you approve."
@@ -13,7 +13,7 @@
         <Border Style="{StaticResource Card}" Margin="0,18,0,0" Padding="18">
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <Border Width="46" Height="46" CornerRadius="12" Background="{DynamicResource AccentSoft}">
+            <Border Width="46" Height="46" CornerRadius="8" Background="{DynamicResource AccentSoft}">
               <TextBlock x:Name="StatusIcon" Text="&#xE8EA;" Style="{StaticResource IconGlyph}" FontSize="20"
                          Foreground="{DynamicResource Accent}"/>
             </Border>
@@ -44,7 +44,7 @@
 
             <Grid Margin="18,12">
               <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <Border Width="32" Height="32" CornerRadius="9" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+              <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
                 <TextBlock Text="C" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
@@ -58,7 +58,7 @@
 
             <Grid Margin="18,12">
               <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <Border Width="32" Height="32" CornerRadius="9" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+              <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
                 <TextBlock Text="X" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
@@ -72,7 +72,7 @@
 
             <Grid Margin="18,12">
               <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <Border Width="32" Height="32" CornerRadius="9" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+              <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
                 <TextBlock Text="C" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
@@ -86,7 +86,7 @@
 
             <Grid Margin="18,12">
               <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <Border Width="32" Height="32" CornerRadius="9" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+              <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
                 <TextBlock Text="G" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">

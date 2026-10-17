@@ -75,7 +75,7 @@
 
     <Border x:Name="DetailsCard" Grid.Row="4" Style="{StaticResource InsetCard}" Margin="0,6,0,0"
             Padding="14" Visibility="Collapsed">
-      <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
+      <ScrollViewer Style="{StaticResource ContentScrollViewer}" MaxHeight="300">
         <StackPanel x:Name="DetailsPanel">
           <StackPanel x:Name="DetailsRows"/>
           <Border x:Name="ValueRevealCard" Style="{StaticResource InsetCard}" Margin="0,12,0,0"

@@ -33,7 +33,7 @@
       </StackPanel>
 
       <Grid Grid.Row="2">
-        <ScrollViewer x:Name="PendingPanel" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="PendingPanel" Style="{StaticResource ContentScrollViewer}">
           <StackPanel>
             <ItemsControl x:Name="PendingList">
               <ItemsControl.ItemTemplate>
@@ -76,7 +76,7 @@
           </StackPanel>
         </ScrollViewer>
 
-        <ScrollViewer x:Name="RecyclePanel" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+        <ScrollViewer x:Name="RecyclePanel" Style="{StaticResource ContentScrollViewer}" Visibility="Collapsed">
           <StackPanel>
             <ItemsControl x:Name="RecycleList">
               <ItemsControl.ItemTemplate>
@@ -111,7 +111,7 @@
           </StackPanel>
         </ScrollViewer>
 
-        <ScrollViewer x:Name="RecordsPanel" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+        <ScrollViewer x:Name="RecordsPanel" Style="{StaticResource ContentScrollViewer}" Visibility="Collapsed">
           <StackPanel>
             <ItemsControl x:Name="RecordsList">
               <ItemsControl.ItemTemplate>
@@ -122,7 +122,7 @@
                       <TextBlock Text="{Binding Time}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/>
                       <TextBlock Grid.Column="1" Text="{Binding Description}" Style="{StaticResource BodyText}"
                                  TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="8,0,12,0"/>
-                      <Border Grid.Column="2" CornerRadius="6" Padding="7,3" Background="{DynamicResource SurfaceMuted}">
+                      <Border Grid.Column="2" CornerRadius="8" Padding="7,3" Background="{DynamicResource SurfaceMuted}">
                         <TextBlock Text="{Binding Result}" FontSize="10" FontWeight="SemiBold"/>
                       </Border>
                     </Grid>

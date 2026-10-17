@@ -3,6 +3,17 @@ using System.Text.Json;
 
 namespace AskKey.Integrations;
 
+/// <summary>MCP revisions supported by the helper and its connection checks.</summary>
+public static class MCPProtocol
+{
+    public const string Previous = "2024-11-05";
+    public const string Current = "2025-11-25";
+
+    // Echo a supported request; otherwise offer the latest revision.
+    public static string Negotiate(string? requestedVersion)
+        => requestedVersion == Previous ? Previous : Current;
+}
+
 /// <summary>Shared initialize + tools/list request and response checks.</summary>
 public static class MCPHelperContract
 {
@@ -11,7 +22,7 @@ public static class MCPHelperContract
         string ClientVersion,
         string ServerName,
         string ServerVersion,
-        string ProtocolVersion = "2024-11-05",
+        string ProtocolVersion = MCPProtocol.Current,
         IReadOnlySet<string>? RequiredTools = null)
     {
         public IReadOnlySet<string> Tools => RequiredTools ?? DefaultTools;

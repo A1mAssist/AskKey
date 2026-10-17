@@ -13,7 +13,7 @@ public sealed class McpServerTests
     {
         using var broker = new BrokerHarness(TestHandlers.Catalog());
         var output = RunMcp(broker,
-            Line(new { jsonrpc = "2.0", id = 1, method = "initialize" }) +
+            Initialize(1, MCPProtocol.Current) +
             Line(new { jsonrpc = "2.0", id = 2, method = "tools/list" }) +
             Line(new { jsonrpc = "2.0", id = 3, method = "ping" }));
         var lines = Lines(output);
@@ -22,7 +22,7 @@ public sealed class McpServerTests
         var rawLines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         var inspection = MCPHelperContract.Inspect(
             string.Join("\n", rawLines.Take(2)), MCPHelperContract.Identity.AskKeyHelper);
-        Assert.Equal("0.3.1", inspection.Version);
+        Assert.Equal("0.1.0", inspection.Version);
         Assert.Equal(19, inspection.Tools.Count);
 
         var tools = lines[1]["result"]!["tools"]!.AsArray();
@@ -69,6 +69,27 @@ public sealed class McpServerTests
         Assert.Equal("2.0", ping["jsonrpc"]!.GetValue<string>());
         Assert.Equal(3, ping["id"]!.GetValue<int>());
         Assert.Empty(ping["result"]!.AsObject());
+    }
+
+    [Theory]
+    [InlineData(MCPProtocol.Current, MCPProtocol.Current)]
+    [InlineData(MCPProtocol.Previous, MCPProtocol.Previous)]
+    [InlineData("2026-07-28", MCPProtocol.Current)]
+    public void InitializeNegotiatesProtocolVersion(string requested, string expected)
+    {
+        using var broker = new BrokerHarness(TestHandlers.Catalog());
+        var response = Assert.Single(Lines(RunMcp(broker, Initialize(1, requested))));
+        Assert.Equal(expected, response["result"]!["protocolVersion"]!.GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(1)]
+    public void InitializeFallsBackToLatestProtocolVersion(object? requested)
+    {
+        using var broker = new BrokerHarness(TestHandlers.Catalog());
+        var response = Assert.Single(Lines(RunMcp(broker, Initialize(1, requested))));
+        Assert.Equal(MCPProtocol.Current, response["result"]!["protocolVersion"]!.GetValue<string>());
     }
 
     [Fact]
@@ -320,6 +341,20 @@ public sealed class McpServerTests
         using var outputStream = new MemoryStream();
         McpServer.Run(inputStream, outputStream, broker.Client);
         return Encoding.UTF8.GetString(outputStream.ToArray());
+    }
+
+    private static string Initialize(int id, object? protocolVersion = null)
+    {
+        var parameters = new JsonObject
+        {
+            ["capabilities"] = new JsonObject(),
+            ["clientInfo"] = new JsonObject { ["name"] = "test", ["version"] = "1" },
+        };
+        if (protocolVersion is not null)
+        {
+            parameters["protocolVersion"] = JsonSerializer.SerializeToNode(protocolVersion);
+        }
+        return Line(new { jsonrpc = "2.0", id, method = "initialize", @params = parameters });
     }
 
     private static string Line(object value) => JsonSerializer.Serialize(value) + "\n";

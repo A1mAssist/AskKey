@@ -1,0 +1,155 @@
+<UserControl
+    x:Class="AskKeyApp.AgentAccessView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AskKeyApp">
+  <Grid Background="{ThemeResource WindowBackgroundBrush}">
+    <ScrollViewer Style="{StaticResource ContentScrollViewerStyle}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" MaxWidth="{StaticResource PageContentMaxWidth}"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Margin="{StaticResource PageMargin}">
+        <TextBlock local:Loc.Key="Agent access" Style="{StaticResource PageTitleStyle}"/>
+        <TextBlock local:Loc.Key="Let a local Agent discover and use only the credentials you approve."
+                   Style="{StaticResource PageSubtitleStyle}" Margin="0,5,0,0"/>
+
+        <Border Style="{StaticResource CardStyle}" Margin="0,18,0,0" Padding="16,14">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Border Width="46" Height="46" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}">
+              <TextBlock x:Name="StatusIcon" Text="&#xE8EA;" Style="{StaticResource IconGlyphStyle}" FontSize="20"
+                         Foreground="{ThemeResource AccentBrush}"/>
+            </Border>
+            <StackPanel Grid.Column="1" Margin="14,0,16,0" VerticalAlignment="Center">
+              <TextBlock x:Name="StatusTitle" local:Loc.Key="Agent access is running" Style="{StaticResource HeadlineStyle}" FontSize="15"/>
+              <TextBlock x:Name="StatusDetail" local:Loc.Key="The local Broker is ready for approved requests."
+                         Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+            </StackPanel>
+            <Button x:Name="PauseButton" Grid.Column="2" local:Loc.Key="Pause Agent access"
+                    Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Center" Click="Pause_Click"/>
+          </Grid>
+        </Border>
+
+        <Border x:Name="BrokerFailurePanel" Style="{StaticResource InsetCardStyle}" Background="{ThemeResource WarningSoftBrush}"
+                Margin="0,12,0,0" Visibility="Collapsed">
+          <Grid>
+            <TextBlock x:Name="BrokerFailureText" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+            <Button local:Loc.Key="Retry Broker" Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Right"
+                    Click="RetryBroker_Click"/>
+          </Grid>
+        </Border>
+
+        <TextBlock local:Loc.Key="AUTOMATIC SETUP" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
+        <Border Style="{StaticResource CardStyle}" Padding="0">
+          <StackPanel>
+            <TextBlock local:Loc.Key="Connect an installed client without copying configuration. Ask Key writes only its own MCP server and discovery hook, keeps a backup, then verifies both."
+                       Style="{StaticResource SecondaryTextStyle}" Margin="16,14,16,4" TextWrapping="Wrap"/>
+
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Border Width="32" Height="32" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}" VerticalAlignment="Center">
+                <TextBlock Text="C" Foreground="{ThemeResource AccentBrush}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
+                <TextBlock local:Loc.Key="Claude Code" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock x:Name="ClaudeDetailText" local:Loc.Key="MCP server and credential discovery" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+              </StackPanel>
+              <TextBlock x:Name="ClaudeStatusText" local:Loc.Key="Not checked" Grid.Column="2" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+              <Button x:Name="ClaudeButton" local:Loc.Key="Connect" Grid.Column="3" Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Center" Click="ConnectClaude_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Border Width="32" Height="32" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}" VerticalAlignment="Center">
+                <TextBlock Text="X" Foreground="{ThemeResource AccentBrush}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
+                <TextBlock local:Loc.Key="Codex" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock x:Name="CodexDetailText" local:Loc.Key="MCP server and credential discovery" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+              </StackPanel>
+              <TextBlock x:Name="CodexStatusText" local:Loc.Key="Not checked" Grid.Column="2" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+              <Button x:Name="CodexButton" local:Loc.Key="Connect" Grid.Column="3" Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Center" Click="ConnectCodex_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Border Width="32" Height="32" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}" VerticalAlignment="Center">
+                <TextBlock Text="C" Foreground="{ThemeResource AccentBrush}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
+                <TextBlock local:Loc.Key="Cursor" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock x:Name="CursorDetailText" local:Loc.Key="MCP server and credential discovery" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+              </StackPanel>
+              <TextBlock x:Name="CursorStatusText" local:Loc.Key="Not checked" Grid.Column="2" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+              <Button x:Name="CursorButton" local:Loc.Key="Connect" Grid.Column="3" Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Center" Click="ConnectCursor_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Border Width="32" Height="32" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}" VerticalAlignment="Center">
+                <TextBlock Text="G" Foreground="{ThemeResource AccentBrush}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
+                <TextBlock local:Loc.Key="Grok CLI" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock x:Name="GrokDetailText" local:Loc.Key="MCP server and credential discovery" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+              </StackPanel>
+              <TextBlock x:Name="GrokStatusText" local:Loc.Key="Not checked" Grid.Column="2" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+              <Button x:Name="GrokButton" local:Loc.Key="Connect" Grid.Column="3" Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Center" Click="ConnectGrok_Click"/>
+            </Grid>
+
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
+              <TextBlock local:Loc.Key="Restart an open client after connecting." Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center"/>
+              <Button local:Loc.Key="Check connections" Style="{StaticResource GhostButtonStyle}" HorizontalAlignment="Right" Click="CheckConnections_Click"/>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <TextBlock local:Loc.Key="MANUAL SETUP" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
+        <Border Style="{StaticResource CardStyle}" Padding="16,14">
+          <StackPanel>
+            <TextBlock local:Loc.Key="Use this only when automatic setup is unavailable. Point an MCP client at the Ask Key helper with the mcp argument."
+                       Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap"/>
+            <Border Style="{StaticResource InsetCardStyle}" Margin="0,14,0,0" Padding="12">
+              <StackPanel>
+                <TextBlock x:Name="HelperPathText" Style="{StaticResource MonoTextStyle}" TextWrapping="Wrap"/>
+                <TextBlock x:Name="McpConfigText" Style="{StaticResource MonoTextStyle}" Margin="0,9,0,0" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+              <Button local:Loc.Key="Copy MCP configuration" Style="{StaticResource PrimaryButtonStyle}" Click="CopyConfig_Click"/>
+              <Button local:Loc.Key="Check helper" Style="{StaticResource SecondaryButtonStyle}" Margin="8,0,0,0" Click="CheckHelper_Click"/>
+              <Button local:Loc.Key="Open helper folder" Style="{StaticResource GhostButtonStyle}" Margin="8,0,0,0" Click="OpenFolder_Click"/>
+            </StackPanel>
+            <TextBlock x:Name="CheckResultText" Style="{StaticResource MonoTextStyle}" Margin="0,10,0,0"
+                       Visibility="Collapsed" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+
+        <TextBlock local:Loc.Key="WHAT AGENTS CAN DO" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
+        <Border Style="{StaticResource CardStyle}" Padding="16,14">
+          <StackPanel>
+            <TextBlock local:Loc.Key="Catalog, read, create, modify, delete and organize" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+            <TextBlock local:Loc.Key="The MCP server exposes 19 tools. Hidden credentials never appear in the catalog. Every read follows the credential's permission: Allow, Ask, or Hidden. Writes always require a fresh approval and device-owner confirmation."
+                       Style="{StaticResource SecondaryTextStyle}" Margin="0,5,0,0" TextWrapping="Wrap"/>
+            <TextBlock local:Loc.Key="Command execution keeps the Agent’s stdout and stderr streaming to the caller. Ask Key never receives credential plaintext from the Agent; it injects the approved values into the target process environment or temporary files."
+                       Style="{StaticResource SecondaryTextStyle}" Margin="0,9,0,0" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource InsetCardStyle}" Margin="0,16,0,0">
+          <StackPanel>
+            <TextBlock local:Loc.Key="Recovery" Style="{StaticResource HeadlineStyle}" FontSize="12"/>
+            <TextBlock local:Loc.Key="If the App is not running, the helper reports NotRunning and Agents receive no credentials. Start Ask Key from the tray or sign in with Launch at login enabled."
+                       Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+      </Grid>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

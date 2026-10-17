@@ -445,7 +445,11 @@ public class CodexDiscoveryHookConfigurationTests
 
 public class MCPHelperContractTests
 {
-    private static string Response(string server = "askkey", string version = null!, params string[] tools)
+    private static string Response(
+        string server = "askkey",
+        string version = null!,
+        string protocolVersion = MCPProtocol.Current,
+        params string[] tools)
     {
         version ??= AskKeyVersion.Current;
         var initialize = global::System.Text.Json.JsonSerializer.Serialize(new
@@ -454,7 +458,7 @@ public class MCPHelperContractTests
             id = 1,
             result = new
             {
-                protocolVersion = "2024-11-05",
+                protocolVersion,
                 serverInfo = new { name = server, version },
             },
         });
@@ -476,6 +480,20 @@ public class MCPHelperContractTests
 
         Assert.Equal(AskKeyVersion.Current, inspected.Version);
         Assert.Equal(new[] { "extra", "list_credentials", "run" }, inspected.Tools);
+    }
+
+    [Fact]
+    public void PreviousProtocolVersionIsAcceptedForAnExplicitPreviousIdentity()
+    {
+        var identity = MCPHelperContract.Identity.CursorClient with
+        {
+            ProtocolVersion = MCPProtocol.Previous,
+        };
+        var inspected = MCPHelperContract.Inspect(
+            Response(protocolVersion: MCPProtocol.Previous, tools: new[] { "run", "list_credentials" }),
+            identity);
+
+        Assert.Equal(AskKeyVersion.Current, inspected.Version);
     }
 
     [Fact]
@@ -502,7 +520,7 @@ public class MCPHelperContractTests
     [InlineData("")]
     [InlineData("not json\n{}")]
     [InlineData("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}")]
-    [InlineData("{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"protocolVersion\":\"2024-11-05\",\"serverInfo\":{\"name\":\"askkey\",\"version\":\"0\"}}}\n{}")]
+    [InlineData("{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"protocolVersion\":\"2025-11-25\",\"serverInfo\":{\"name\":\"askkey\",\"version\":\"0\"}}}\n{}")]
     public void MalformedResponsesAreRejected(string response)
     {
         var exception = Assert.Throws<MCPHelperContract.MCPHelperContractException>(() =>
@@ -520,6 +538,7 @@ public class MCPHelperContractTests
 
         Assert.Equal(2, lines.Length);
         Assert.Contains("\"method\":\"initialize\"", lines[0], StringComparison.Ordinal);
+        Assert.Contains($"\"protocolVersion\":\"{MCPProtocol.Current}\"", lines[0], StringComparison.Ordinal);
         Assert.Contains("\"name\":\"claude-code\"", lines[0], StringComparison.Ordinal);
         Assert.Contains("\"method\":\"tools/list\"", lines[1], StringComparison.Ordinal);
     }

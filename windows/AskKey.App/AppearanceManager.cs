@@ -10,6 +10,8 @@ namespace AskKeyApp;
 public static class AppearanceManager
 {
     private const string DarkThemeSource = "Theme.Dark.xaml";
+    private const int DwmWindowCornerPreference = 33;
+    private const int DwmWindowCornerRound = 2;
     private static string _mode = "system";
     private static bool _watchingSystem;
 
@@ -44,7 +46,7 @@ public static class AppearanceManager
         if (window.IsLoaded) ApplyTitleBar(window, IsDark());
     }
 
-    private static bool IsDark()
+    internal static bool IsDark()
         => _mode == "dark" || (_mode == "system" && !SystemUsesLightTheme());
 
     private static bool SystemUsesLightTheme()
@@ -81,6 +83,8 @@ public static class AppearanceManager
     {
         var handle = new WindowInteropHelper(window).Handle;
         if (handle == IntPtr.Zero) return;
+        var corner = DwmWindowCornerRound;
+        DwmSetWindowAttribute(handle, DwmWindowCornerPreference, ref corner, sizeof(int));
         var value = dark ? 1 : 0;
         if (DwmSetWindowAttribute(handle, 20, ref value, sizeof(int)) != 0)
         {

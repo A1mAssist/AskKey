@@ -4,13 +4,10 @@
              xmlns:loc="clr-namespace:AskKeyApp"
              FontFamily="{StaticResource UiFont}">
   <Grid Background="{DynamicResource WindowBackground}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer Style="{StaticResource ContentScrollViewer}">
       <StackPanel MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="36,34,36,34">
-        <Border Width="54" Height="54" CornerRadius="15" Background="{DynamicResource Accent}"
-                HorizontalAlignment="Left">
-          <TextBlock Text="K" Foreground="White" FontFamily="{StaticResource DisplayFont}" FontSize="28"
-                     FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
+        <Image Width="54" Height="54" Source="Assets/AppIcon.png" Stretch="Uniform"
+               HorizontalAlignment="Left"/>
         <TextBlock loc:Loc.Key="Keep credentials away from Agents until you approve" Style="{StaticResource PageTitle}"
                    Margin="0,20,0,0"/>
         <TextBlock loc:Loc.Key="Ask Key stores credentials locally, gives an Agent only the one it needs, and asks you before any read or write."

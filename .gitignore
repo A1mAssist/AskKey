@@ -26,3 +26,6 @@ windows/_*.png
 # The original macOS checkout is kept locally for reference only.
 .askkey-upstream-git/
 AskKey/
+
+# Local QA outputs and screenshots
+/artifacts/

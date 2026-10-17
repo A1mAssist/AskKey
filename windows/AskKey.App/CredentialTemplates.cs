@@ -1,6 +1,6 @@
 namespace AskKeyApp;
 
-internal enum CredentialTemplate
+public enum CredentialTemplate
 {
     Api,
     Ssh,
@@ -11,7 +11,7 @@ internal enum CredentialTemplate
     Custom,
 }
 
-internal enum CredentialTemplateComponentKind
+public enum CredentialTemplateComponentKind
 {
     Text,
     File,

@@ -9,8 +9,6 @@ namespace AskKey.Helper;
 
 internal static class McpServer
 {
-    public const string ProtocolVersion = "2024-11-05";
-
     public static void Run()
     {
         BrokerSocketClient client;
@@ -83,9 +81,14 @@ internal static class McpServer
             switch (method)
             {
                 case "initialize":
+                {
+                    var requestedVersion = request["params"] is JsonObject initializeParams
+                        && TryString(initializeParams, "protocolVersion", out var version)
+                        ? version
+                        : null;
                     response = McpResponses.Success(id, new JsonObject
                     {
-                        ["protocolVersion"] = ProtocolVersion,
+                        ["protocolVersion"] = MCPProtocol.Negotiate(requestedVersion),
                         ["capabilities"] = new JsonObject { ["tools"] = new JsonObject() },
                         ["serverInfo"] = new JsonObject
                         {
@@ -95,6 +98,7 @@ internal static class McpServer
                         ["instructions"] = AgentUsageGuide.Instructions,
                     });
                     break;
+                }
                 case "tools/list":
                     response = McpResponses.Success(id, new JsonObject
                     {

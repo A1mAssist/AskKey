@@ -1,0 +1,197 @@
+<UserControl
+    x:Class="AskKeyApp.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AskKeyApp">
+  <Grid Background="{ThemeResource WindowBackgroundBrush}">
+    <ScrollViewer Style="{StaticResource ContentScrollViewerStyle}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" MaxWidth="{StaticResource PageContentMaxWidth}"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Margin="{StaticResource PageMargin}">
+        <TextBlock local:Loc.Key="Settings" Style="{StaticResource PageTitleStyle}"/>
+        <TextBlock local:Loc.Key="Choose how Ask Key starts and how much friction Agent access requires."
+                   Style="{StaticResource PageSubtitleStyle}" Margin="0,5,0,0"/>
+
+        <Border x:Name="BrokerFailurePanel" Style="{StaticResource InsetCardStyle}" Margin="0,18,0,0"
+                Background="{ThemeResource WarningSoftBrush}" Visibility="Collapsed">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock local:Loc.Key="Agent access needs attention" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+              <TextBlock x:Name="BrokerFailureText" Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"/>
+            </StackPanel>
+            <Button local:Loc.Key="Retry" Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Center"
+                    Margin="16,0,0,0" Grid.Column="1" Click="RetryBroker_Click"/>
+          </Grid>
+        </Border>
+
+        <TextBlock local:Loc.Key="GENERAL" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
+        <Border Style="{StaticResource CardStyle}" Padding="0">
+          <StackPanel>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Launch at login" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Keep Ask Key ready for Agent requests after you sign in."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ToggleSwitch x:Name="LaunchToggle" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Toggled="Launch_Toggled"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Global shortcut" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Open Ask Key from any application." Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ComboBox x:Name="HotkeyCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+                        DisplayMemberPath="Label" SelectionChanged="Hotkey_SelectionChanged"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Timed read allowance" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Default window for “Allow for…” on read requests."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ComboBox x:Name="AllowanceCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+                        DisplayMemberPath="Label" SelectionChanged="Allowance_SelectionChanged"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Appearance" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Match Windows or choose a fixed light or dark theme."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ComboBox x:Name="AppearanceCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+                        SelectionChanged="Appearance_SelectionChanged">
+                <ComboBoxItem local:Loc.Key="System" Tag="system"/>
+                <ComboBoxItem local:Loc.Key="Light" Tag="light"/>
+                <ComboBoxItem local:Loc.Key="Dark" Tag="dark"/>
+              </ComboBox>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Language" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Choose the language used by Ask Key."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ComboBox x:Name="LanguageCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+                        SelectionChanged="Language_SelectionChanged">
+                <ComboBoxItem local:Loc.Key="System" Tag="system"/>
+                <ComboBoxItem local:Loc.Key="Simplified Chinese" Tag="zh-Hans"/>
+                <ComboBoxItem local:Loc.Key="English" Tag="en"/>
+              </ComboBox>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <TextBlock local:Loc.Key="SECURITY" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
+        <Border Style="{StaticResource CardStyle}" Padding="0">
+          <StackPanel>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Confirm before reading a credential" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Ask for device-owner confirmation when an Agent reads a visible credential."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ToggleSwitch x:Name="ReadAuthToggle" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Toggled="ReadAuth_Toggled"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Access records" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Keep up to 90 days of allowed, denied and expired Agent requests."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <Button local:Loc.Key="Clear records" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="1"
+                      VerticalAlignment="Center" Click="ClearAccess_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Local data" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock x:Name="DataFolderText" Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <Button local:Loc.Key="Open folder" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="1"
+                      VerticalAlignment="Center" Click="OpenDataFolder_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <StackPanel>
+              <Grid Margin="16,14">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock local:Loc.Key="Erase Local Data" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                  <TextBlock local:Loc.Key="Permanently deletes all credentials, groups and records. This cannot be undone."
+                             Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+                </StackPanel>
+                <Button x:Name="EraseButton" local:Loc.Key="Erase…" Style="{StaticResource DangerButtonStyle}" Grid.Column="1"
+                        VerticalAlignment="Center" Click="Erase_Click"/>
+              </Grid>
+              <Border x:Name="EraseConfirmPanel" Style="{StaticResource InsetCardStyle}"
+                      Background="{ThemeResource WarningSoftBrush}" Margin="16,0,16,14" Visibility="Collapsed">
+                <StackPanel>
+                  <TextBlock x:Name="ErasePromptText" Style="{StaticResource SecondaryTextStyle}"/>
+                  <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBox x:Name="EraseWordBox" Style="{StaticResource FormTextBoxStyle}" Width="200"
+                             HorizontalAlignment="Left" TextChanged="EraseWord_TextChanged"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                      <Button local:Loc.Key="Cancel" Style="{StaticResource SecondaryButtonStyle}" Margin="8,0,8,0"
+                              Click="EraseCancel_Click"/>
+                      <Button x:Name="EraseConfirmButton" local:Loc.Key="Authenticate and Erase"
+                              Style="{StaticResource DangerSolidButtonStyle}" IsEnabled="False"
+                              Click="EraseConfirm_Click"/>
+                    </StackPanel>
+                  </Grid>
+                  <TextBlock x:Name="EraseFailureText" Foreground="{ThemeResource WarningBrush}" FontSize="12"
+                             TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"/>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <TextBlock local:Loc.Key="ABOUT" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
+        <Button x:Name="AboutCard" Style="{StaticResource CardButtonStyle}" HorizontalAlignment="Stretch" Click="OpenGitHub_Click"
+                local:Loc.ToolTipKey="Open the AskKey repository on GitHub">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock local:Loc.Key="Ask Key for Windows 0.1.0" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+              <TextBlock local:Loc.Key="Credentials are encrypted with Windows DPAPI. The Broker protocol is version 1; MCP supports 2024-11-05 and 2025-11-25."
+                         Style="{StaticResource SecondaryTextStyle}" Margin="0,5,0,0" TextWrapping="Wrap"/>
+              <TextBlock x:Name="AccessRecordFailureText" Foreground="{ThemeResource WarningBrush}" FontSize="12"
+                         TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="16,0,0,0">
+              <TextBlock Text="GitHub" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"
+                         VerticalAlignment="Center"/>
+              <FontIcon Glyph="&#xE8A7;" FontSize="12" Margin="5,0,0,0"
+                        Foreground="{ThemeResource AccentBrush}"/>
+            </StackPanel>
+          </Grid>
+        </Button>
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

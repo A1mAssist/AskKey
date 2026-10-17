@@ -1,5 +1,7 @@
-﻿using System.Windows;
+﻿using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using AskKey.Vault;
 
@@ -22,6 +24,8 @@ public enum ActivitySection
 
 public partial class MainWindow : Window
 {
+    private const int WmGetMinMaxInfo = 0x0024;
+    private const uint MonitorDefaultToNearest = 2;
     private readonly AppHost _host;
     private readonly CredentialsView _credentialsView;
     private readonly ActivityView _activityView;
@@ -148,7 +152,16 @@ public partial class MainWindow : Window
         };
         if (tag.Length > 0 && tag != "\u0001")
         {
-            var delete = new MenuItem { Header = Loc.T("Delete group") };
+            var delete = new MenuItem
+            {
+                Header = Loc.T("Delete group"),
+                Icon = new TextBlock
+                {
+                    Style = (Style)Application.Current.FindResource("IconGlyph"),
+                    Text = "\uE74D",
+                    FontSize = 14,
+                },
+            };
             delete.Click += (_, _) => DeleteGroup(tag);
             item.ContextMenu = new ContextMenu { Items = { delete } };
         }
@@ -241,10 +254,91 @@ public partial class MainWindow : Window
 
     private void Quit_Click(object sender, RoutedEventArgs e) => _host.Quit();
 
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Maximize_Click(object sender, RoutedEventArgs e)
+        => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (MaximizeGlyph is null || MaximizeButton is null) return;
+        var maximized = WindowState == WindowState.Maximized;
+        MaximizeGlyph.Text = maximized ? "\uE923" : "\uE922";
+        Loc.SetToolTipKey(MaximizeButton, maximized ? "Restore down" : "Maximize");
+    }
+
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         if (_allowClose) return;
         e.Cancel = true;
         Hide();
     }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WindowProc);
+    }
+
+    private static IntPtr WindowProc(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (message != WmGetMinMaxInfo) return IntPtr.Zero;
+        var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+        if (monitor == IntPtr.Zero) return IntPtr.Zero;
+        var monitorInfo = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(monitor, ref monitorInfo)) return IntPtr.Zero;
+
+        var bounds = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+        bounds.MaxPosition.X = monitorInfo.Work.Left - monitorInfo.Monitor.Left;
+        bounds.MaxPosition.Y = monitorInfo.Work.Top - monitorInfo.Monitor.Top;
+        bounds.MaxSize.X = monitorInfo.Work.Right - monitorInfo.Work.Left;
+        bounds.MaxSize.Y = monitorInfo.Work.Bottom - monitorInfo.Work.Top;
+        Marshal.StructureToPtr(bounds, lParam, false);
+        handled = true;
+        return IntPtr.Zero;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor;
+        public NativeRect Work;
+        public uint Flags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public NativePoint Reserved;
+        public NativePoint MaxSize;
+        public NativePoint MaxPosition;
+        public NativePoint MaxTrackSize;
+        public NativePoint MinTrackSize;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
 }

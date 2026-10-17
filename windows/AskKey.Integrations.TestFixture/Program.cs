@@ -60,14 +60,23 @@ static int Helper(string[] arguments)
         var input = Console.In.ReadToEnd();
         var requests = input.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         var client = "cursor";
+        var protocolVersion = "2025-11-25";
         if (requests.Length > 0)
         {
             using var document = JsonDocument.Parse(requests[0]);
-            if (document.RootElement.TryGetProperty("params", out var parameters)
-                && parameters.TryGetProperty("clientInfo", out var info)
-                && info.TryGetProperty("name", out var clientName))
+            if (document.RootElement.TryGetProperty("params", out var parameters))
             {
-                client = clientName.GetString() ?? client;
+                if (parameters.TryGetProperty("clientInfo", out var info)
+                    && info.TryGetProperty("name", out var clientName))
+                {
+                    client = clientName.GetString() ?? client;
+                }
+                if (parameters.TryGetProperty("protocolVersion", out var requested)
+                    && requested.ValueKind == JsonValueKind.String
+                    && requested.GetString() == "2024-11-05")
+                {
+                    protocolVersion = "2024-11-05";
+                }
             }
         }
         var initialize = JsonSerializer.Serialize(new
@@ -76,8 +85,8 @@ static int Helper(string[] arguments)
             id = 1,
             result = new
             {
-                protocolVersion = "2024-11-05",
-                serverInfo = new { name = "askkey", version = "0.3.1" },
+                protocolVersion,
+                serverInfo = new { name = "askkey", version = "0.1.0" },
             },
         });
         var tools = JsonSerializer.Serialize(new

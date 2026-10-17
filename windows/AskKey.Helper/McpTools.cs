@@ -10,7 +10,7 @@ namespace AskKey.Helper;
 
 internal static class McpTools
 {
-    private const string McpProtocolVersion = "2024-11-05";
+    private const string McpProtocolVersion = MCPProtocol.Current;
 
     public static JsonObject Call(
         JsonNode? id,

@@ -20,6 +20,14 @@
   <Color x:Key="SelectedSurfaceColor">#1C2638</Color>
   <Color x:Key="ToggleTrackColor">#4A5159</Color>
   <Color x:Key="ToggleThumbColor">#F4F5F7</Color>
+  <Color x:Key="TitleBarBackgroundColor">#1B1E22</Color>
+  <Color x:Key="TitleBarBorderColor">#2C3035</Color>
+  <Color x:Key="TitleBarCloseHoverColor">#C42B1C</Color>
+  <Color x:Key="ScrollThumbColor">#4A5058</Color>
+  <Color x:Key="ScrollThumbHoverColor">#727A83</Color>
+  <Color x:Key="PermissionAllowedSoftColor">#1E3A2C</Color>
+  <Color x:Key="PermissionAskSoftColor">#3A2F1D</Color>
+  <Color x:Key="PermissionAskTextColor">#F2C46D</Color>
 
   <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource WindowBackgroundColor}"/>
   <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource SidebarBackgroundColor}"/>
@@ -39,4 +47,12 @@
   <SolidColorBrush x:Key="SelectedSurface" Color="{StaticResource SelectedSurfaceColor}"/>
   <SolidColorBrush x:Key="ToggleTrack" Color="{StaticResource ToggleTrackColor}"/>
   <SolidColorBrush x:Key="ToggleThumb" Color="{StaticResource ToggleThumbColor}"/>
+  <SolidColorBrush x:Key="TitleBarBackground" Color="{StaticResource TitleBarBackgroundColor}"/>
+  <SolidColorBrush x:Key="TitleBarBorder" Color="{StaticResource TitleBarBorderColor}"/>
+  <SolidColorBrush x:Key="TitleBarCloseHover" Color="{StaticResource TitleBarCloseHoverColor}"/>
+  <SolidColorBrush x:Key="ScrollThumb" Color="{StaticResource ScrollThumbColor}"/>
+  <SolidColorBrush x:Key="ScrollThumbHover" Color="{StaticResource ScrollThumbHoverColor}"/>
+  <SolidColorBrush x:Key="PermissionAllowedSoft" Color="{StaticResource PermissionAllowedSoftColor}"/>
+  <SolidColorBrush x:Key="PermissionAskSoft" Color="{StaticResource PermissionAskSoftColor}"/>
+  <SolidColorBrush x:Key="PermissionAskText" Color="{StaticResource PermissionAskTextColor}"/>
 </ResourceDictionary>
