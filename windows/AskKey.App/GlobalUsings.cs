@@ -1,0 +1,17 @@
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Threading;
+global using System.Threading.Tasks;
+global using Application = global::System.Windows.Application;
+global using Binding = global::System.Windows.Data.Binding;
+global using Brush = global::System.Windows.Media.Brush;
+global using OpenFileDialog = global::Microsoft.Win32.OpenFileDialog;
+global using MessageBox = global::System.Windows.MessageBox;
+global using UserControl = global::System.Windows.Controls.UserControl;
+global using Button = global::System.Windows.Controls.Button;
+global using ComboBox = global::System.Windows.Controls.ComboBox;
+global using CheckBox = global::System.Windows.Controls.CheckBox;
+global using TextBox = global::System.Windows.Controls.TextBox;
+global using Clipboard = global::System.Windows.Clipboard;

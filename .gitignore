@@ -1,0 +1,29 @@
+# Windows build and local artifacts
+windows/**/bin/
+windows/**/obj/
+windows/**/.vs/
+windows/**/TestResults/
+windows/**/publish/
+windows/**/artifacts/
+windows/_crashes/
+windows/_probe/
+windows/_probe_catalog/
+windows/_probe_ns/
+windows/_probe_run/
+windows/_*.txt
+windows/_*.png
+
+# Local settings and generated files
+**/launchSettings.json
+**/*.user
+**/*.suo
+**/*.db-shm
+**/*.db-wal
+**/node_modules/
+**/__pycache__/
+**/.DS_Store
+
+# Preserve the original macOS checkout metadata locally
+.askkey-upstream-git/
+AskKey/.git-upstream/
+AskKey/.git/

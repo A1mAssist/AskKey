@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>AskKey</AssemblyName>
+    <RootNamespace>AskKeyApp</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AskKey.Broker\AskKey.Broker.csproj" />
+    <ProjectReference Include="..\AskKey.Helper\AskKey.Helper.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\AskKey.Integrations\AskKey.Integrations.csproj" />
+    <ProjectReference Include="..\AskKey.System\AskKey.System.csproj" />
+    <ProjectReference Include="..\AskKey.Vault\AskKey.Vault.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AskKeyApp.Tests" />
+  </ItemGroup>
+
+  <Target Name="CopyHelperToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <HelperOutput Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(TargetFramework)\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HelperOutput)" DestinationFolder="$(OutDir)Helpers\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyHelperToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <HelperPublish Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(TargetFramework)\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HelperPublish)" DestinationFolder="$(PublishDir)Helpers\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

@@ -1,0 +1,266 @@
+using System.Security.Cryptography.X509Certificates;
+
+namespace AskKey.Broker.Runtime;
+
+public enum OfficialInstallDecisionKind
+{
+    Accepted,
+    DevelopmentAccepted,
+    RelocatedOrRenamed,
+    HelperMismatch,
+}
+
+public sealed class OfficialInstallDecision
+{
+    public OfficialInstallDecisionKind Kind { get; }
+    public string? HelperPath { get; }
+
+    private OfficialInstallDecision(OfficialInstallDecisionKind kind, string? helperPath)
+    {
+        Kind = kind;
+        HelperPath = helperPath;
+    }
+
+    public static OfficialInstallDecision Accepted(string helperPath)
+        => new(OfficialInstallDecisionKind.Accepted, helperPath);
+
+    public static OfficialInstallDecision DevelopmentAccepted(string helperPath)
+        => new(OfficialInstallDecisionKind.DevelopmentAccepted, helperPath);
+
+    public static OfficialInstallDecision RelocatedOrRenamed { get; }
+        = new(OfficialInstallDecisionKind.RelocatedOrRenamed, null);
+
+    public static OfficialInstallDecision HelperMismatch { get; }
+        = new(OfficialInstallDecisionKind.HelperMismatch, null);
+}
+
+public sealed class OfficialInstallTopologyException : Exception
+{
+    public OfficialInstallTopologyException(OfficialInstallDecision decision)
+        : base(OfficialInstallTopology.NextStep(decision)) => Decision = decision;
+
+    public OfficialInstallDecision Decision { get; }
+}
+
+/// <summary>
+/// Windows counterpart of the macOS bundle/codesign topology: the official install
+/// lives under %LOCALAPPDATA%\AskKey and the helper must sit beside its host.
+/// </summary>
+public static class OfficialInstallTopology
+{
+    public const string HelperFileName = "askkey.exe";
+    public const string HostFileName = "AskKey.exe";
+    // NTFS treats AskKey.exe and askkey.exe as the same name, so the helper lives
+    // in a subdirectory while keeping the command name used by MCP configuration.
+    public const string HelperDirectoryName = "Helpers";
+    public const string HelperRelativePath = HelperDirectoryName + "\\" + HelperFileName;
+
+    public static string CanonicalAppPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AskKey");
+
+    public static string CanonicalHelperPath => Path.Combine(
+        CanonicalAppPath, HelperDirectoryName, HelperFileName);
+
+    public static string CanonicalHostPath => Path.Combine(CanonicalAppPath, HostFileName);
+
+    public static OfficialInstallDecision Decide(
+        string appPath,
+        string? helperPath = null,
+        bool isDevelopmentBuild = false,
+        Func<string, string>? resolvePath = null)
+    {
+        resolvePath ??= path => Path.GetFullPath(path);
+        var normalizedApp = Normalize(appPath);
+        var expectedHelper = Normalize(Path.Combine(normalizedApp, HelperRelativePath));
+        var helper = Normalize(helperPath ?? expectedHelper);
+        if (!string.Equals(helper, expectedHelper, StringComparison.OrdinalIgnoreCase))
+        {
+            return OfficialInstallDecision.HelperMismatch;
+        }
+        if (isDevelopmentBuild)
+        {
+            return OfficialInstallDecision.DevelopmentAccepted(helper);
+        }
+        var canonical = Normalize(CanonicalAppPath);
+        var resolvedApp = Normalize(resolvePath(normalizedApp));
+        if (!string.Equals(normalizedApp, canonical, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(resolvedApp, canonical, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(Path.GetFileName(normalizedApp), "AskKey", StringComparison.OrdinalIgnoreCase))
+        {
+            return OfficialInstallDecision.RelocatedOrRenamed;
+        }
+        return OfficialInstallDecision.Accepted(helper);
+    }
+
+    public static bool AllowsOfficialRuntime(OfficialInstallDecision decision)
+        => decision.Kind is OfficialInstallDecisionKind.Accepted
+            or OfficialInstallDecisionKind.DevelopmentAccepted;
+
+    public static string NextStep(OfficialInstallDecision decision) => decision.Kind switch
+    {
+        OfficialInstallDecisionKind.Accepted or OfficialInstallDecisionKind.DevelopmentAccepted => string.Empty,
+        OfficialInstallDecisionKind.RelocatedOrRenamed =>
+            $"Ask Key must stay at {CanonicalAppPath}. Reinstall the official package, then open that copy.",
+        _ => "This Ask Key helper does not match the official app. Reinstall the official package, then try again.",
+    };
+
+    public static string ResolvedHelperPath(
+        string appPath,
+        string? helperPath = null,
+        bool isDevelopmentBuild = false,
+        Func<string, string>? resolvePath = null)
+    {
+        var decision = Decide(appPath, helperPath, isDevelopmentBuild, resolvePath);
+        return decision.HelperPath
+            ?? throw new OfficialInstallTopologyException(decision);
+    }
+
+    private static string Normalize(string path)
+        => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+}
+
+/// <summary>Authenticode facts for one executable. Unsigned files yield IsValid=false.</summary>
+public sealed class HelperHostSigningFacts
+{
+    public string? Publisher { get; init; }
+    public string? Thumbprint { get; init; }
+    public bool IsValid { get; init; }
+
+    public static HelperHostSigningFacts Unsigned { get; } = new();
+}
+
+public enum HelperHostSignatureKind
+{
+    Signed,
+    Unsigned,
+}
+
+public static class HelperHostSignatureTrust
+{
+    public static HelperHostSignatureKind Classify(HelperHostSigningFacts facts)
+        => facts.IsValid && !string.IsNullOrWhiteSpace(facts.Publisher)
+            ? HelperHostSignatureKind.Signed
+            : HelperHostSignatureKind.Unsigned;
+
+    /// <summary>
+    /// Production requires both binaries to carry the same publisher identity.
+    /// Development and test builds skip signature trust, matching the macOS ad-hoc
+    /// development gate.
+    /// </summary>
+    public static bool Allows(
+        HelperHostSigningFacts helper,
+        HelperHostSigningFacts host,
+        bool isDevelopmentBuild)
+    {
+        if (isDevelopmentBuild) return true;
+        if (Classify(helper) != HelperHostSignatureKind.Signed
+            || Classify(host) != HelperHostSignatureKind.Signed)
+        {
+            return false;
+        }
+        return string.Equals(
+            helper.Publisher!.Trim(), host.Publisher!.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+public sealed class HelperHostApplicationException : Exception
+{
+    public HelperHostApplicationException(string message) : base(message) { }
+
+    public static HelperHostApplicationException Unavailable { get; }
+        = new("Ask Key could not open the host application.");
+
+    public static HelperHostApplicationException Failed { get; }
+        = new("Ask Key could not open the host application.");
+}
+
+/// <summary>
+/// Resolves the host executable beside this helper, then opens it only after the
+/// install-topology and publisher gates pass.
+/// </summary>
+public static class HelperHostApplication
+{
+    /// <summary>Structural host path: Helpers\askkey.exe belongs to AskKey.exe in its parent.</summary>
+    public static string? HostPath(string helperPath)
+    {
+        var resolved = Path.GetFullPath(helperPath);
+        var directory = Path.GetDirectoryName(resolved);
+        if (directory is null) return null;
+        // Structural, like Swift's bundle lookup: a missing host fails at the
+        // topology gate or opener, never by silently choosing another path.
+        return Path.Combine(Path.GetDirectoryName(directory) ?? directory,
+            OfficialInstallTopology.HostFileName);
+    }
+
+    public static void OpenHost(
+        string helperPath,
+        bool isDevelopmentBuild,
+        Action<string>? opener = null,
+        Func<string, HelperHostSigningFacts>? signingFacts = null,
+        Func<string, string>? resolvePath = null)
+    {
+        opener ??= Open;
+        signingFacts ??= SigningFacts;
+        resolvePath ??= path => Path.GetFullPath(path);
+
+        var host = HostPath(helperPath)
+            ?? throw new HelperHostApplicationException(
+                OfficialInstallTopology.NextStep(OfficialInstallDecision.HelperMismatch));
+        var directory = Path.GetDirectoryName(Path.GetFullPath(host))!;
+        var decision = OfficialInstallTopology.Decide(
+            directory, helperPath, isDevelopmentBuild, resolvePath);
+        if (!OfficialInstallTopology.AllowsOfficialRuntime(decision))
+        {
+            throw new HelperHostApplicationException(OfficialInstallTopology.NextStep(decision));
+        }
+        if (!HelperHostSignatureTrust.Allows(
+                signingFacts(helperPath), signingFacts(host), isDevelopmentBuild))
+        {
+            throw new HelperHostApplicationException(
+                OfficialInstallTopology.NextStep(OfficialInstallDecision.HelperMismatch));
+        }
+        opener(host);
+    }
+
+    /// <summary>
+    /// Publisher facts from the Authenticode signer certificate. Dev/test builds
+    /// skip this check; production treats a missing signer as unsigned.
+    /// </summary>
+    public static HelperHostSigningFacts SigningFacts(string path)
+    {
+        try
+        {
+            // WinVerifyTrust-equivalent: the signer certificate embedded in the
+            // PE image. An unsigned file yields no certificate.
+            using var certificate = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
+            var publisher = certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
+            return new HelperHostSigningFacts
+            {
+                Publisher = string.IsNullOrWhiteSpace(publisher) ? null : publisher,
+                Thumbprint = certificate.Thumbprint,
+                IsValid = !string.IsNullOrWhiteSpace(publisher),
+            };
+        }
+        catch (Exception)
+        {
+            return HelperHostSigningFacts.Unsigned;
+        }
+    }
+
+    private static void Open(string hostPath)
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = hostPath,
+                UseShellExecute = true,
+            });
+            if (process is null) throw HelperHostApplicationException.Failed;
+        }
+        catch (global::System.ComponentModel.Win32Exception)
+        {
+            throw HelperHostApplicationException.Failed;
+        }
+    }
+}

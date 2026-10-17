@@ -1,0 +1,14 @@
+<Solution>
+  <Project Path="AskKey.App/AskKey.App.csproj" />
+  <Project Path="AskKey.Broker.Tests/AskKey.Broker.Tests.csproj" />
+  <Project Path="AskKey.Broker/AskKey.Broker.csproj" />
+  <Project Path="AskKey.Integrations.TestFixture/AskKey.Integrations.TestFixture.csproj" />
+  <Project Path="AskKey.Integrations.Tests/AskKey.Integrations.Tests.csproj" />
+  <Project Path="AskKey.Helper.Tests/AskKey.Helper.Tests.csproj" />
+  <Project Path="AskKey.Helper/AskKey.Helper.csproj" />
+  <Project Path="AskKey.Integrations/AskKey.Integrations.csproj" />
+  <Project Path="AskKey.System.Tests/AskKey.System.Tests.csproj" />
+  <Project Path="AskKey.System/AskKey.System.csproj" />
+  <Project Path="AskKey.Vault.Tests/AskKey.Vault.Tests.csproj" />
+  <Project Path="AskKey.Vault/AskKey.Vault.csproj" />
+</Solution>

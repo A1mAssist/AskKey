@@ -1,0 +1,104 @@
+﻿<Window x:Class="AskKeyApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:AskKeyApp"
+        loc:Loc.Key="Ask Key"
+        Width="1120" Height="740" MinWidth="940" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackground}"
+        FontFamily="{StaticResource UiFont}"
+        Foreground="{DynamicResource Text}"
+        Closing="Window_Closing">
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="222"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}">
+      <DockPanel Margin="16,18,14,14">
+        <StackPanel DockPanel.Dock="Top">
+          <StackPanel Orientation="Horizontal">
+            <Border Width="34" Height="34" CornerRadius="9" Background="{DynamicResource Accent}">
+              <TextBlock Text="K" Foreground="White" FontFamily="{StaticResource DisplayFont}"
+                         FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+              <TextBlock loc:Loc.Key="Ask Key" FontFamily="{StaticResource DisplayFont}" FontSize="17"
+                         FontWeight="SemiBold"/>
+              <TextBlock loc:Loc.Key="Credentials for Agents" Style="{StaticResource CaptionText}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <Border x:Name="AgentStatusPill" Style="{StaticResource InsetCard}" Margin="0,18,0,12"
+                  Padding="10,8" Cursor="Hand" MouseLeftButtonUp="AgentStatusPill_Click">
+            <StackPanel Orientation="Horizontal">
+              <Ellipse x:Name="AgentStatusDot" Width="7" Height="7" Fill="{DynamicResource Success}"
+                       VerticalAlignment="Center"/>
+              <TextBlock x:Name="AgentStatusText" loc:Loc.Key="Agent access running" Style="{StaticResource SecondaryText}"
+                         Margin="8,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+
+          <ListBox x:Name="NavList" Style="{StaticResource NavList}" SelectionChanged="NavList_SelectionChanged">
+            <ListBoxItem Style="{StaticResource NavItem}" Tag="Credentials">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE8D7;" Style="{StaticResource IconGlyph}" FontSize="14"/>
+                <TextBlock loc:Loc.Key="Credentials" Margin="9,0,0,0" FontSize="13"/>
+              </StackPanel>
+            </ListBoxItem>
+            <ListBoxItem Style="{StaticResource NavItem}" Tag="Activity">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xE7BA;" Style="{StaticResource IconGlyph}" FontSize="14"/>
+                  <TextBlock loc:Loc.Key="Activity" Margin="9,0,0,0" FontSize="13"/>
+                </StackPanel>
+                <Border x:Name="PendingBadge" Grid.Column="1" Style="{StaticResource Badge}"
+                        Visibility="Collapsed" VerticalAlignment="Center">
+                  <TextBlock x:Name="PendingBadgeText" Text="0" Foreground="White" FontSize="10"
+                             FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+              </Grid>
+            </ListBoxItem>
+            <ListBoxItem Style="{StaticResource NavItem}" Tag="AgentAccess">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE8EA;" Style="{StaticResource IconGlyph}" FontSize="14"/>
+                <TextBlock loc:Loc.Key="Agent access" Margin="9,0,0,0" FontSize="13"/>
+              </StackPanel>
+            </ListBoxItem>
+            <ListBoxItem Style="{StaticResource NavItem}" Tag="Settings">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE713;" Style="{StaticResource IconGlyph}" FontSize="14"/>
+                <TextBlock loc:Loc.Key="Settings" Margin="9,0,0,0" FontSize="13"/>
+              </StackPanel>
+            </ListBoxItem>
+          </ListBox>
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Bottom">
+          <Border Style="{StaticResource ThinSeparator}" Margin="2,12,2,10"/>
+          <Button x:Name="QuitButton" loc:Loc.Key="Quit Ask Key" Style="{StaticResource GhostButton}"
+                  HorizontalAlignment="Left" Foreground="{DynamicResource TextTertiary}"
+                  Click="Quit_Click"/>
+          <TextBlock loc:Loc.Key="v0.3.1 · Windows" Style="{StaticResource CaptionText}" Margin="6,2,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+          <StackPanel>
+            <Grid Margin="6,0,0,6">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock loc:Loc.Key="GROUPS" Style="{StaticResource SectionLabel}"/>
+              <Button Grid.Column="1" Content="+" Style="{StaticResource GhostButton}" Padding="4,0"
+                      FontSize="16" Click="NewGroup_Click" loc:Loc.ToolTipKey="New group"/>
+            </Grid>
+            <ListBox x:Name="GroupList" Style="{StaticResource NavList}" SelectionChanged="GroupList_SelectionChanged"/>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <ContentControl x:Name="ContentHost" Grid.Column="1"/>
+  </Grid>
+</Window>

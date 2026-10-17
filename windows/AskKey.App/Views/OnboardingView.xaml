@@ -1,0 +1,66 @@
+﻿<UserControl x:Class="AskKeyApp.OnboardingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:AskKeyApp"
+             FontFamily="{StaticResource UiFont}">
+  <Grid Background="{DynamicResource WindowBackground}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="36,34,36,34">
+        <Border Width="54" Height="54" CornerRadius="15" Background="{DynamicResource Accent}"
+                HorizontalAlignment="Left">
+          <TextBlock Text="K" Foreground="White" FontFamily="{StaticResource DisplayFont}" FontSize="28"
+                     FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <TextBlock loc:Loc.Key="Keep credentials away from Agents until you approve" Style="{StaticResource PageTitle}"
+                   Margin="0,20,0,0"/>
+        <TextBlock loc:Loc.Key="Ask Key stores credentials locally, gives an Agent only the one it needs, and asks you before any read or write."
+                   Style="{StaticResource PageSubtitle}" Margin="0,7,0,0"/>
+
+        <Border Style="{StaticResource Card}" Margin="0,22,0,0" Padding="0">
+          <StackPanel>
+            <Grid Margin="18,16">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource AccentSoft}">
+                <TextBlock Text="1" Foreground="{DynamicResource Accent}" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                <TextBlock loc:Loc.Key="Save your first credential" Style="{StaticResource Headline}" FontSize="14"/>
+                <TextBlock loc:Loc.Key="Create a text credential, store a file, or import an .env bundle."
+                           Style="{StaticResource SecondaryText}" Margin="0,3,0,0"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                  <Button loc:Loc.Key="Create credential" Style="{StaticResource PrimaryButton}" Click="Create_Click"/>
+                  <Button loc:Loc.Key="Import file" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"
+                          Click="Import_Click"/>
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+            <Border Style="{StaticResource ThinSeparator}"/>
+            <Grid Margin="18,16">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceMuted}">
+                <TextBlock Text="2" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                <TextBlock loc:Loc.Key="Connect an Agent" Style="{StaticResource Headline}" FontSize="14"/>
+                <TextBlock loc:Loc.Key="Point an MCP client at Helpers\askkey.exe mcp. The helper only reaches this App over a local named pipe."
+                           Style="{StaticResource SecondaryText}" Margin="0,3,0,0"/>
+                <Button loc:Loc.Key="Open Agent access" Style="{StaticResource SecondaryButton}" Margin="0,10,0,0"
+                        HorizontalAlignment="Left" Click="Connect_Click"/>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <CheckBox x:Name="LaunchCheck" Style="{StaticResource ToggleSwitch}" IsChecked="True" Margin="0,18,0,0"
+                  loc:Loc.Key="Launch Ask Key at login. Agents receive no credentials while Ask Key is off."/>
+
+        <Button loc:Loc.Key="Continue to Ask Key" Style="{StaticResource PrimaryButton}" Margin="0,20,0,0"
+                HorizontalAlignment="Left" Click="Continue_Click"/>
+        <TextBlock loc:Loc.Key="Ask Key stores data under your Windows user profile. Credentials are encrypted with DPAPI."
+                   Style="{StaticResource CaptionText}" Margin="0,14,0,0"/>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
