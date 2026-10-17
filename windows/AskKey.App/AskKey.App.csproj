@@ -2,7 +2,9 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <HelperTargetFramework>net10.0-windows</HelperTargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -27,7 +29,7 @@
 
   <Target Name="CopyHelperToOutput" AfterTargets="Build">
     <ItemGroup>
-      <HelperOutput Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(TargetFramework)\**\*" />
+      <HelperOutput Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(HelperTargetFramework)\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(HelperOutput)" DestinationFolder="$(OutDir)Helpers\%(RecursiveDir)"
           SkipUnchangedFiles="true" />
@@ -35,10 +37,13 @@
 
   <Target Name="CopyHelperToPublish" AfterTargets="Publish">
     <ItemGroup>
-      <HelperPublish Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(TargetFramework)\**\*" />
+      <HelperPublish Include="$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(HelperTargetFramework)\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(HelperPublish)" DestinationFolder="$(PublishDir)Helpers\%(RecursiveDir)"
           SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
+
+
+

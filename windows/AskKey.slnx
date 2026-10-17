@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="AskKey.App/AskKey.App.csproj" />
+  <Project Path="AskKey.App.Tests/AskKey.App.Tests.csproj" />
   <Project Path="AskKey.Broker.Tests/AskKey.Broker.Tests.csproj" />
   <Project Path="AskKey.Broker/AskKey.Broker.csproj" />
   <Project Path="AskKey.Integrations.TestFixture/AskKey.Integrations.TestFixture.csproj" />

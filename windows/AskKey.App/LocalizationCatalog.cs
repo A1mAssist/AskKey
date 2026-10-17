@@ -209,6 +209,15 @@ internal static class LocalizationCatalog
         ["PRIVATE NOTES"] = "私人备注",
         ["PRIVATE NOTES (OPTIONAL)"] = "私人备注（可选）",
         ["Protected by Windows DPAPI"] = "受 Windows DPAPI 保护",
+        ["Windows Hello or a PIN is required to confirm this action. Set it up in Windows Settings > Accounts > Sign-in options."] =
+            "此操作需要 Windows Hello 或 PIN 确认。请先在 Windows 设置 > 帐户 > 登录选项 中完成设置。",
+        ["Windows Hello could not verify your identity. Try again."] = "Windows Hello 无法验证你的身份，请重试。",
+        ["Windows Hello is busy. Wait a moment and try again."] = "Windows Hello 正忙，请稍后再试。",
+        ["Windows Hello has been disabled by policy."] = "Windows Hello 已被策略禁用。",
+        ["Too many Windows Hello attempts failed. Wait and try again."] = "Windows Hello 尝试次数过多，请稍后再试。",
+        ["Ask Key could not start Windows Hello. Try again."] = "请旨无法启动 Windows Hello，请重试。",
+        ["Ask Key could not open the Windows identity prompt. Bring the Ask Key window to the foreground and try again."] =
+            "请旨无法打开 Windows 身份验证窗口。请将请旨窗口置于前台后重试。",
         ["Quit Ask Key"] = "退出请旨",
         ["Recovery"] = "恢复",
         ["Recycle Bin"] = "回收站",
