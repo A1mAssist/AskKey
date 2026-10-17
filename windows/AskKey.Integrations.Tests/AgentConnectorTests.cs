@@ -106,4 +106,28 @@ public sealed class AgentConnectorTests
             home, helper, temp.Combine("support", "client-backups", "grok-discovery"));
         Assert.True(hook.HasExpectedHook());
     }
+
+    [Fact]
+    public void ConnectionRequiresTheCredentialDiscoveryHook()
+    {
+        using var temp = new TempDirectory();
+        var home = temp.Combine("home");
+        Directory.CreateDirectory(home);
+        var helper = TestFiles.InstallFixture(temp.Combine("home", ".askkey", "askkey.exe"));
+        var grok = TestFiles.InstallFixture(temp.Combine("home", ".grok", "bin", "grok.exe"));
+        var connector = new AgentConnector(
+            home, temp.Combine("support"), helper, "unused-pipe", "ok-test",
+            grokExecutable: grok, signing: CodexHelperSigning.Development);
+
+        var connected = connector.Connect(AgentClientKind.Grok);
+        Assert.True(connected.Connected, connected.Message);
+
+        File.Delete(CommandDiscoveryClient.Grok.Configuration(
+            home, helper, temp.Combine("support", "client-backups", "grok-discovery")).HooksPath);
+        var status = connector.Check(AgentClientKind.Grok);
+
+        Assert.False(status.DiscoveryConfigured);
+        Assert.False(status.Connected);
+        Assert.Equal("The MCP server is configured, but the credential discovery hook is missing.", status.Message);
+    }
 }

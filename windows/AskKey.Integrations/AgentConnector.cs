@@ -319,7 +319,8 @@ public sealed class AgentConnector
         bool discovery,
         bool connected)
     {
-        var message = connected
+        var verified = connected && discovery;
+        var message = verified
             ? "Connected and verified."
             : !installed
                 ? "The client is not installed, or its CLI is not on PATH."
@@ -328,7 +329,7 @@ public sealed class AgentConnector
                     : configured
                         ? "The client configuration was found, but the connection is not verified."
                         : "The client is not connected to Ask Key.";
-        return new(client, installed, configured, discovery, connected, message);
+        return new(client, installed, configured, discovery, verified, message);
     }
 
     private AgentConnectionStatus Failed(AgentClientKind client, Exception error)
