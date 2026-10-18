@@ -16,6 +16,12 @@ public static class ComboBoxPlacement
     public static readonly DependencyProperty OpenBelowProperty = DependencyProperty.RegisterAttached(
         "OpenBelow", typeof(bool), typeof(ComboBoxPlacement), new PropertyMetadata(false, OnOpenBelowChanged));
 
+    private const int DwmWindowCornerPreference = 33;
+    private const int DwmWindowCornerRound = 2;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+
     private static readonly ConditionalWeakTable<ComboBox, PendingAdjustment> Pending = new();
 
     private sealed class PendingAdjustment
@@ -63,12 +69,12 @@ public static class ComboBoxPlacement
         if (FindPopup(combo) is not { IsOpen: true } popup || popup.Child is not FrameworkElement child) return;
         if (child.ActualHeight <= 0) return;
 
-        RestoreClosedContent(combo);
-
         var scale = combo.XamlRoot.RasterizationScale;
         var host = Win32Interop.GetWindowFromWindowId(combo.XamlRoot.ContentIslandEnvironment.AppWindowId);
         var popupWindow = FindPopupWindow(host);
         if (popupWindow == IntPtr.Zero) return;
+
+        RoundPopupWindow(popupWindow, scale);
 
         var origin = default(POINT);
         if (!ClientToScreen(host, ref origin) || !GetWindowRect(popupWindow, out var popupRect)) return;
@@ -80,8 +86,13 @@ public static class ComboBoxPlacement
         if (!ClientToScreen(host, ref clientBottom)) return;
         if (desiredTop + child.ActualHeight * scale <= clientBottom.Y - 8 * scale)
         {
-            var delta = (desiredTop - popupRect.Top) / scale;
-            if (Math.Abs(delta) > 0.5) popup.VerticalOffset += delta;
+            // Moving Popup.VerticalOffset breaks the split-open animation and blanks the selected label.
+            var delta = (int)Math.Round(desiredTop - popupRect.Top);
+            if (Math.Abs(delta) >= 1)
+            {
+                SetWindowPos(popupWindow, IntPtr.Zero, popupRect.Left, popupRect.Top + delta, 0, 0,
+                    SwpNoSize | SwpNoZOrder | SwpNoActivate);
+            }
         }
 
         RoundWhenSettled(popupWindow, scale);
@@ -91,30 +102,6 @@ public static class ComboBoxPlacement
     {
         await Task.Delay(200);
         if (IsWindowVisible(window)) RoundPopupWindow(window, scale);
-    }
-
-    private static void RestoreClosedContent(ComboBox combo)
-    {
-        if (combo.IsEditable) return;
-        if (FindNamedDescendant(combo, "ContentPresenter") is not ContentPresenter { Content: TextBlock text }) return;
-
-        var label = combo.SelectionBoxItem as string;
-        if (string.IsNullOrEmpty(label) && combo.SelectedItem is ComboBoxItem { Content: string itemLabel }) label = itemLabel;
-        if (string.IsNullOrEmpty(label)) return;
-        text.Text = label;
-        text.Opacity = 1;
-    }
-
-    private static FrameworkElement? FindNamedDescendant(DependencyObject root, string name)
-    {
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var index = 0; index < count; index++)
-        {
-            var child = VisualTreeHelper.GetChild(root, index);
-            if (child is FrameworkElement element && element.Name == name) return element;
-            if (FindNamedDescendant(child, name) is { } nested) return nested;
-        }
-        return null;
     }
 
     private static Popup? FindPopup(ComboBox combo)
@@ -151,7 +138,10 @@ public static class ComboBoxPlacement
 
     private static void RoundPopupWindow(IntPtr window, double scale)
     {
-        // WinUI's popup window is rectangular even when its border is rounded.
+        var corner = DwmWindowCornerRound;
+        if (DwmSetWindowAttribute(window, DwmWindowCornerPreference, ref corner, sizeof(int)) == 0) return;
+
+        // Windows 10 has no DWM corner preference; clip the composition surface there.
         if (!GetWindowRect(window, out var rect)) return;
         var radius = Math.Max(1, (int)Math.Round(8 * scale));
         var region = CreateRoundRectRgn(0, 0, rect.Right - rect.Left + 1, rect.Bottom - rect.Top + 1, radius * 2, radius * 2);
@@ -191,11 +181,19 @@ public static class ComboBoxPlacement
     [DllImport("user32.dll")]
     private static extern IntPtr GetWindow(IntPtr hWnd, uint command);
 
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
     [DllImport("gdi32.dll")]
     private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
 
     [DllImport("user32.dll")]
     private static extern int SetWindowRgn(IntPtr hWnd, IntPtr region, bool redraw);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter,
+        int x, int y, int width, int height, uint flags);
 
     [DllImport("user32.dll")]
     private static extern bool ClientToScreen(IntPtr hWnd, ref POINT point);
