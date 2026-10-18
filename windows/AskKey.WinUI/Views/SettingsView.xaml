@@ -33,15 +33,15 @@
         <TextBlock local:Loc.Key="GENERAL" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
         <Border Style="{StaticResource CardStyle}" Padding="0">
           <StackPanel>
-            <Grid Margin="16,14">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+            <Grid Margin="16,14" HorizontalAlignment="Stretch">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <StackPanel>
                 <TextBlock local:Loc.Key="Launch at login" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
                 <TextBlock local:Loc.Key="Keep Ask Key ready for Agent requests after you sign in."
                            Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
               </StackPanel>
-              <ToggleSwitch x:Name="LaunchToggle" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
-                            Toggled="Launch_Toggled"/>
+              <ToggleButton x:Name="LaunchToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
+                            Click="Launch_Click"/>
             </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>
             <Grid Margin="16,14">
@@ -100,24 +100,28 @@
         <TextBlock local:Loc.Key="SECURITY" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
         <Border Style="{StaticResource CardStyle}" Padding="0">
           <StackPanel>
-            <Grid Margin="16,14">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+            <Grid Margin="16,14" HorizontalAlignment="Stretch">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <StackPanel>
                 <TextBlock local:Loc.Key="Confirm before reading a credential" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
                 <TextBlock local:Loc.Key="Ask for device-owner confirmation when an Agent reads a visible credential."
                            Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
               </StackPanel>
-              <ToggleSwitch x:Name="ReadAuthToggle" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
-                            Toggled="ReadAuth_Toggled"/>
+              <ToggleButton x:Name="ReadAuthToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
+                            Click="ReadAuth_Click"/>
             </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>
             <Grid Margin="16,14">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <StackPanel>
-                <TextBlock local:Loc.Key="Access records" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
-                <TextBlock local:Loc.Key="Keep up to 90 days of allowed, denied and expired Agent requests."
-                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
-              </StackPanel>
+              <Button x:Name="AccessRecordsButton" Background="Transparent" BorderThickness="0" Padding="0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"
+                      local:Loc.ToolTipKey="Access records" Click="OpenAccessRecords_Click">
+                <StackPanel>
+                  <TextBlock local:Loc.Key="Access records" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                  <TextBlock local:Loc.Key="Keep up to 90 days of allowed, denied and expired Agent requests."
+                             Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+                </StackPanel>
+              </Button>
               <Button local:Loc.Key="Clear records" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="1"
                       VerticalAlignment="Center" Click="ClearAccess_Click"/>
             </Grid>

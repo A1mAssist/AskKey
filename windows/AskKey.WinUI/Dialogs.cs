@@ -18,7 +18,7 @@ internal static class Dialogs
             Content = new TextBlock { Text = Loc.T(message), TextWrapping = TextWrapping.Wrap },
             PrimaryButtonText = Loc.T(confirmText),
             CloseButtonText = Loc.T("Cancel"),
-            DefaultButton = ContentDialogButton.Close,
+            DefaultButton = ContentDialogButton.None,
             RequestedTheme = ThemeFor(owner),
         };
         if (destructive) dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["DangerSolidButtonStyle"];

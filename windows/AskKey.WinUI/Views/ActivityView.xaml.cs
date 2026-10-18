@@ -120,7 +120,7 @@ public partial class ActivityView : UserControl
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             },
             CloseButtonText = Loc.T("Close"),
-            DefaultButton = ContentDialogButton.Close,
+            DefaultButton = ContentDialogButton.None,
             MinWidth = 420,
             RequestedTheme = RequestedTheme,
         };
@@ -175,13 +175,13 @@ public partial class ActivityView : UserControl
     private void RecycleTab_Click(object sender, RoutedEventArgs e)
     {
         _section = ActivitySection.RecycleBin;
-        EnsureManagement();
+        Refresh();
     }
 
     private void RecordsTab_Click(object sender, RoutedEventArgs e)
     {
         _section = ActivitySection.AccessRecords;
-        EnsureManagement();
+        Refresh();
     }
 
     private void EnsureManagement()

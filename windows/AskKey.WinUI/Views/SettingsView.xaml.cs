@@ -29,21 +29,20 @@ public partial class SettingsView : UserControl
         {
             RefreshChoices();
             var preferences = _host.Preferences;
-            LaunchToggle.OnContent = Loc.T("On");
-            LaunchToggle.OffContent = Loc.T("Off");
-            LaunchToggle.IsOn = preferences.LaunchAtLogin;
+            LaunchToggle.IsChecked = preferences.LaunchAtLogin;
+            LaunchToggle.Content = Loc.T(preferences.LaunchAtLogin ? "On" : "Off");
             HotkeyCombo.SelectedItem = HotkeyCombo.Items.OfType<HotkeyOption>()
                 .FirstOrDefault(option => option.Id == preferences.HotkeyShortcut);
             AllowanceCombo.SelectedItem = AllowanceCombo.Items.OfType<AllowanceOption>()
                 .FirstOrDefault(option => option.Minutes ==
                     (preferences.TimedAllowanceEnabled ? preferences.DefaultTimedAllowanceMinutes : 0))
                 ?? AllowanceCombo.Items.OfType<AllowanceOption>().First();
-            ReadAuthToggle.OnContent = Loc.T("On");
-            ReadAuthToggle.OffContent = Loc.T("Off");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AccessRecordsButton, Loc.T("Access records"));
             SelectTag(AppearanceCombo, preferences.AppearanceMode);
             SelectTag(LanguageCombo, preferences.LanguageMode);
             ErasePromptText.Text = Loc.F("Type {0} to confirm", EraseConfirmation);
-            ReadAuthToggle.IsOn = preferences.ReadApprovalAuthenticationEnabled;
+            ReadAuthToggle.IsChecked = preferences.ReadApprovalAuthenticationEnabled;
+            ReadAuthToggle.Content = Loc.T(preferences.ReadApprovalAuthenticationEnabled ? "On" : "Off");
             DataFolderText.Text = VaultConfiguration.Default.LocalApplicationDataDirectory;
             EraseConfirmPanel.Visibility = Visibility.Collapsed;
             EraseWordBox.Text = "";
@@ -70,10 +69,11 @@ public partial class SettingsView : UserControl
         }
     }
 
-    private void Launch_Toggled(object sender, RoutedEventArgs e)
+    private void Launch_Click(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
-        var enabled = LaunchToggle.IsOn;
+        var enabled = LaunchToggle.IsChecked == true;
+        LaunchToggle.Content = Loc.T(enabled ? "On" : "Off");
         _host.Preferences.LaunchAtLogin = enabled;
         _host.Preferences.Save();
         try { StartupRegistration.Apply(enabled); }
@@ -133,10 +133,11 @@ public partial class SettingsView : UserControl
         combo.SelectedItem = selected;
     }
 
-    private async void ReadAuth_Toggled(object sender, RoutedEventArgs e)
+    private async void ReadAuth_Click(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
-        var enabled = ReadAuthToggle.IsOn;
+        var enabled = ReadAuthToggle.IsChecked == true;
+        ReadAuthToggle.Content = Loc.T(enabled ? "On" : "Off");
         if (!enabled)
         {
             var warning = Loc.T("Turning this off lets one click release Agent read requests without confirming it is you. Credential changes still require authentication.");
@@ -144,14 +145,16 @@ public partial class SettingsView : UserControl
                     warning, destructive: true))
             {
                 _loading = true;
-                ReadAuthToggle.IsOn = true;
+                ReadAuthToggle.IsChecked = true;
+                ReadAuthToggle.Content = Loc.T("On");
                 _loading = false;
                 return;
             }
             if (!_host.ConfirmManagement("Disable system authentication for read approvals"))
             {
                 _loading = true;
-                ReadAuthToggle.IsOn = true;
+                ReadAuthToggle.IsChecked = true;
+                ReadAuthToggle.Content = Loc.T("On");
                 _loading = false;
                 return;
             }
@@ -159,6 +162,11 @@ public partial class SettingsView : UserControl
         _host.Preferences.ReadApprovalAuthenticationEnabled = enabled;
         _host.Preferences.Save();
         _host.Vault.ApprovalRequests.SetReadAuthenticationEnabled(enabled);
+    }
+
+    private void OpenAccessRecords_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.CurrentWindow is MainWindow window) window.ShowActivity(ActivitySection.AccessRecords);
     }
 
     private async void ClearAccess_Click(object sender, RoutedEventArgs e)

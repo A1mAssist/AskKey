@@ -53,7 +53,8 @@
 
   <Target Name="CopyHelperToOutput" AfterTargets="Build">
     <PropertyGroup>
-      <HelperOutputRoot>$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\net10.0-windows\</HelperOutputRoot>
+      <HelperOutputRoot>$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Platform)\$(Configuration)\net10.0-windows\</HelperOutputRoot>
+      <HelperOutputRoot Condition="!Exists('$(HelperOutputRoot)')">$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\net10.0-windows\</HelperOutputRoot>
       <HelperOutputRoot Condition="'$(RuntimeIdentifier)' != ''">$(HelperOutputRoot)$(RuntimeIdentifier)\</HelperOutputRoot>
     </PropertyGroup>
     <ItemGroup>

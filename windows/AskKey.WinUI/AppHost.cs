@@ -167,8 +167,8 @@ public sealed class AppHost : IDisposable
         try
         {
             if (Vault.HasActiveManagementSession) return true;
-            _ = AuthenticateAndBeginManagement(reason);
-            return true;
+            AuthenticateAndBeginManagement(reason);
+            return Vault.HasActiveManagementSession;
         }
         catch (Exception error)
         {

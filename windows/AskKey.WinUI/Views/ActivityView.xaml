@@ -72,7 +72,13 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <StackPanel x:Name="PendingEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,80,0,0">
-              <TextBlock local:Loc.Key="No pending requests" Style="{StaticResource HeadlineStyle}" FontSize="16" HorizontalAlignment="Center"/>
+              <Border Width="48" Height="48" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}"
+                      HorizontalAlignment="Center">
+                <TextBlock Text="&#xE823;" Style="{StaticResource IconGlyphStyle}" FontSize="22"
+                           Foreground="{ThemeResource AccentBrush}"/>
+              </Border>
+              <TextBlock local:Loc.Key="No pending requests" Style="{StaticResource HeadlineStyle}" FontSize="16"
+                         HorizontalAlignment="Center" Margin="0,14,0,0"/>
               <TextBlock local:Loc.Key="New requests open a confirmation and remain here if deferred."
                          Style="{StaticResource SecondaryTextStyle}" TextAlignment="Center" Margin="0,6,0,0"/>
             </StackPanel>
@@ -88,8 +94,10 @@
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                       <StackPanel>
-                        <TextBlock Text="{Binding Name}" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
-                        <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0">
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource HeadlineStyle}" FontSize="14"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap">
                           <Run local:Loc.Key="Deleted "/><Run Text="{Binding DeletedAt, Converter={StaticResource Timestamp}}"/>
                           <Run local:Loc.Key=" · restored credentials become available again immediately."/>
                         </TextBlock>
@@ -106,7 +114,13 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <StackPanel x:Name="RecycleEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,80,0,0">
-              <TextBlock local:Loc.Key="Recycle Bin is empty" Style="{StaticResource HeadlineStyle}" FontSize="16" HorizontalAlignment="Center"/>
+              <Border Width="48" Height="48" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}"
+                      HorizontalAlignment="Center">
+                <TextBlock Text="&#xE74D;" Style="{StaticResource IconGlyphStyle}" FontSize="22"
+                           Foreground="{ThemeResource AccentBrush}"/>
+              </Border>
+              <TextBlock local:Loc.Key="Recycle Bin is empty" Style="{StaticResource HeadlineStyle}" FontSize="16"
+                         HorizontalAlignment="Center" Margin="0,14,0,0"/>
               <TextBlock local:Loc.Key="Deleted credentials stay here for 30 days." Style="{StaticResource SecondaryTextStyle}"
                          TextAlignment="Center" Margin="0,6,0,0"/>
             </StackPanel>
@@ -139,7 +153,13 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <StackPanel x:Name="RecordsEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,80,0,0">
-              <TextBlock local:Loc.Key="No access records yet" Style="{StaticResource HeadlineStyle}" FontSize="16" HorizontalAlignment="Center"/>
+              <Border Width="48" Height="48" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}"
+                      HorizontalAlignment="Center">
+                <TextBlock Text="&#xE81C;" Style="{StaticResource IconGlyphStyle}" FontSize="22"
+                           Foreground="{ThemeResource AccentBrush}"/>
+              </Border>
+              <TextBlock local:Loc.Key="No access records yet" Style="{StaticResource HeadlineStyle}" FontSize="16"
+                         HorizontalAlignment="Center" Margin="0,14,0,0"/>
               <TextBlock local:Loc.Key="Allowed, denied and expired Agent requests appear here."
                          Style="{StaticResource SecondaryTextStyle}" TextAlignment="Center" Margin="0,6,0,0"/>
             </StackPanel>
@@ -148,7 +168,13 @@
 
         <Border x:Name="LockedPanel" Background="{ThemeResource WindowBackgroundBrush}" Visibility="Collapsed">
           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="340">
-            <TextBlock local:Loc.Key="Unlock Ask Key" Style="{StaticResource PageTitleStyle}" FontSize="20" HorizontalAlignment="Center"/>
+            <Border Width="52" Height="52" CornerRadius="8" Background="{ThemeResource AccentSoftBrush}"
+                    HorizontalAlignment="Center">
+              <TextBlock Text="&#xE72E;" Style="{StaticResource IconGlyphStyle}" FontSize="22"
+                         Foreground="{ThemeResource AccentBrush}"/>
+            </Border>
+            <TextBlock local:Loc.Key="Unlock Ask Key" Style="{StaticResource PageTitleStyle}" FontSize="21"
+                       HorizontalAlignment="Center" Margin="0,16,0,0"/>
             <TextBlock local:Loc.Key="Activity history and the Recycle Bin are protected by device-owner confirmation."
                        Style="{StaticResource SecondaryTextStyle}" TextAlignment="Center" Margin="0,6,0,0"/>
             <Button local:Loc.Key="Unlock management" Style="{StaticResource PrimaryButtonStyle}" Margin="0,16,0,0"
