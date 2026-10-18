@@ -22,7 +22,6 @@ public sealed partial class TrayMenuWindow : Window
     private readonly IntPtr _windowHandle;
     private bool _hostReady;
     private bool _showPending;
-    private bool _menuOpen;
     private bool _closing;
     private int _pendingCount;
     private bool _paused;
@@ -34,7 +33,6 @@ public sealed partial class TrayMenuWindow : Window
         ApplyLanguage();
         ApplyTheme(ThemeManager.IsDark);
         MenuAnchor.Loaded += MenuAnchorLoaded;
-        Activated += TrayMenuActivated;
         AppWindow.IsShownInSwitchers = false;
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -135,7 +133,6 @@ public sealed partial class TrayMenuWindow : Window
         if (!MenuAnchor.DispatcherQueue.TryEnqueue(() =>
             {
                 _showPending = false;
-                _menuOpen = true;
                 SetForegroundWindow(_windowHandle);
                 TrayMenuFlyout.ShowAt(MenuAnchor);
             }))
@@ -148,7 +145,6 @@ public sealed partial class TrayMenuWindow : Window
     public void CloseMenuHost()
     {
         _closing = true;
-        _menuOpen = false;
         TrayMenuFlyout.Hide();
         Close();
     }
@@ -203,19 +199,11 @@ public sealed partial class TrayMenuWindow : Window
     private void TrayMenuClosed(object sender, object e)
     {
         if (_closing) return;
-        _menuOpen = false;
         AppWindow.Hide();
-    }
-
-    private void TrayMenuActivated(object sender, WindowActivatedEventArgs args)
-    {
-        if (args.WindowActivationState == WindowActivationState.Deactivated && _menuOpen)
-            DismissMenu();
     }
 
     private void DismissMenu()
     {
-        _menuOpen = false;
         TrayMenuFlyout.Hide();
         AppWindow.Hide();
     }

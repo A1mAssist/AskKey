@@ -157,7 +157,7 @@ public sealed class AppHost : IDisposable
     }
 
     public bool ConfirmManagement(string reason)
-        => _authentication.Confirm(Loc.T(reason));
+        => Vault.HasActiveManagementSession || _authentication.Confirm(Loc.T(reason));
 
     public ManagementAuthenticator ManagementAuthenticator(string reason)
         => new(_ => ConfirmManagement(reason));
