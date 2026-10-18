@@ -566,10 +566,11 @@ public sealed class AppHost : IDisposable
 
     private void StartTrayAndHotkey()
     {
-        _tray = new TrayHost(ShowMainWindow, ShowPendingRequests, ShowSettings, ToggleAgentAccess, Quit);
+        _mainWindow = new MainWindow(this);
+        _tray = new TrayHost(WindowHelpers.Handle(_mainWindow),
+            ShowMainWindow, ShowPendingRequests, ShowSettings, ToggleAgentAccess, Quit);
         _hotkey = new GlobalHotkey();
         _hotkey.Pressed += ShowMainWindow;
-        _mainWindow = new MainWindow(this);
         var option = HotkeyOption.FromId(_preferences.HotkeyShortcut);
         if (!_hotkey.Register(option) && option != HotkeyOption.Disabled)
         {
