@@ -30,6 +30,15 @@ public sealed partial class BrokerApprovalStateMachine
         }
     }
 
+    public void AddOperationStateChanged(
+        Action<string, BrokerApprovalOperationRequest?, BrokerRequestState> operationStateChanged)
+    {
+        lock (_observerLock)
+        {
+            _operationStateSubscribers += operationStateChanged;
+        }
+    }
+
     /// <summary>Test seam. Counts and notifications are delivered synchronously, so
     /// there is never an observer delivery in flight to drain.</summary>
     internal void FlushObservers()
@@ -43,7 +52,7 @@ public sealed partial class BrokerApprovalStateMachine
         Action<string, BrokerApprovalOperationRequest?, BrokerRequestState> operationStateChanged;
         lock (_observerLock)
         {
-            operationStateChanged = _operationStateChanged;
+            operationStateChanged = _operationStateSubscribers + _operationStateChanged;
         }
         foreach (var (operationId, request, state) in transitions)
         {

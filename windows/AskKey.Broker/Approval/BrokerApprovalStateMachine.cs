@@ -49,6 +49,7 @@ public sealed partial class BrokerApprovalStateMachine : IDisposable
     private Action<int> _pendingCountChanged;
     private Action<string> _timedAllowanceRevoked;
     private Action<string, BrokerApprovalOperationRequest?, BrokerRequestState> _operationStateChanged = (_, _, _) => { };
+    private Action<string, BrokerApprovalOperationRequest?, BrokerRequestState> _operationStateSubscribers = (_, _, _) => { };
     private readonly TimeSpan _requestTtl;
     private TimeSpan _defaultTimedAllowance;
     private bool _readAuthenticationEnabled;
@@ -122,7 +123,13 @@ public sealed partial class BrokerApprovalStateMachine : IDisposable
     /// <summary>Test seam; see <see cref="SuspendExpirationTimer"/>.</summary>
     internal void ResumeExpirationTimer()
     {
-        lock (_timerGate) _timerSuspended = false;
+        lock (_timerGate)
+        {
+            _timerSuspended = false;
+            // A one-shot callback may have been consumed while suspended; rebuild
+            // the arm from the current deadlines instead of waiting for a mutation.
+            lock (_lock) RescheduleExpirationLocked(_clock());
+        }
     }
 
     /// <summary>

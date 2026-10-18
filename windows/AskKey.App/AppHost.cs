@@ -388,7 +388,7 @@ public sealed class AppHost : IDisposable
                 if (_sessionLocked && _pendingCount > 0) ShowLockedApprovalReminder();
             }),
             _ => _dispatcher.BeginInvoke(RefreshPendingCount));
-        Vault.ApprovalRequests.ConfigureOperationStateChanged((_, _, _) =>
+        Vault.ApprovalRequests.AddOperationStateChanged((_, _, _) =>
             _dispatcher.BeginInvoke(() =>
             {
                 RefreshPendingCount();

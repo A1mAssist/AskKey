@@ -33,7 +33,7 @@ public sealed partial class Vault
 
     internal void ConfigureAgentTextWriteCleanup()
     {
-        ApprovalRequests.ConfigureOperationStateChanged((operationId, request, state) =>
+        ApprovalRequests.AddOperationStateChanged((operationId, request, state) =>
         {
             if (state is BrokerRequestState.Pending or BrokerRequestState.Approved) return;
             if (request?.Operation == BrokerApprovalOperation.Organize)

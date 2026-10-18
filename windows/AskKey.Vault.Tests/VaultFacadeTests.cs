@@ -352,6 +352,64 @@ public sealed class VaultFacadeTests
         Assert.Single(vault.ListRecycledTextCredentials());
     }
 
+    [Theory]
+    [InlineData(BrokerRequestState.Denied, false)]
+    [InlineData(BrokerRequestState.Cancelled, false)]
+    [InlineData(BrokerRequestState.Expired, false)]
+    [InlineData(BrokerRequestState.Denied, true)]
+    [InlineData(BrokerRequestState.Cancelled, true)]
+    [InlineData(BrokerRequestState.Expired, true)]
+    public void TerminalAgentWritesStillCleanUpAndRecordAccessAfterUiRegistration(
+        BrokerRequestState state, bool organization)
+    {
+        var now = Now;
+        using var harness = new Harness(() => now);
+        var vault = harness.Vault;
+        var uiStates = new List<BrokerRequestState>();
+        vault.ApprovalRequests.AddOperationStateChanged((_, _, terminal) => uiStates.Add(terminal));
+        vault.ApprovalRequests.ConfigureOperationStateChanged((_, _, _) => { });
+        var action = organization
+            ? AgentTextWriteAction.Organize(new[] { BrokerOrganizationOperation.CreateGroup("New") })
+            : AgentTextWriteAction.Create("Agent Token", "synthetic-secret");
+        var request = new AgentTextWriteRequest("terminal-write", action, "Synthetic client", "Test cleanup");
+        var ticket = Submit(vault, request);
+        Assert.True(organization
+            ? vault.AgentOrganizations.Entry(request.OperationId) is not null
+            : vault.AgentTextWrites.Entry(request.OperationId) is not null);
+
+        switch (state)
+        {
+            case BrokerRequestState.Denied:
+                vault.ApprovalRequests.Decide(ticket.RequestId, ticket.Capability, BrokerApprovalDecision.Deny);
+                break;
+            case BrokerRequestState.Cancelled:
+                vault.ApprovalRequests.Cancel(ticket.RequestId, ticket.Capability);
+                break;
+            case BrokerRequestState.Expired:
+                now = now.AddHours(1);
+                vault.ApprovalRequests.RefreshExpiration();
+                break;
+        }
+
+        Assert.Null(vault.AgentTextWrites.Entry(request.OperationId));
+        Assert.Null(vault.AgentOrganizations.Entry(request.OperationId));
+        Assert.Equal(new[] { state }, uiStates);
+        Assert.Equal(state, vault.ApprovalRequests.Status(ticket.RequestId, ticket.Capability));
+        if (state == BrokerRequestState.Expired)
+        {
+            vault.BeginManagementSession(ManagementAuthenticator.Allow);
+        }
+        var record = Assert.Single(vault.ListCredentialAccessRecords());
+        Assert.Equal(state == BrokerRequestState.Expired
+            ? CredentialAccessResult.Expired : CredentialAccessResult.Denied, record.Result);
+        Assert.Equal(organization ? CredentialAccessOperation.Modify : CredentialAccessOperation.Create,
+            record.Operation);
+        Assert.Equal("Synthetic client", record.CallerHint);
+        Assert.Equal("Test cleanup", record.DeclaredPurpose);
+        Assert.Empty(vault.ListTextCredentials());
+        Assert.Empty(vault.ListCredentialGroups());
+    }
+
     [Fact]
     public void AgentOrganizationBatchFreezesAndCommitsOneApproval()
     {

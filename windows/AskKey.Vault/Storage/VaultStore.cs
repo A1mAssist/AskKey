@@ -130,16 +130,8 @@ public sealed partial class VaultStore : IDisposable
     private static void Preflight(string path, byte[]? key, Action<VaultStore>? validation,
         out CurrentLibrarySchema.Opening? opening)
     {
-        var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-            "AskKeyPreflight-" + Guid.NewGuid().ToString("N"));
-        PrivateFileSystem.CreatePrivateDirectory(directory);
-        try
+        opening = CurrentLibrarySnapshot.WithCopy(path, copy =>
         {
-            var copy = System.IO.Path.Combine(directory, "library.db");
-            File.Copy(path, copy, overwrite: false);
-            if (File.Exists(path + "-wal")) File.Copy(path + "-wal", copy + "-wal", overwrite: false);
-            PrivateFileSystem.ApplyFile(copy);
-
             var connectionString = new SqliteConnectionStringBuilder
             {
                 DataSource = copy,
@@ -149,14 +141,11 @@ public sealed partial class VaultStore : IDisposable
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var store = new VaultStore(copy, connection);
-            opening = store.ReadOpening();
+            var result = store.ReadOpening();
             if (key is not null) store.ValidateCredentialRows(key);
             validation?.Invoke(store);
-        }
-        finally
-        {
-            try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
-        }
+            return result;
+        });
     }
 
     public CurrentLibrarySchema.Opening ReadOpening()
@@ -581,7 +570,12 @@ public sealed partial class VaultStore : IDisposable
         => QueryCredentials("SELECT * FROM credentials;");
 
     public List<CredentialRecord> FetchAllCredentialsIncludingRecycled()
-        => FetchAllCredentialsIncludingRecycledRaw().Select(Authenticate).ToList();
+    {
+        lock (_gate)
+        {
+            return FetchAllCredentialsIncludingRecycledRaw().Select(Authenticate).ToList();
+        }
+    }
 
     private CredentialRecord? FetchCredentialRaw(string id)
     {

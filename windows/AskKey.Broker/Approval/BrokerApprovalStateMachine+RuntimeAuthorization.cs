@@ -54,6 +54,22 @@ public sealed partial class BrokerApprovalStateMachine
         foreach (var cleanup in cleanups) cleanup();
     }
 
+    internal void ReleaseAbandonedRuntimeAuthorization(Guid id)
+    {
+        List<Action> cleanups;
+        lock (_lock)
+        {
+            if (!_runtimeAuthorizations.Remove(id, out var authorization)) return;
+            cleanups = authorization.Cleanups;
+        }
+        foreach (var cleanup in cleanups)
+        {
+            // A finalizer cannot surface failures; still attempt every registered cleanup.
+            try { cleanup(); }
+            catch { }
+        }
+    }
+
     private void InvalidateRuntimeAuthorizationsLocked(string? credentialId = null)
     {
         foreach (var authorization in _runtimeAuthorizations.Values)

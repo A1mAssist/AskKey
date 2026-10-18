@@ -57,4 +57,31 @@ public sealed class ApprovalAwayExpirationTests
         machine.RefreshExpiration();
         Assert.Equal(BrokerRequestState.Expired, machine.Status(ticket.RequestId, ticket.Capability));
     }
+
+    [Fact]
+    public void ResumeRearmsAConsumedTimerWithoutARefresh()
+    {
+        var counts = new NotificationRecorder();
+        using var machine = new BrokerApprovalStateMachine(
+            requestTtl: TimeSpan.FromMilliseconds(80),
+            clock: () => DateTimeOffset.UtcNow,
+            pendingCountChanged: counts.Record);
+        machine.SuspendExpirationTimer();
+        var ticket = machine.Submit(Fixture.MakeRequest(operationId: "resume-arm"));
+        Assert.True(SpinWait.SpinUntil(
+            () => machine.ScheduledExpirationTaskCount == 0, TimeSpan.FromSeconds(2)));
+        machine.ResumeExpirationTimer();
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (counts.Counts.Contains(0))
+            {
+                Assert.Equal(BrokerRequestState.Expired, machine.Status(ticket.RequestId, ticket.Capability));
+                return;
+            }
+            Thread.Sleep(20);
+        }
+        Assert.Contains(0, counts.Counts);
+    }
 }

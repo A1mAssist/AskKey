@@ -32,12 +32,8 @@ public sealed class BrokerRuntimeReadAuthorization : IDisposable
 
     public void Finish() => _owner.ReleaseRuntimeAuthorization(_id);
 
-    // Match Swift deinit: abandoned leases must release their cleanup registrations.
-    ~BrokerRuntimeReadAuthorization()
-    {
-        try { Finish(); }
-        catch { /* finalizers cannot surface cleanup failures */ }
-    }
+    // Unlike normal mutations, finalization must not notify observers or touch a disposed timer.
+    ~BrokerRuntimeReadAuthorization() => _owner.ReleaseAbandonedRuntimeAuthorization(_id);
 
     public void Dispose()
     {

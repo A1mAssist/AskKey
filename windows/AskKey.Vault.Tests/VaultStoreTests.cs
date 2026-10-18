@@ -119,6 +119,35 @@ public sealed class VaultStoreTests
     }
 
     [Fact]
+    public async Task FetchAllIncludingRecycledWaitsForAnAtomicTransaction()
+    {
+        using var root = new TestDirectory();
+        var key = TestCredentials.Key();
+        using var store = TestCredentials.NewStore(root.Combine("library.db"), key);
+        var record = TestCredentials.Text(key, "TRANSACTIONAL", "value");
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+
+        var writer = Task.Run(() =>
+        {
+            Assert.Throws<InvalidOperationException>(() => store.RunTransaction<int>(() =>
+            {
+                store.InsertCredentialInTransaction(record);
+                entered.Set();
+                Assert.True(release.Wait(TimeSpan.FromSeconds(2)));
+                throw new InvalidOperationException("rollback");
+            }));
+        });
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(2)));
+
+        var reader = Task.Run(store.FetchAllCredentialsIncludingRecycled);
+        Assert.NotSame(reader, await Task.WhenAny(reader, Task.Delay(100)));
+        release.Set();
+        await writer.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Empty(await reader.WaitAsync(TimeSpan.FromSeconds(2)));
+    }
+
+    [Fact]
     public void DuplicateNameIndexIsRejectedByUniqueConstraint()
     {
         using var root = new TestDirectory();

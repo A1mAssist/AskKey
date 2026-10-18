@@ -36,29 +36,17 @@ public static class VaultBootstrap
 {
     public static VaultBootstrapState State(VaultBootstrapPaths paths)
     {
-        if (IsNonRegularPath(paths.CurrentDatabase))
-        {
-            throw new VaultBootstrapException(VaultBootstrapError.InvalidState);
-        }
-        if (File.Exists(paths.CurrentDatabase)) return VaultBootstrapState.Current;
+        if (CurrentLibrarySnapshot.RegularFileExists(paths.CurrentDatabase)) return VaultBootstrapState.Current;
         foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
         {
             // A sidecar without its database is orphaned state: any entry,
             // including a regular file, fails closed instead of being adopted.
-            if (File.Exists(paths.CurrentDatabase + suffix)
-                || Directory.Exists(paths.CurrentDatabase + suffix))
+            if (CurrentLibrarySnapshot.RegularFileExists(paths.CurrentDatabase + suffix))
             {
                 throw new VaultBootstrapException(VaultBootstrapError.InvalidState);
             }
         }
         return VaultBootstrapState.Fresh;
-    }
-
-    /// <summary>Windows counterpart of Swift's lstat regular-file check.</summary>
-    private static bool IsNonRegularPath(string path)
-    {
-        if (Directory.Exists(path)) return true;
-        return File.Exists(path) && new FileInfo(path).LinkTarget is not null;
     }
 
     public static (VaultStore Store, byte[] Key) OpenCurrent(
@@ -278,10 +266,12 @@ public static class VaultBootstrap
     private static (VaultStore Store, byte[] Key) ResumeUnfinishedFirstCreation(VaultBootstrapPaths paths,
         IAppKeyStore keyStore, byte[] key, Action<VaultBootstrapSyncTarget> synchronize)
     {
-        using (var snapshot = VaultStore.OpenReadOnly(paths.CurrentDatabase))
+        CurrentLibrarySnapshot.WithCopy(paths.CurrentDatabase, copy =>
         {
+            using var snapshot = VaultStore.OpenReadOnly(copy);
             RequireUnfinishedFirstCreation(snapshot);
-        }
+            return 0;
+        });
         var store = new VaultStore(paths.CurrentDatabase, key, RequireUnfinishedFirstCreation);
         try
         {
@@ -420,33 +410,24 @@ public static class VaultBootstrap
     public static int CredentialCount(VaultBootstrapPaths paths)
     {
         if (State(paths) != VaultBootstrapState.Current) return 0;
-        using var store = VaultStore.OpenReadOnly(paths.CurrentDatabase);
-        store.ReadOpening();
-        return checked((int)store.ScalarLong("SELECT COUNT(*) FROM credentials;"));
+        return CurrentLibrarySnapshot.WithCopy(paths.CurrentDatabase, copy =>
+        {
+            using var store = VaultStore.OpenReadOnly(copy);
+            store.ReadOpening();
+            return checked((int)store.ScalarLong("SELECT COUNT(*) FROM credentials;"));
+        });
     }
 
     private static int ValidateCurrentLibrary(VaultBootstrapPaths paths, byte[] key)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "AskKeyValidate-" + Guid.NewGuid().ToString("N"));
-        PrivateFileSystem.CreatePrivateDirectory(directory);
-        try
+        return CurrentLibrarySnapshot.WithCopy(paths.CurrentDatabase, copy =>
         {
-            var copy = Path.Combine(directory, "library.db");
-            File.Copy(paths.CurrentDatabase, copy, overwrite: false);
-            if (File.Exists(paths.CurrentDatabase + "-wal"))
-            {
-                File.Copy(paths.CurrentDatabase + "-wal", copy + "-wal", overwrite: false);
-            }
             using var store = new VaultStore(copy);
             store.ReadOpening();
             var records = store.FetchAllCredentialsIncludingRecycledRaw();
             foreach (var record in records) CredentialRecordAuthentication.Verify(record, key);
             return records.Count;
-        }
-        finally
-        {
-            try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
-        }
+        });
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]

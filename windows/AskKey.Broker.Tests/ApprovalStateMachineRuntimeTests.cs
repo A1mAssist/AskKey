@@ -14,6 +14,58 @@ public sealed class ApprovalStateMachineRuntimeTests
     }
 
     [Fact]
+    public void ConfiguringAnObserverPreservesSubscribersAndReplacesOnlyTheConfiguredCallback()
+    {
+        using var machine = new BrokerApprovalStateMachine();
+        var delivered = new List<string>();
+        machine.AddOperationStateChanged((_, _, _) => delivered.Add("cleanup"));
+        machine.ConfigureOperationStateChanged((_, _, _) => delivered.Add("replaced"));
+        machine.AddOperationStateChanged((_, _, _) => delivered.Add("ui"));
+        machine.ConfigureOperationStateChanged((_, _, _) => delivered.Add("configured"));
+
+        var request = Fixture.MakeRequest("observer-registration");
+        var ticket = machine.Submit(request);
+        machine.Cancel(ticket.RequestId, ticket.Capability);
+
+        Assert.Equal(new[] { "cleanup", "ui", "configured" }, delivered);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AbandonedAuthorizationCleansEveryResourceEvenAfterOwnerDisposal(bool disposeOwner)
+    {
+        using var machine = new BrokerApprovalStateMachine(authenticate: _ => true);
+        var cleaned = 0;
+        var abandoned = AbandonAuthorization(machine, () => Interlocked.Increment(ref cleaned));
+        if (disposeOwner) machine.Dispose();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.False(abandoned.IsAlive);
+        Assert.Equal(1, Volatile.Read(ref cleaned));
+        GC.KeepAlive(machine);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference AbandonAuthorization(BrokerApprovalStateMachine machine, Action cleanup)
+    {
+        var request = Fixture.MakeRequest(operationId: "abandoned-runtime");
+        var ticket = machine.Submit(request);
+        machine.Decide(ticket.RequestId, ticket.Capability, BrokerApprovalDecision.Once);
+        var lease = machine.ConsumeForRuntime(new[]
+        {
+            new BrokerApprovalConsumption(ticket.RequestId, ticket.Capability, request),
+        });
+        Assert.NotNull(lease);
+        lease.RegisterCleanup(() => throw new IOException("Synthetic cleanup failure"));
+        lease.RegisterCleanup(cleanup);
+        return new WeakReference(lease);
+    }
+
+    [Fact]
     public void ConcurrentCountCallbacksCannotPublishAnOlderCountLast()
     {
         var recorder = new OrderedCountRecorder();
