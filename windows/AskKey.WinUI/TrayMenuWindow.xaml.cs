@@ -18,6 +18,7 @@ public sealed partial class TrayMenuWindow : Window
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpShowWindow = 0x0040;
     private const uint SwpNoOwnerZOrder = 0x0200;
+    private const uint SwpNoZOrder = 0x0004;
 
     private const int WhMouseLl = 14;
     private const int WhKeyboardLl = 13;
@@ -98,6 +99,9 @@ public sealed partial class TrayMenuWindow : Window
     public void ApplyTheme(bool dark)
     {
         MenuRoot.RequestedTheme = dark ? ElementTheme.Dark : ElementTheme.Light;
+        MenuRoot.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            dark ? Windows.UI.Color.FromArgb(255, 0x2A, 0x2A, 0x2A)
+                 : Windows.UI.Color.FromArgb(255, 0xF9, 0xF9, 0xF9));
     }
 
     public void ApplyLanguage()
@@ -143,12 +147,22 @@ public sealed partial class TrayMenuWindow : Window
         if (_showPending || _menuOpen) return;
 
         _showPending = true;
+        SetWindowPos(
+            _windowHandle,
+            HwndTopmost,
+            x,
+            y,
+            1,
+            1,
+            SwpNoActivate | SwpNoZOrder);
         MenuRoot.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var scale = GetDpiForWindow(_windowHandle) / 96d;
+        var dpiScale = GetDpiForWindow(_windowHandle) / 96d;
+        var xamlScale = MenuRoot.XamlRoot?.RasterizationScale ?? 0;
+        var scale = Math.Max(dpiScale, xamlScale);
         if (scale <= 0) scale = 1;
         var desired = MenuRoot.DesiredSize;
-        var width = Math.Max(1, (int)Math.Ceiling((desired.Width > 0 ? desired.Width : 240) * scale));
-        var height = Math.Max(1, (int)Math.Ceiling((desired.Height > 0 ? desired.Height : 250) * scale));
+        var width = Math.Max(1, (int)Math.Ceiling((desired.Width > 0 ? desired.Width : 220) * scale));
+        var height = Math.Max(1, (int)Math.Ceiling((desired.Height > 0 ? desired.Height : 214) * scale));
         var workArea = DisplayArea.GetFromPoint(
             new PointInt32(x, y),
             DisplayAreaFallback.Primary).WorkArea;
