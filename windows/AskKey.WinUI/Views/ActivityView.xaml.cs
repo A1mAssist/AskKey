@@ -33,15 +33,7 @@ public partial class ActivityView : UserControl
         if (_managementAvailable)
         {
             RefreshRecycle();
-            RefreshRecords();
-        }
-        LockedPanel.Visibility = !_managementAvailable && _section != ActivitySection.Pending
-            ? Visibility.Visible : Visibility.Collapsed;
-        if (!_managementAvailable && _section != ActivitySection.Pending)
-        {
-            PendingPanel.Visibility = Visibility.Collapsed;
-            RecyclePanel.Visibility = Visibility.Collapsed;
-            RecordsPanel.Visibility = Visibility.Collapsed;
+            if (_managementAvailable) RefreshRecords();
         }
         ShowSection();
     }
@@ -84,13 +76,8 @@ public partial class ActivityView : UserControl
                 .Concat(_host.Vault.ListRecycledTextCredentials())
                 .GroupBy(item => item.Id)
                 .ToDictionary(group => group.Key, group => group.First().Name);
-            var rows = _host.Vault.ListCredentialAccessRecords()
-                .OrderByDescending(record => record.Timestamp)
-                .Select(record => new AccessRow(
-                    record.Timestamp.ToLocalTime().ToString("g", Loc.Culture),
-                    Describe(record, names),
-                    ResultLabel(record.Result)))
-                .ToList();
+            var rows = AccessRecordPresentation.Build(
+                _host.Vault.ListCredentialAccessRecords(), names, Loc.Culture);
             RecordsList.ItemsSource = rows;
             RecordsEmpty.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -104,39 +91,72 @@ public partial class ActivityView : UserControl
         }
     }
 
-    private static string Describe(CredentialAccessEvent record, IReadOnlyDictionary<string, string> names)
+    private async void OpenRecord_Click(object sender, RoutedEventArgs e)
     {
-        var credential = record.CredentialId is { } id && names.TryGetValue(id, out var name)
-            ? $"“{name}”" : Loc.T("a credential");
-        var caller = string.IsNullOrWhiteSpace(record.CallerHint) ? Loc.T("Local Agent") : record.CallerHint;
-        var action = record.Operation switch
+        if ((sender as FrameworkElement)?.Tag is not AccessRecordRow row) return;
+        var details = new StackPanel();
+        AddDetail(details, Loc.T("Time"),
+            row.Record.Timestamp.ToLocalTime().ToString("F", Loc.Culture));
+        AddDetail(details, Loc.T("Operation"),
+            AccessRecordPresentation.OperationLabel(row.Record.Operation));
+        AddDetail(details, Loc.T("Result"), row.Result);
+        if (row.Record.Operation != CredentialAccessOperation.Catalog)
+            AddDetail(details, Loc.T("Credential"), row.Credential);
+        AddDetail(details, Loc.T("Requested by"),
+            string.IsNullOrWhiteSpace(row.Record.CallerHint) ? Loc.T("Local Agent") : row.Record.CallerHint);
+        if (!string.IsNullOrWhiteSpace(row.Record.DeclaredPurpose))
+            AddDetail(details, Loc.T("Purpose"), row.Record.DeclaredPurpose);
+        if (!string.IsNullOrWhiteSpace(row.Record.ExecutableBasename))
+            AddDetail(details, Loc.T("Executable"), row.Record.ExecutableBasename);
+
+        var dialog = new ContentDialog
         {
-            CredentialAccessOperation.Catalog => Loc.T("listed credentials"),
-            CredentialAccessOperation.RuntimeRead => Loc.F("used {0}", credential),
-            CredentialAccessOperation.Create => Loc.F("tried to create {0}", credential),
-            CredentialAccessOperation.Modify => Loc.F("tried to change {0}", credential),
-            _ => Loc.F("tried to delete {0}", credential),
+            XamlRoot = XamlRoot,
+            Title = Loc.T("Access record details"),
+            Content = new ScrollViewer
+            {
+                Content = details,
+                MaxHeight = 460,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            },
+            CloseButtonText = Loc.T("Close"),
+            DefaultButton = ContentDialogButton.Close,
+            MinWidth = 420,
+            RequestedTheme = RequestedTheme,
         };
-        var executable = record.ExecutableBasename is { } exe ? Loc.F(" with {0}", exe) : "";
-        return Loc.F("{0} {1}{2}", caller, action, executable);
+        await dialog.ShowAsync();
     }
 
-    private static string ResultLabel(CredentialAccessResult result) => result switch
+    private static void AddDetail(Panel panel, string label, string value)
     {
-        CredentialAccessResult.Allowed => Loc.T("Allowed"),
-        CredentialAccessResult.Denied => Loc.T("Denied"),
-        CredentialAccessResult.Expired => Loc.T("Expired"),
-        CredentialAccessResult.Failed => Loc.T("Failed"),
-        _ => Loc.T("Hidden name rejected"),
-    };
+        var item = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+        item.Children.Add(new TextBlock
+        {
+            Text = label,
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"],
+        });
+        item.Children.Add(new TextBlock
+        {
+            Text = value,
+            Style = (Style)Application.Current.Resources["BodyTextStyle"],
+            Margin = new Thickness(0, 3, 0, 0),
+            IsTextSelectionEnabled = true,
+        });
+        panel.Children.Add(item);
+    }
 
     private void ShowSection()
     {
-        if (!_managementAvailable && _section != ActivitySection.Pending) return;
-        PendingPanel.Visibility = _section == ActivitySection.Pending ? Visibility.Visible : Visibility.Collapsed;
-        RecyclePanel.Visibility = _section == ActivitySection.RecycleBin ? Visibility.Visible : Visibility.Collapsed;
-        RecordsPanel.Visibility = _section == ActivitySection.AccessRecords ? Visibility.Visible : Visibility.Collapsed;
-        ClearRecordsButton.Visibility = _section == ActivitySection.AccessRecords ? Visibility.Visible : Visibility.Collapsed;
+        var locked = !_managementAvailable && _section != ActivitySection.Pending;
+        LockedPanel.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
+        PendingPanel.Visibility = _section == ActivitySection.Pending && !locked
+            ? Visibility.Visible : Visibility.Collapsed;
+        RecyclePanel.Visibility = _section == ActivitySection.RecycleBin && !locked
+            ? Visibility.Visible : Visibility.Collapsed;
+        RecordsPanel.Visibility = _section == ActivitySection.AccessRecords && !locked
+            ? Visibility.Visible : Visibility.Collapsed;
+        ClearRecordsButton.Visibility = _section == ActivitySection.AccessRecords && !locked
+            ? Visibility.Visible : Visibility.Collapsed;
         SetTab(PendingTab, _section == ActivitySection.Pending);
         SetTab(RecycleTab, _section == ActivitySection.RecycleBin);
         SetTab(RecordsTab, _section == ActivitySection.AccessRecords);
@@ -194,7 +214,7 @@ public partial class ActivityView : UserControl
         }
         catch (Exception error)
         {
-            _host.ShowError(error.Message);
+            HandleManagementError(error);
         }
     }
 
@@ -211,7 +231,7 @@ public partial class ActivityView : UserControl
         }
         catch (Exception error)
         {
-            _host.ShowError(error.Message);
+            HandleManagementError(error);
         }
     }
 
@@ -227,9 +247,18 @@ public partial class ActivityView : UserControl
         }
         catch (Exception error)
         {
-            _host.ShowError(error.Message);
+            HandleManagementError(error);
         }
     }
 
-    private sealed record AccessRow(string Time, string Description, string Result);
+    private void HandleManagementError(Exception error)
+    {
+        if (error is VaultException { Code: VaultErrorCode.ManagementAuthenticationRequired })
+        {
+            _managementAvailable = false;
+            Refresh();
+            return;
+        }
+        _host.ShowError(error.Message);
+    }
 }

@@ -38,6 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\AskKey.App\AccessRecordPresentation.cs" Link="Shared\AccessRecordPresentation.cs" />
     <Compile Include="..\AskKey.App\AppPaths.cs" Link="Shared\AppPaths.cs" />
     <Compile Include="..\AskKey.App\ApprovalDetailsContent.cs" Link="Shared\ApprovalDetailsContent.cs" />
     <Compile Include="..\AskKey.App\CredentialTemplates.cs" Link="Shared\CredentialTemplates.cs" />

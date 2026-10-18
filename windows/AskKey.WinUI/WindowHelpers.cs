@@ -10,6 +10,8 @@ namespace AskKeyApp;
 internal static class WindowHelpers
 {
     private const int GwlStyle = -16;
+    private const int DwmWindowCornerPreference = 33;
+    private const int DwmWindowCornerRound = 2;
     private const long WsCaption = 0x00C00000L;
     private const long WsThickFrame = 0x00040000L;
 
@@ -36,16 +38,24 @@ internal static class WindowHelpers
         var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "AskKey.ico");
         if (File.Exists(iconPath)) window.AppWindow.SetIcon(iconPath);
         window.AppWindow.IsShownInSwitchers = showInSwitchers;
+        var handle = Handle(window);
         if (minWidth > 0 || minHeight > 0)
         {
-            var handle = Handle(window);
             var style = GetWindowLongPtr(handle, GwlStyle).ToInt64();
             SetWindowLongPtr(handle, GwlStyle, new IntPtr(style | WsCaption | WsThickFrame));
             SetWindowSubclass(handle, MinMaxProc, 0x41534B32, UIntPtr.Zero);
             MinSizeStore.Set(handle, minWidth, minHeight);
             window.Closed += (_, _) => MinSizeStore.Remove(handle);
         }
+        EnableRoundedCorners(window);
         Center(window);
+    }
+
+    // DWM clips the top-level frame; extended title-bar content does not request this itself.
+    public static void EnableRoundedCorners(Window window)
+    {
+        var corner = DwmWindowCornerRound;
+        DwmSetWindowAttribute(Handle(window), DwmWindowCornerPreference, ref corner, sizeof(int));
     }
 
     public static async Task<T> ShowDialogAsync<T>(Window dialog, Window? owner, Task<T> completion)
@@ -155,6 +165,9 @@ internal static class WindowHelpers
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
     private static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
     [DllImport("user32.dll")]
     private static extern bool IsWindowVisible(IntPtr hwnd);

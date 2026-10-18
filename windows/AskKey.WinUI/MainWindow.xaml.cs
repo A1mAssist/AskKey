@@ -68,6 +68,7 @@ public partial class MainWindow : Window
         if (AppWindow.Presenter is OverlappedPresenter presenter && presenter.State == OverlappedPresenterState.Minimized)
             ShowWindow(WindowHelpers.Handle(this), SwRestore);
         AppWindow.Show();
+        WindowHelpers.EnableRoundedCorners(this);
         Activate();
         if (_initialShow)
         {

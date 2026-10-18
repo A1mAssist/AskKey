@@ -32,7 +32,16 @@ public sealed class BrokerRuntimeReadAuthorization : IDisposable
 
     public void Finish() => _owner.ReleaseRuntimeAuthorization(_id);
 
-    // Swift's deinit calls finish(); C# has no deterministic destructor, so callers
-    // must Finish() or Dispose(). The authorization still expires by deadline.
-    public void Dispose() => Finish();
+    // Match Swift deinit: abandoned leases must release their cleanup registrations.
+    ~BrokerRuntimeReadAuthorization()
+    {
+        try { Finish(); }
+        catch { /* finalizers cannot surface cleanup failures */ }
+    }
+
+    public void Dispose()
+    {
+        Finish();
+        GC.SuppressFinalize(this);
+    }
 }
