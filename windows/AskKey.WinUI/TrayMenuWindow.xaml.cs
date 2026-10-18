@@ -18,7 +18,6 @@ public sealed partial class TrayMenuWindow : Window
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpShowWindow = 0x0040;
     private const uint SwpNoOwnerZOrder = 0x0200;
-    private const uint SwpNoZOrder = 0x0004;
 
     private const int WhMouseLl = 14;
     private const int WhKeyboardLl = 13;
@@ -147,18 +146,24 @@ public sealed partial class TrayMenuWindow : Window
         if (_showPending || _menuOpen) return;
 
         _showPending = true;
-        SetWindowPos(
-            _windowHandle,
-            HwndTopmost,
-            x,
-            y,
-            1,
-            1,
-            SwpNoActivate | SwpNoZOrder);
+        SetLayeredWindowAttributes(_windowHandle, 0, 0, LwaAlpha);
+        if (!SetWindowPos(
+                _windowHandle,
+                HwndTopmost,
+                x,
+                y,
+                1,
+                1,
+                SwpNoActivate | SwpShowWindow | SwpNoOwnerZOrder))
+        {
+            _showPending = false;
+            HideMenu();
+            return;
+        }
+
+        MenuRoot.UpdateLayout();
         MenuRoot.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var dpiScale = GetDpiForWindow(_windowHandle) / 96d;
-        var xamlScale = MenuRoot.XamlRoot?.RasterizationScale ?? 0;
-        var scale = Math.Max(dpiScale, xamlScale);
+        var scale = MenuRoot.XamlRoot?.RasterizationScale ?? GetDpiForWindow(_windowHandle) / 96d;
         if (scale <= 0) scale = 1;
         var desired = MenuRoot.DesiredSize;
         var width = Math.Max(1, (int)Math.Ceiling((desired.Width > 0 ? desired.Width : 220) * scale));
