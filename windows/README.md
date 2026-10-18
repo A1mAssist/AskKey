@@ -31,7 +31,7 @@ To sign the host and helper with a certificate from the current user's certifica
 .\windows\publish-windows.ps1 -CertificateThumbprint <thumbprint>
 ```
 
-Both files must be signed by the same publisher. Without a signature the script writes an artifact named `...-unsigned.zip`; a Release build rejects agent connections because the helper trust check requires matching Authenticode signatures. For local testing only, an unsigned published build can be launched with `ASKKEY_DEVELOPMENT=1`; never distribute that build.
+Signed builds require both files to be signed by the same publisher. Without a signature the script writes an artifact named `...-unsigned.zip`. That build embeds a manifest of every file under `Helpers\` and verifies it before Agent connections, so automatic setup still works; editing the helper payload invalidates the manifest and requires a rebuild. Windows SmartScreen still warns for unsigned downloads. `ASKKEY_DEVELOPMENT=1` remains a local-only bypass.
 
 ## Install
 

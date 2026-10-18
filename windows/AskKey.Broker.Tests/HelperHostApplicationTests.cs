@@ -14,7 +14,7 @@ public sealed class HelperHostApplicationTests
         using var fixture = new HostFixture("AskKey");
         var opened = new List<string>();
         var error = Assert.Throws<HelperHostApplicationException>(() =>
-            HelperHostApplication.OpenHost(fixture.Helper, isDevelopmentBuild: false, opened.Add));
+            HelperHostApplication.OpenHost(fixture.Helper, isDevelopmentBuild: false, opened.Add, allowUnsigned: false));
         Assert.Contains(OfficialInstallTopology.CanonicalAppPath, error.Message);
         Assert.Contains("Reinstall", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(opened);
@@ -29,7 +29,7 @@ public sealed class HelperHostApplicationTests
             File.WriteAllText(loose, "helper");
             var opened = new List<string>();
             Assert.Throws<HelperHostApplicationException>(() =>
-                HelperHostApplication.OpenHost(loose, isDevelopmentBuild: false, opened.Add));
+                HelperHostApplication.OpenHost(loose, isDevelopmentBuild: false, opened.Add, allowUnsigned: false));
             Assert.Empty(opened);
         }
         finally
@@ -51,7 +51,7 @@ public sealed class HelperHostApplicationTests
                 path => path == fixture.Helper
                     ? new HelperHostSigningFacts { Publisher = "Contoso", IsValid = true }
                     : new HelperHostSigningFacts { Publisher = "Fabrikam", IsValid = true },
-                path => path));
+                path => path, allowUnsigned: false));
         Assert.Contains("Reinstall", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(opened);
     }
@@ -64,8 +64,24 @@ public sealed class HelperHostApplicationTests
         Assert.Throws<HelperHostApplicationException>(() =>
             HelperHostApplication.OpenHost(
                 fixture.Helper, isDevelopmentBuild: false, opened.Add,
-                _ => HelperHostSigningFacts.Unsigned, path => path));
+                _ => HelperHostSigningFacts.Unsigned, path => path, allowUnsigned: false));
         Assert.Empty(opened);
+    }
+
+    [Fact]
+    public void ReleaseOpenAllowsUnsignedWhenTheBuildOptsIn()
+    {
+        var app = OfficialInstallTopology.CanonicalAppPath;
+        var helper = OfficialInstallTopology.CanonicalHelperPath;
+        var opened = new List<string>();
+        HelperHostApplication.OpenHost(
+            helper,
+            isDevelopmentBuild: false,
+            opened.Add,
+            _ => HelperHostSigningFacts.Unsigned,
+            path => path,
+            allowUnsigned: true);
+        Assert.Equal(new[] { Path.Combine(app, OfficialInstallTopology.HostFileName) }, opened.ToArray());
     }
 
     [Fact]
@@ -79,7 +95,7 @@ public sealed class HelperHostApplicationTests
             isDevelopmentBuild: false,
             opened.Add,
             _ => new HelperHostSigningFacts { Publisher = "Ask Key", IsValid = true },
-            path => path);
+            path => path, allowUnsigned: false);
         Assert.Equal(new[] { Path.Combine(app, OfficialInstallTopology.HostFileName) }, opened.ToArray());
     }
 

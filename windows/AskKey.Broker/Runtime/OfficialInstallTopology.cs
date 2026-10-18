@@ -145,14 +145,15 @@ public static class HelperHostSignatureTrust
     /// <summary>
     /// Production requires both binaries to carry the same publisher identity.
     /// Development and test builds skip signature trust, matching the macOS ad-hoc
-    /// development gate.
+    /// development gate. Unsigned builds opt into the embedded helper manifest.
     /// </summary>
     public static bool Allows(
         HelperHostSigningFacts helper,
         HelperHostSigningFacts host,
-        bool isDevelopmentBuild)
+        bool isDevelopmentBuild,
+        bool allowUnsigned = UnsignedBuild.Allowed)
     {
-        if (isDevelopmentBuild) return true;
+        if (isDevelopmentBuild || allowUnsigned) return true;
         if (Classify(helper) != HelperHostSignatureKind.Signed
             || Classify(host) != HelperHostSignatureKind.Signed)
         {
@@ -197,7 +198,8 @@ public static class HelperHostApplication
         bool isDevelopmentBuild,
         Action<string>? opener = null,
         Func<string, HelperHostSigningFacts>? signingFacts = null,
-        Func<string, string>? resolvePath = null)
+        Func<string, string>? resolvePath = null,
+        bool allowUnsigned = UnsignedBuild.Allowed)
     {
         opener ??= Open;
         signingFacts ??= SigningFacts;
@@ -214,7 +216,7 @@ public static class HelperHostApplication
             throw new HelperHostApplicationException(OfficialInstallTopology.NextStep(decision));
         }
         if (!HelperHostSignatureTrust.Allows(
-                signingFacts(helperPath), signingFacts(host), isDevelopmentBuild))
+                signingFacts(helperPath), signingFacts(host), isDevelopmentBuild, allowUnsigned))
         {
             throw new HelperHostApplicationException(
                 OfficialInstallTopology.NextStep(OfficialInstallDecision.HelperMismatch));

@@ -34,8 +34,13 @@ if (-not $SkipTests) {
 }
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-& dotnet publish $project -c Release -r $Runtime --self-contained true `
-    -p:PublishSingleFile=false -o $publishDir --nologo -v minimal
+$unsigned = -not $CertificateThumbprint
+$publishArgs = @(
+    'publish', $project, '-c', 'Release', '-r', $Runtime, '--self-contained', 'true',
+    '-p:PublishSingleFile=false', '-o', $publishDir, '--nologo', '-v', 'minimal'
+)
+if ($unsigned) { $publishArgs += '-p:AskKeyUnsigned=true' }
+& dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE." }
 
 $hostPath = Join-Path $publishDir 'AskKey.exe'
@@ -79,6 +84,6 @@ Set-Content -LiteralPath "$zipPath.sha256" -Value "$hash  $zipName" -Encoding as
 
 Write-Output "Published: $publishDir"
 Write-Output "Archive:   $zipPath"
-if (-not $CertificateThumbprint) {
-    Write-Warning 'This build is unsigned. Release builds reject agent connections until AskKey.exe and Helpers\askkey.exe are Authenticode-signed by the same publisher.'
+if ($unsigned) {
+    Write-Warning 'This build is unsigned. Agent connections use the embedded helper integrity manifest instead of Authenticode.'
 }

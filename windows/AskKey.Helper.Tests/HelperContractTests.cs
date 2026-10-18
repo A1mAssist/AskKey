@@ -146,10 +146,13 @@ public sealed class HelperContractTests
         var signed = new HelperHostSigningFacts { Publisher = "Ask Key", IsValid = true };
         var same = new HelperHostSigningFacts { Publisher = "ask key", IsValid = true };
         var other = new HelperHostSigningFacts { Publisher = "Contoso", IsValid = true };
-        Assert.True(HelperHostSignatureTrust.Allows(signed, same, isDevelopmentBuild: false));
-        Assert.False(HelperHostSignatureTrust.Allows(signed, other, isDevelopmentBuild: false));
-        Assert.False(HelperHostSignatureTrust.Allows(HelperHostSigningFacts.Unsigned, signed, isDevelopmentBuild: false));
-        Assert.True(HelperHostSignatureTrust.Allows(HelperHostSigningFacts.Unsigned, HelperHostSigningFacts.Unsigned, isDevelopmentBuild: true));
+        Assert.True(HelperHostSignatureTrust.Allows(signed, same, isDevelopmentBuild: false, allowUnsigned: false));
+        Assert.False(HelperHostSignatureTrust.Allows(signed, other, isDevelopmentBuild: false, allowUnsigned: false));
+        Assert.False(HelperHostSignatureTrust.Allows(HelperHostSigningFacts.Unsigned, signed, isDevelopmentBuild: false, allowUnsigned: false));
+        Assert.True(HelperHostSignatureTrust.Allows(HelperHostSigningFacts.Unsigned, HelperHostSigningFacts.Unsigned, isDevelopmentBuild: true, allowUnsigned: false));
+        Assert.True(HelperHostSignatureTrust.Allows(
+            HelperHostSigningFacts.Unsigned, HelperHostSigningFacts.Unsigned,
+            isDevelopmentBuild: false, allowUnsigned: true));
     }
 
     [Fact]

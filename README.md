@@ -64,7 +64,7 @@ To sign the host and helper with a certificate from the current user's certifica
 .\windows\publish-windows.ps1 -CertificateThumbprint <thumbprint>
 ```
 
-Both executables must be Authenticode-signed by the same publisher. An unsigned Release build can be launched for local testing, but it rejects Agent connections because the helper trust check is not satisfied.
+Signed builds require both executables to be Authenticode-signed by the same publisher. Without a certificate, the unsigned build embeds a SHA-256 manifest of the complete `Helpers\` payload and verifies it before Agent connections, so automatic setup still works; Windows SmartScreen still warns.
 
 ## Install
 

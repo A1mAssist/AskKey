@@ -1,9 +1,11 @@
+using AskKey.Broker.Runtime;
+
 namespace AskKey.Integrations;
 
 /// <summary>
-/// Windows replacement for the macOS code-signing check. A release helper must be
-/// Authenticode-signed by the same subject as the host executable; a development
-/// build (ASKKEY_DEVELOPMENT=1) may run an unsigned helper that sits beside it.
+/// Windows replacement for the macOS code-signing check. A signed release helper
+/// must share the host's publisher; an unsigned build may instead pin the helper
+/// payload manifest. Development builds may run an unsigned helper beside the host.
 /// </summary>
 public sealed class HelperTrust
 {
@@ -11,11 +13,19 @@ public sealed class HelperTrust
 
     private readonly IAuthenticodeVerifier _verifier;
     private readonly Func<string, string?> _environment;
+    private readonly HelperIntegrity _integrity;
+    private readonly bool _allowUnsignedIntegrity;
 
-    public HelperTrust(IAuthenticodeVerifier? verifier = null, Func<string, string?>? environment = null)
+    public HelperTrust(
+        IAuthenticodeVerifier? verifier = null,
+        Func<string, string?>? environment = null,
+        HelperIntegrity? integrity = null,
+        bool? allowUnsignedIntegrity = null)
     {
         _verifier = verifier ?? AuthenticodeVerifier.Shared;
         _environment = environment ?? Environment.GetEnvironmentVariable;
+        _integrity = integrity ?? HelperIntegrity.FromAssembly();
+        _allowUnsignedIntegrity = allowUnsignedIntegrity ?? UnsignedBuild.Allowed;
     }
 
     public bool IsDevelopment =>
@@ -33,10 +43,16 @@ public sealed class HelperTrust
         {
             return true;
         }
-        if (helperSubject is null) return false;
-        var hostSubject = _verifier.SignerSubject(hostExecutablePath);
-        return hostSubject is not null
-            && string.Equals(Normalize(hostSubject), Normalize(helperSubject), StringComparison.OrdinalIgnoreCase);
+        if (helperSubject is not null)
+        {
+            var hostSubject = _verifier.SignerSubject(hostExecutablePath);
+            if (hostSubject is not null
+                && string.Equals(Normalize(hostSubject), Normalize(helperSubject), StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return _allowUnsignedIntegrity && _integrity.IsTrusted(helperPath);
     }
 
     public static bool IsExecutableRegularFile(string path)

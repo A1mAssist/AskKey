@@ -57,6 +57,20 @@
           SkipUnchangedFiles="true" />
   </Target>
 
+  <Target Name="GenerateHelperIntegrityManifest" BeforeTargets="SplitResourcesByCulture"
+          DependsOnTargets="ResolveProjectReferences"
+          Condition="'$(AskKeyUnsigned)' == 'true'">
+    <PropertyGroup>
+      <HelperOutputRoot>$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\$(HelperTargetFramework)</HelperOutputRoot>
+      <HelperOutputRoot Condition="'$(RuntimeIdentifier)' != ''">$(HelperOutputRoot)\$(RuntimeIdentifier)</HelperOutputRoot>
+      <HelperIntegrityManifest>$(IntermediateOutputPath)HelperIntegrity.manifest</HelperIntegrityManifest>
+    </PropertyGroup>
+    <Exec Command="pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\GenerateHelperManifest.ps1&quot; -Root &quot;$(HelperOutputRoot)&quot; -Output &quot;$(HelperIntegrityManifest)&quot;" />
+    <ItemGroup>
+      <EmbeddedResource Remove="$(HelperIntegrityManifest)" />
+      <EmbeddedResource Include="$(HelperIntegrityManifest)" LogicalName="AskKey.HelperIntegrity.manifest" />
+    </ItemGroup>
+  </Target>
 </Project>
 
 
