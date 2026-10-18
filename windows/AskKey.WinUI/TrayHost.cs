@@ -32,6 +32,15 @@ public sealed class TrayHost : IDisposable
             _notificationClick = null;
             (action ?? _showPending)();
         };
+        try
+        {
+            _menuWindow = CreateMenuWindow();
+        }
+        catch
+        {
+            _icon.Dispose();
+            throw;
+        }
         ApplyLanguage();
     }
 
