@@ -3,7 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Ask Key">
-  <Grid x:Name="MenuRoot" Background="#2A2A2A">
+  <Grid x:Name="MenuRoot" MinWidth="176" Background="#2A2A2A">
     <Grid.Resources>
       <Style x:Key="TrayMenuButtonStyle" TargetType="Button">
         <Setter Property="Height" Value="34" />
