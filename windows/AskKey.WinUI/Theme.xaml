@@ -793,7 +793,6 @@
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="ItemContainerStyle" Value="{StaticResource FormComboBoxItemStyle}" />
-    <Setter Property="local:ComboBoxPlacement.OpenBelow" Value="True" />
   </Style>
   <Style x:Key="SettingsSwitchStyle" TargetType="ToggleButton">
     <Setter Property="MinWidth" Value="0" />
