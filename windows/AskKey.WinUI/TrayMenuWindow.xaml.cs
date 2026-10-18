@@ -125,7 +125,7 @@ public sealed partial class TrayMenuWindow : Window
             ? Loc.F("Pending requests ({0})", count)
             : Loc.T("Pending requests");
         PendingMenuItem.IsEnabled = count > 0;
-        PendingMenuItem.Opacity = count > 0 ? 1 : 0.55;
+
         AutomationProperties.SetName(PendingMenuItem, PendingMenuText.Text);
     }
 
