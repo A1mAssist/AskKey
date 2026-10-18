@@ -18,18 +18,49 @@ public static class ComboBoxPopup
     {
         if (dependencyObject is not ComboBox combo) return;
         combo.Loaded -= OnLoaded;
-        if (args.NewValue is true) combo.Loaded += OnLoaded;
+        combo.DropDownOpened -= OnDropDownOpened;
+        if (args.NewValue is true)
+        {
+            combo.Loaded += OnLoaded;
+            combo.DropDownOpened += OnDropDownOpened;
+        }
     }
 
     private static void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is not ComboBox combo) return;
         combo.ApplyTemplate();
-        var popup = combo.FindName("Popup") as Popup ?? FindDescendant<Popup>(combo);
+        var popup = FindPopup(combo);
         if (popup is null) return;
 
-        // ComboBox uses a square top-level HWND by default; render in-root so PopupBorder's 8px radius is visible.
+        // ComboBox uses a square top-level HWND by default; render in-root so the template border can round.
         popup.ShouldConstrainToRootBounds = true;
+        RoundPopupBorder(popup);
+    }
+
+    private static void OnDropDownOpened(object? sender, object e)
+    {
+        if (sender is ComboBox combo && FindPopup(combo) is { } popup) RoundPopupBorder(popup);
+    }
+
+    private static Popup? FindPopup(ComboBox combo)
+        => combo.FindName("Popup") as Popup ?? FindDescendant<Popup>(combo);
+
+    private static void RoundPopupBorder(Popup popup)
+    {
+        if (popup.Child is DependencyObject root && FindPopupBorder(root) is { } border)
+            border.CornerRadius = new CornerRadius(8);
+    }
+
+    private static Border? FindPopupBorder(DependencyObject root)
+    {
+        if (root is Border { Name: "PopupBorder" } border) return border;
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < count; index++)
+        {
+            if (FindPopupBorder(VisualTreeHelper.GetChild(root, index)) is { } nested) return nested;
+        }
+        return null;
     }
 
     private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject

@@ -5,6 +5,7 @@
 
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
+      <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
       <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F6F6F4" />
       <SolidColorBrush x:Key="ContentDialogBackground" Color="#FFFFFF" />
       <SolidColorBrush x:Key="ContentDialogTopOverlay" Color="#FFFFFF" />
@@ -66,6 +67,7 @@
       <SolidColorBrush x:Key="PermissionAskTextBrush" Color="#8A5A00" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
+      <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
       <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#151719" />
       <SolidColorBrush x:Key="ContentDialogBackground" Color="#23262A" />
       <SolidColorBrush x:Key="ContentDialogTopOverlay" Color="#23262A" />
@@ -133,6 +135,7 @@
   <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
   <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
   <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
   <Thickness x:Key="ButtonPadding">14,8</Thickness>
   <Thickness x:Key="PageMargin">30,26,30,22</Thickness>
   <x:Double x:Key="PageContentMaxWidth">960</x:Double>
