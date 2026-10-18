@@ -287,6 +287,9 @@ internal static class LocalizationCatalog
         ["Type ERASE to confirm"] = "输入「抹除」以确认",
         ["Unlock Ask Key"] = "解锁请旨",
         ["Unlock management"] = "解锁管理",
+        ["Unlock duration"] = "解锁时长",
+        ["After one Windows Hello confirmation, skip repeated checks for in-app management actions during this window."] =
+            "Windows Hello 确认一次后，在此时长内进行应用内管理操作时不再重复验证。",
         ["Use Ask Key as an MCP server"] = "将请旨用作 MCP 服务",
         ["v0.1.0 · Windows"] = "v0.1.0 · Windows",
         ["VALUE"] = "值",

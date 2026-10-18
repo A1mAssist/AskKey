@@ -9,6 +9,7 @@ public partial class SettingsView : UserControl
 {
     private const string RepositoryUrl = "https://github.com/A1mAssist/AskKey";
     private sealed record AllowanceOption(int Minutes, string Label);
+    private sealed record UnlockDurationOption(int Minutes, string Label);
     private static string EraseConfirmation => EraseLanguage.ConfirmationText();
     private static LocalVaultEraseLanguage EraseLanguage =>
         Loc.Current == AppLanguage.SimplifiedChinese ? LocalVaultEraseLanguage.SimplifiedChinese : LocalVaultEraseLanguage.English;
@@ -41,6 +42,9 @@ public partial class SettingsView : UserControl
             SelectTag(AppearanceCombo, preferences.AppearanceMode);
             SelectTag(LanguageCombo, preferences.LanguageMode);
             ErasePromptText.Text = Loc.F("Type {0} to confirm", EraseConfirmation);
+            UnlockDurationCombo.SelectedItem = UnlockDurationCombo.Items.OfType<UnlockDurationOption>()
+                .FirstOrDefault(option => option.Minutes * 60 == preferences.SessionTimeoutSeconds)
+                ?? UnlockDurationCombo.Items.OfType<UnlockDurationOption>().First();
             ReadAuthToggle.IsChecked = preferences.ReadApprovalAuthenticationEnabled;
             ReadAuthToggle.Content = Loc.T(preferences.ReadApprovalAuthenticationEnabled ? "On" : "Off");
             DataFolderText.Text = VaultConfiguration.Default.LocalApplicationDataDirectory;
@@ -96,6 +100,14 @@ public partial class SettingsView : UserControl
         if (enabled) _host.Vault.UpdateDefaultTimedAllowanceMinutes(option.Minutes);
     }
 
+    private void UnlockDuration_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || UnlockDurationCombo.SelectedItem is not UnlockDurationOption option) return;
+        _host.Preferences.SessionTimeoutSeconds = option.Minutes * 60;
+        _host.Preferences.Save();
+        _host.Vault.SetManagementSessionIdleLimit(TimeSpan.FromMinutes(option.Minutes));
+    }
+
     private void Appearance_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_loading || AppearanceCombo.SelectedItem is not ComboBoxItem item) return;
@@ -121,6 +133,13 @@ public partial class SettingsView : UserControl
             new AllowanceOption(60, Loc.F("{0} minutes", 60)),
             new AllowanceOption(120, Loc.F("{0} minutes", 120)),
             new AllowanceOption(240, Loc.F("{0} minutes", 240)),
+        };
+        UnlockDurationCombo.ItemsSource = new[]
+        {
+            new UnlockDurationOption(5, Loc.F("{0} minutes", 5)),
+            new UnlockDurationOption(15, Loc.F("{0} minutes", 15)),
+            new UnlockDurationOption(30, Loc.F("{0} minutes", 30)),
+            new UnlockDurationOption(60, Loc.F("{0} minutes", 60)),
         };
     }
 

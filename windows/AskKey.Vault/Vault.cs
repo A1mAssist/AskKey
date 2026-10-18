@@ -182,6 +182,20 @@ public sealed partial class Vault : IDisposable
         }
     }
 
+    public void SetManagementSessionIdleLimit(TimeSpan limit)
+    {
+        if (limit <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(limit));
+        ManagementSessionIdleLimit = limit;
+        lock (_stateLock)
+        {
+            var now = _clock();
+            if (_managementSessionExpiresAt is { } expires && now < expires)
+            {
+                _managementSessionExpiresAt = now + limit;
+            }
+        }
+    }
+
     public void BeginManagementSession(ManagementAuthenticator authenticator)
     {
         AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
@@ -230,8 +244,14 @@ public sealed partial class Vault : IDisposable
     private bool IsManagementSessionValidLocked()
         => _managementSessionExpiresAt is { } expires && _clock() < expires;
 
-    internal static void AuthorizeManagement(ManagementAuthenticator authenticator, string reason)
+    internal void AuthorizeManagement(ManagementAuthenticator authenticator, string reason)
     {
+        // A valid management session already represents a recent Windows Hello
+        // confirmation; the configured idle window is the reuse period.
+        lock (_stateLock)
+        {
+            if (IsManagementSessionValidLocked()) return;
+        }
         if (!authenticator.Confirm(reason)) throw VaultException.ManagementAuthenticationRequired();
     }
 

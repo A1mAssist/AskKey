@@ -100,6 +100,17 @@
         <TextBlock local:Loc.Key="SECURITY" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
         <Border Style="{StaticResource CardStyle}" Padding="0">
           <StackPanel>
+            <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Unlock duration" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="After one Windows Hello confirmation, skip repeated checks for in-app management actions during this window."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ComboBox x:Name="UnlockDurationCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+                        DisplayMemberPath="Label" SelectionChanged="UnlockDuration_SelectionChanged"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
             <Grid Margin="16,14" HorizontalAlignment="Stretch">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <StackPanel>

@@ -60,7 +60,7 @@ public sealed class AppHost : IDisposable
         try
         {
             Vault.Unlock();
-            Vault.ManagementSessionIdleLimit = TimeSpan.FromSeconds(_preferences.SessionTimeoutSeconds);
+            Vault.SetManagementSessionIdleLimit(TimeSpan.FromSeconds(_preferences.SessionTimeoutSeconds));
             Vault.UpdateDefaultTimedAllowanceMinutes(_preferences.DefaultTimedAllowanceMinutes);
             Vault.ApprovalRequests.SetReadAuthenticationEnabled(_preferences.ReadApprovalAuthenticationEnabled);
             ConfigureApprovals();
@@ -190,9 +190,9 @@ public sealed class AppHost : IDisposable
     }
 
     /// <summary>
-    /// Performs one identity check and renews the management session. The
-    /// returned authenticator is already satisfied, so the following vault
-    /// call does not ask again.
+    /// Reuses an active management session, or performs one identity check and
+    /// starts a new one. The returned authenticator is already satisfied, so
+    /// the following vault call does not ask again.
     /// </summary>
     public ManagementAuthenticator AuthenticateAndBeginManagement(string reason)
     {

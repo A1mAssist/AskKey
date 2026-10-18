@@ -59,7 +59,7 @@ public sealed class AppHost : IDisposable
         try
         {
             Vault.Unlock();
-            Vault.ManagementSessionIdleLimit = TimeSpan.FromSeconds(_preferences.SessionTimeoutSeconds);
+            Vault.SetManagementSessionIdleLimit(TimeSpan.FromSeconds(_preferences.SessionTimeoutSeconds));
             Vault.UpdateDefaultTimedAllowanceMinutes(_preferences.DefaultTimedAllowanceMinutes);
             Vault.ApprovalRequests.SetReadAuthenticationEnabled(_preferences.ReadApprovalAuthenticationEnabled);
             ConfigureApprovals();

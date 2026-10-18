@@ -55,6 +55,51 @@ public sealed class VaultFacadeTests
         Assert.False(harness.Vault.HasActiveManagementSession);
     }
 
+    [Fact]
+    public void ActiveManagementSessionReusesWindowsHelloConfirmation()
+    {
+        using var harness = new Harness();
+        var created = harness.Vault.CreateTextCredential(new TextCredentialInput
+        {
+            Name = "Reusable Token",
+            Value = "synthetic-secret",
+        }, ManagementAuthenticator.Allow);
+        var prompts = 0;
+
+        harness.Vault.UpdateCredentialPermission(created.Id, CredentialPermission.Allowed,
+            new ManagementAuthenticator(_ => { prompts++; return true; }));
+
+        Assert.Equal(0, prompts);
+    }
+
+    [Fact]
+    public void ExpiredManagementSessionRequiresConfirmationAgain()
+    {
+        var now = Now;
+        using var harness = new Harness(() => now, idleLimit: TimeSpan.FromMinutes(5));
+        now = now.AddMinutes(6);
+        var prompts = 0;
+
+        var error = Assert.Throws<VaultException>(() => harness.Vault.PauseAgentAccess(
+            new ManagementAuthenticator(_ => { prompts++; return false; })));
+
+        Assert.Equal(VaultErrorCode.ManagementAuthenticationRequired, error.Code);
+        Assert.Equal(1, prompts);
+    }
+
+    [Fact]
+    public void ChangingTheIdleLimitRestartsAnActiveSessionFromNow()
+    {
+        var now = Now;
+        using var harness = new Harness(() => now, idleLimit: TimeSpan.FromMinutes(5));
+        now = now.AddMinutes(4);
+
+        harness.Vault.SetManagementSessionIdleLimit(TimeSpan.FromMinutes(15));
+        now = now.AddMinutes(10);
+
+        Assert.True(harness.Vault.HasActiveManagementSession);
+    }
+
     private static AgentTextWriteSubmission Submit(Vault vault, AgentTextWriteRequest request)
     {
         var outcome = vault.RequestAgentTextWrite(request);
