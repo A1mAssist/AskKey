@@ -25,6 +25,12 @@ Debug builds set `ASKKEY_DEVELOPMENT=1` and use the `dev` data roots, so they do
 
 The script runs the tests, builds a self-contained `win-x64` payload, verifies the required `AskKey.exe` and `Helpers\askkey.exe` layout, then hands it to Velopack (`vpk pack`). It takes the version from `AskKeyVersion.Current` in `AskKey.Integrations\AskKeyVersion.cs`; bump that file to cut a release.
 
+The payload ships Simplified Chinese satellite assemblies only: every locale folder
+except `zh-CN` is deleted before packing. Those folders hold nothing but
+`Microsoft.ui.xaml` `*.mui` pairs, and WinUI falls back to the neutral resources in
+the root binaries when a satellite is absent, so startup is unaffected. To ship more
+languages, extend `$keepSatellites` in the script.
+
 `vpk pack` writes the whole release set into `windows\publish\release`: `AskKey-win-Setup.exe`, `AskKey-win.msi`, `AskKey-win-Portable.zip`, `AskKey-<version>-full.nupkg`, plus the update feed `assets.win.json`, `releases.win.json` and `RELEASES`. Upload all of them together and never hand-edit the feed files.
 
 To sign the host and helper with a certificate from the current user's certificate store:

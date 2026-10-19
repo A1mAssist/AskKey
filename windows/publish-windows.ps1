@@ -47,6 +47,18 @@ if (-not (Test-Path -LiteralPath $buildDir -PathType Container)) {
 }
 Copy-Item -Path (Join-Path $buildDir '*') -Destination $publishDir -Recurse -Force
 
+# Ship Simplified Chinese satellite assemblies only. Every other locale folder is a
+# Microsoft.ui.xaml *.mui pair; WinUI falls back to the neutral resources next to the
+# root binaries when a satellite is absent, so dropping them cannot break startup.
+# "Neutral" means the invariant copy inside the root DLLs, not the en-us folder.
+$keepSatellites = 'zh-CN'
+foreach ($satellite in Get-ChildItem -LiteralPath $publishDir -Directory |
+        Where-Object { Test-Path (Join-Path $_.FullName 'Microsoft.ui.xaml.dll.mui') }) {
+    if ($keepSatellites -notcontains $satellite.Name) {
+        Remove-Item -LiteralPath $satellite.FullName -Recurse -Force
+    }
+}
+
 $hostPath = Join-Path $publishDir 'AskKey.exe'
 $helperPath = Join-Path $publishDir 'Helpers\askkey.exe'
 foreach ($required in @($hostPath, $helperPath, (Join-Path $publishDir 'App.xbf'), (Join-Path $publishDir 'Views'))) {
