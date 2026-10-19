@@ -1,17 +1,10 @@
-# Windows build and local artifacts
-windows/**/bin/
-windows/**/obj/
-windows/**/.vs/
-windows/**/TestResults/
-windows/**/publish/
-windows/**/artifacts/
-windows/_crashes/
-windows/_probe/
-windows/_probe_catalog/
-windows/_probe_ns/
-windows/_probe_run/
-windows/_*.txt
-windows/_*.png
+# Build output
+**/bin/
+**/obj/
+**/.vs/
+**/TestResults/
+**/publish/
+/artifacts/
 
 # Local settings and generated files
 **/launchSettings.json
@@ -22,10 +15,3 @@ windows/_*.png
 **/node_modules/
 **/__pycache__/
 **/.DS_Store
-
-# The original macOS checkout is kept locally for reference only.
-.askkey-upstream-git/
-AskKey/
-
-# Local QA outputs and screenshots
-/artifacts/
