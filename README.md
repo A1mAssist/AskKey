@@ -1,6 +1,14 @@
-# Ask Key for Windows
+<p align="center">
+  <img src="assets/icon.png" width="96" alt="Ask Key icon">
+</p>
 
-**A local credential manager for AI agents on Windows.**
+<h1 align="center">Ask Key for Windows</h1>
+
+<p align="center"><strong>A local credential manager for AI agents on Windows.</strong></p>
+
+<p align="center">
+  <a href="README.zh-CN.md">简体中文</a> · <a href="README.md">English</a>
+</p>
 
 Ask Key keeps credentials encrypted on your PC. Agents discover credentials by name and metadata, then ask the local Broker for access. You decide whether a request may proceed. Approved text values are delivered as environment variables to the target process, and file values as short-lived private files. The agent never receives the stored plaintext.
 
