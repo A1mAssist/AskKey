@@ -288,7 +288,8 @@ internal static partial class BuildTool
         var project = Path.Combine(root, "installer", "Guard", "AskKey.Guard.Installer.wixproj");
         if (!File.Exists(project))
             throw new FileNotFoundException("AskKey.Guard.Installer.wixproj was not found.", project);
-        Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal",
+        // Rebuild, not build: the payload arrives as a command-line property MSBuild never tracks.
+        Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal", "-t:Rebuild",
             $"-p:ProductVersion={version}", $"-p:GuardPublishDir={Path.GetFullPath(publishDir)}"], root);
         var built = Path.Combine(root, "installer", "Guard", "bin", "Release", $"AskKeyGuard-{version}.msi");
         if (!File.Exists(built)) throw new FileNotFoundException("The Guard MSI was not produced.", built);
@@ -306,7 +307,9 @@ internal static partial class BuildTool
             throw new FileNotFoundException("AskKey.Bundle.wixproj was not found.", project);
         if (!File.Exists(appMsi)) throw new FileNotFoundException("The app MSI was not found.", appMsi);
         if (!File.Exists(guardMsi)) throw new FileNotFoundException("The Guard MSI was not found.", guardMsi);
-        Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal",
+        // Rebuild, not build: MSBuild does not track files that arrive through command-line
+        // properties, so an incremental build can ship a bundle with the previous MSI inside.
+        Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal", "-t:Rebuild",
             $"-p:ProductVersion={version}", $"-p:AppMsi={Path.GetFullPath(appMsi)}",
             $"-p:GuardMsi={Path.GetFullPath(guardMsi)}"], root);
         var built = Path.Combine(root, "installer", "Bundle", "bin", "Release", $"AskKeySetup-{version}.exe");
