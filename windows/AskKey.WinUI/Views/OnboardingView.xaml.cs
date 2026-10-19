@@ -14,6 +14,7 @@ public partial class OnboardingView : UserControl
         UpdateLaunchCopy();
         UpdatePassphraseCopy();
         Loc.LanguageChanged += UpdateLaunchCopy;
+        Loc.LanguageChanged += UpdatePassphraseCopy;
     }
 
     private void UpdateLaunchCopy()
@@ -85,6 +86,8 @@ public partial class OnboardingView : UserControl
             PassphraseHint.Text = Loc.T("High security mode is already on.");
             return;
         }
+        PassphraseBox.PlaceholderText = Loc.T("Passphrase (at least 8 characters)");
+        PassphraseConfirmBox.PlaceholderText = Loc.T("Confirm the passphrase");
         var on = PassphraseToggle.IsChecked == true;
         PassphraseFields.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         PassphraseHint.Text = Loc.T(on
