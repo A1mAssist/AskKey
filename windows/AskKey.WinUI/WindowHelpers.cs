@@ -12,6 +12,9 @@ internal static class WindowHelpers
     private const int GwlStyle = -16;
     private const int DwmWindowCornerPreference = 33;
     private const int DwmWindowCornerRound = 2;
+    private const int DwmWindowCornerDoNotRound = 1;
+    private const int DwmBorderColor = 34;
+    private const int DwmBorderColorNone = unchecked((int)0xFFFFFFFE);
     private const long WsCaption = 0x00C00000L;
     private const long WsThickFrame = 0x00040000L;
 
@@ -56,6 +59,17 @@ internal static class WindowHelpers
     {
         var corner = DwmWindowCornerRound;
         DwmSetWindowAttribute(Handle(window), DwmWindowCornerPreference, ref corner, sizeof(int));
+    }
+
+    // Menus draw their own surface and corner region; DWM's own frame would add a
+    // grey halo outside it. Border=none drops it; donotround defers corners to SetWindowRgn.
+    public static void DisableWindowFrame(Window window)
+    {
+        var handle = Handle(window);
+        var border = DwmBorderColorNone;
+        DwmSetWindowAttribute(handle, DwmBorderColor, ref border, sizeof(int));
+        var corners = DwmWindowCornerDoNotRound;
+        DwmSetWindowAttribute(handle, DwmWindowCornerPreference, ref corners, sizeof(int));
     }
 
     public static async Task<T> ShowDialogAsync<T>(Window dialog, Window? owner, Task<T> completion)

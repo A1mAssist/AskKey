@@ -3,14 +3,14 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Ask Key">
-  <Grid x:Name="MenuRoot" MinWidth="176" Background="#2A2A2A">
+  <Grid x:Name="MenuRoot" MinWidth="152" Background="Transparent">
     <Grid.Resources>
       <Style x:Key="TrayMenuButtonStyle" TargetType="Button">
-        <Setter Property="Height" Value="34" />
+        <Setter Property="Height" Value="30" />
         <Setter Property="MinHeight" Value="0" />
         <Setter Property="MinWidth" Value="0" />
-        <Setter Property="Margin" Value="4,2,4,2" />
-        <Setter Property="Padding" Value="7,4,6,7" />
+        <Setter Property="Margin" Value="3,1,3,1" />
+        <Setter Property="Padding" Value="6,3,5,4" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="4" />
@@ -18,7 +18,7 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{ThemeResource MenuFlyoutItemForeground}" />
         <Setter Property="Template">
           <Setter.Value>
@@ -63,21 +63,21 @@
       </Style>
     </Grid.Resources>
     <Border x:Name="MenuPanel"
-            Background="Transparent"
-            BorderBrush="{ThemeResource MenuFlyoutPresenterBorderBrush}"
-            BorderThickness="1"
+            Background="{ThemeResource SurfaceBrush}"
+            BorderThickness="0"
             CornerRadius="8"
-            Padding="0,2">
-      <StackPanel>
+            Padding="0,4,0,4"
+            VerticalAlignment="Top">
+      <StackPanel x:Name="MenuItems">
         <Button x:Name="OpenMenuItem"
                 Click="OpenClick"
                 AutomationProperties.Name="Open Ask Key"
                 Style="{StaticResource TrayMenuButtonStyle}">
           <Grid>
-            <Viewbox Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center">
-              <FontIcon Glyph="&#xE80F;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+            <Viewbox Width="15" Height="15" HorizontalAlignment="Left" VerticalAlignment="Center">
+              <FontIcon Glyph="&#xE80F;" FontFamily="Segoe Fluent Icons" FontSize="13" />
             </Viewbox>
-            <TextBlock x:Name="OpenMenuText" Text="Open Ask Key" Margin="28,0,0,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="OpenMenuText" Text="Open Ask Key" Margin="26,0,0,0" VerticalAlignment="Center" />
           </Grid>
         </Button>
         <Button x:Name="PendingMenuItem"
@@ -85,10 +85,10 @@
                 AutomationProperties.Name="Pending requests"
                 Style="{StaticResource TrayMenuButtonStyle}">
           <Grid>
-            <Viewbox Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center">
-              <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+            <Viewbox Width="15" Height="15" HorizontalAlignment="Left" VerticalAlignment="Center">
+              <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" FontSize="13" />
             </Viewbox>
-            <TextBlock x:Name="PendingMenuText" Text="Pending requests" Margin="28,0,0,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="PendingMenuText" Text="Pending requests" Margin="26,0,0,0" VerticalAlignment="Center" />
           </Grid>
         </Button>
         <Button x:Name="PauseMenuItem"
@@ -96,34 +96,47 @@
                 AutomationProperties.Name="Pause Agent access"
                 Style="{StaticResource TrayMenuButtonStyle}">
           <Grid>
-            <Viewbox Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center">
-              <FontIcon Glyph="&#xE7E8;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+            <Viewbox Width="15" Height="15" HorizontalAlignment="Left" VerticalAlignment="Center">
+              <FontIcon Glyph="&#xE7E8;" FontFamily="Segoe Fluent Icons" FontSize="13" />
             </Viewbox>
-            <TextBlock x:Name="PauseMenuText" Text="Pause Agent access" Margin="28,0,0,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="PauseMenuText" Text="Pause Agent access" Margin="26,0,0,0" VerticalAlignment="Center" />
           </Grid>
         </Button>
-        <Rectangle Height="1" Fill="{ThemeResource MenuFlyoutSeparatorBackground}" Margin="12,4,12,4" />
+        <Rectangle Height="1" Fill="{ThemeResource MenuFlyoutSeparatorBackground}" Margin="12,2,12,2" />
         <Button x:Name="SettingsMenuItem"
                 Click="SettingsClick"
                 AutomationProperties.Name="Settings"
                 Style="{StaticResource TrayMenuButtonStyle}">
           <Grid>
-            <Viewbox Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center">
-              <FontIcon Glyph="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+            <Viewbox Width="15" Height="15" HorizontalAlignment="Left" VerticalAlignment="Center">
+              <FontIcon Glyph="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="13" />
             </Viewbox>
-            <TextBlock x:Name="SettingsMenuText" Text="Settings" Margin="28,0,0,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="SettingsMenuText" Text="Settings" Margin="26,0,0,0" VerticalAlignment="Center" />
           </Grid>
         </Button>
-        <Rectangle Height="1" Fill="{ThemeResource MenuFlyoutSeparatorBackground}" Margin="12,4,12,4" />
+        <Rectangle Height="1" Fill="{ThemeResource MenuFlyoutSeparatorBackground}" Margin="12,2,12,2" />
         <Button x:Name="QuitMenuItem"
                 Click="QuitClick"
                 AutomationProperties.Name="Quit Ask Key"
                 Style="{StaticResource TrayMenuButtonStyle}">
           <Grid>
-            <Viewbox Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center">
+            <!-- The 24x24 path leaves ~7 units of empty canvas below the ink, so the glyph
+                 reads smaller than the Segoe Fluent Icons beside it and its bottom edge
+                 lands between pixels. Scale about the ink centre (10.5,10 of 24) to match
+                 their optical size without touching the original path data. -->
+            <Viewbox Width="15" Height="15"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Center"
+                     RenderTransformOrigin="0.4385,0.4167">
+              <Viewbox.RenderTransform>
+                <TransformGroup>
+                  <ScaleTransform ScaleX="1.25" ScaleY="1.25" />
+                  <TranslateTransform Y="-1.1" />
+                </TransformGroup>
+              </Viewbox.RenderTransform>
               <PathIcon Data="M12.5,17 C12.7761,17 13,16.7761 13,16.5 C13,16.2239 12.7761,16 12.5,16 L6,16 C4.89543,16 4,15.1046 4,14 L4,6 C4,4.89543 4.89543,4 6,4 L12.5,4 C12.7761,4 13,3.77614 13,3.5 C13,3.22386 12.7761,3 12.5,3 L6,3 C4.34315,3 3,4.34315 3,6 L3,14 C3,15.6569 4.34315,17 6,17 Z M13.6464,6.14645 C13.8417,5.95118 14.1583,5.95118 14.3536,6.14645 L17.8536,9.64645 C18.0488,9.84171 18.0488,10.1583 17.8536,10.3536 L14.3536,13.8536 C14.1583,14.0488 13.8417,14.0488 13.6464,13.8536 C13.4512,13.6583 13.4512,13.3417 13.6464,13.1464 L16.2929,10.5 L7.5,10.5 C7.22386,10.5 7,10.2761 7,10 C7,9.72386 7.22386,9.5 7.5,9.5 L16.2929,9.5 L13.6464,6.85355 C13.4512,6.65829 13.4512,6.34171 13.6464,6.14645 Z" />
             </Viewbox>
-            <TextBlock x:Name="QuitMenuText" Text="Quit Ask Key" Margin="28,0,0,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="QuitMenuText" Text="Quit Ask Key" Margin="26,0,0,0" VerticalAlignment="Center" />
           </Grid>
         </Button>
       </StackPanel>

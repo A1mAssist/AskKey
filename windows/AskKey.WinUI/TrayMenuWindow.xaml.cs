@@ -1,3 +1,4 @@
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -29,6 +30,10 @@ public sealed partial class TrayMenuWindow : Window
     private const int VkEscape = 0x1B;
     private const uint GaRoot = 2;
     private const int CornerRadius = 8;
+    private const double MinPanelWidth = 152;
+    // 5 buttons @ (30 + 1 margin top + 1 margin bottom) + 2 separators @ (1 + 2 + 2)
+    // + panel padding 4 top + 4 bottom.
+    private const double PanelContentHeightDip = 5 * 32 + 2 * 5 + 8;
     private static readonly IntPtr HwndTopmost = new(-1);
     private readonly IntPtr _windowHandle;
     private bool _hostReady;
@@ -37,6 +42,7 @@ public sealed partial class TrayMenuWindow : Window
     private bool _closing;
     private int _pendingCount;
     private bool _paused;
+    private bool _prerendered;
     private (int X, int Y)? _queuedShow;
     private IntPtr _mouseHook;
     private IntPtr _keyboardHook;
@@ -59,6 +65,7 @@ public sealed partial class TrayMenuWindow : Window
         }
 
         _windowHandle = WindowHelpers.Handle(this);
+        WindowHelpers.DisableWindowFrame(this);
         var extendedStyle = GetWindowLongPtr(_windowHandle, GwlExStyle).ToInt64();
         SetWindowLongPtr(
             _windowHandle,
@@ -98,9 +105,9 @@ public sealed partial class TrayMenuWindow : Window
     public void ApplyTheme(bool dark)
     {
         MenuRoot.RequestedTheme = dark ? ElementTheme.Dark : ElementTheme.Light;
-        MenuRoot.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-            dark ? Windows.UI.Color.FromArgb(255, 0x2A, 0x2A, 0x2A)
-                 : Windows.UI.Color.FromArgb(255, 0xF9, 0xF9, 0xF9));
+        MenuPanel.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            dark ? Windows.UI.Color.FromArgb(255, 0x23, 0x26, 0x2A)
+                 : Windows.UI.Color.FromArgb(255, 0xFF, 0xFF, 0xFF));
     }
 
     public void ApplyLanguage()
@@ -161,13 +168,32 @@ public sealed partial class TrayMenuWindow : Window
             return;
         }
 
-        MenuRoot.UpdateLayout();
-        MenuRoot.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        // Do NOT size this window from a measured DesiredSize. Every element in the tree stretches
+        // to the client area, so any measured height is the PREVIOUS window's height and feeds
+        // straight back into the next size -- the window grew a screen-tall black strip. The menu
+        // has a fixed row count, so derive the size arithmetically instead. If you add, remove or
+        // resize a row, update these four numbers.
         var scale = MenuRoot.XamlRoot?.RasterizationScale ?? GetDpiForWindow(_windowHandle) / 96d;
         if (scale <= 0) scale = 1;
-        var desired = MenuRoot.DesiredSize;
-        var width = Math.Max(1, (int)Math.Ceiling((desired.Width > 0 ? desired.Width : 220) * scale));
-        var height = Math.Max(1, (int)Math.Ceiling((desired.Height > 0 ? desired.Height : 214) * scale));
+        var desired = new Size(MinPanelWidth, PanelContentHeightDip);
+        // SetWindowPos takes the OUTER rect, but this window keeps a non-client frame, so the
+        // client area is smaller than the size handed in. Add the frame back, otherwise the panel
+        // is clipped: the right edge loses its hover inset and the bottom loses the last item's
+        // corner radius.
+        // Measure the non-client frame instead of asking for it. SM_CXPADDEDBORDER /
+        // SM_CYPADDEDBORDER are documented to return SM_CXFRAME * 2, and on this system they
+        // returned 11 and 33549 -- the height blew the window up to a full-screen black strip.
+        // window - client is the frame, straight from the window we already own.
+        var frameX = 0;
+        var frameY = 0;
+        GetWindowRect(_windowHandle, out var frameProbeWindow);
+        GetClientRect(_windowHandle, out var frameProbeClient);
+        frameX = Math.Max(0, (frameProbeWindow.Right - frameProbeWindow.Left) -
+            (frameProbeClient.Right - frameProbeClient.Left));
+        frameY = Math.Max(0, (frameProbeWindow.Bottom - frameProbeWindow.Top) -
+            (frameProbeClient.Bottom - frameProbeClient.Top));
+        var width = Math.Max(1, (int)Math.Ceiling(desired.Width * scale) + frameX);
+        var height = Math.Max(1, (int)Math.Ceiling(desired.Height * scale) + frameY);
         var workArea = DisplayArea.GetFromPoint(
             new PointInt32(x, y),
             DisplayAreaFallback.Primary).WorkArea;
@@ -200,6 +226,55 @@ public sealed partial class TrayMenuWindow : Window
         _menuOpen = true;
         _showPending = false;
         InstallHooks();
+        // The first show is the offscreen pre-render pass, not a real animation.
+        StartOpenAnimation(animateFrom: _prerendered);
+        _prerendered = true;
+    }
+
+    // Mirrors the system flyout: a short fade + rise out of the tray anchor.
+    private const double OpenDurationMs = 110;
+    private const double RiseDistanceDip = 8;
+    private DispatcherQueueTimer? _openTimer;
+
+    private void StartOpenAnimation(bool animateFrom)
+    {
+        if (!animateFrom)
+        {
+            MenuRoot.Opacity = 1d;
+            MenuRoot.Translation = default;
+            return;
+        }
+
+        _openTimer?.Stop();
+        MenuRoot.Opacity = 0d;
+        MenuRoot.Translation = new System.Numerics.Vector3(0f, (float)RiseDistanceDip, 0f);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        _openTimer = MenuRoot.DispatcherQueue.CreateTimer();
+        _openTimer.IsRepeating = true;
+        _openTimer.Tick += (_, _) =>
+        {
+            if (_closing)
+            {
+                _openTimer?.Stop();
+                return;
+            }
+            var t = Math.Clamp(stopwatch.Elapsed.TotalMilliseconds / OpenDurationMs, 0d, 1d);
+            var eased = 1d - Math.Pow(1d - t, 3d);
+            MenuRoot.Opacity = eased;
+            MenuRoot.Translation = new System.Numerics.Vector3(0f, (float)(RiseDistanceDip * (1d - eased)), 0f);
+            if (t < 1d) return;
+            ResetOpenAnimation();
+        };
+        _openTimer.Start();
+    }
+
+    private void ResetOpenAnimation()
+    {
+        _openTimer?.Stop();
+        _openTimer = null;
+        MenuRoot.Opacity = 1d;
+        MenuRoot.Translation = default;
     }
 
     public void CloseMenuHost()
@@ -251,6 +326,7 @@ public sealed partial class TrayMenuWindow : Window
         _showPending = false;
         RemoveHooks();
         SetLayeredWindowAttributes(_windowHandle, 0, 0, LwaAlpha);
+        ResetOpenAnimation();
         AppWindow.Hide();
     }
 
