@@ -1,3 +1,4 @@
+using AskKey.Vault;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -100,7 +101,7 @@ public partial class OnboardingView : UserControl
         var on = PassphraseToggle.IsChecked == true;
         PassphraseFields.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         PassphraseHint.Text = Loc.T(on
-            ? "The vault key is wrapped with your passphrase. Ask Key asks for it every time it starts."
+            ? "The vault key is wrapped with your passphrase. Enter it once each time Ask Key starts; sensitive actions then use Windows Hello."
             : "Windows DPAPI wraps the key. Any program running as you can decrypt it.");
     }
 
@@ -123,6 +124,10 @@ public partial class OnboardingView : UserControl
         try
         {
             _host.Vault.EnableHighSecurity(passphrase);
+            // The passphrase was just set; do not make the user pass a second
+            // Hello gate before the first management window opens.
+            _host.Vault.BeginManagementSession(ManagementAuthenticator.Allow);
+            UpdatePassphraseCopy();
             return true;
         }
         catch (Exception error)

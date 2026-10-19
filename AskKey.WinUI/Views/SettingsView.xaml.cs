@@ -53,7 +53,7 @@ public partial class SettingsView : UserControl
             var highSecurity = _host.Vault.IsHighSecurityEnabled;
             HighSecurityToggle.IsChecked = highSecurity;
             HighSecurityText.Text = Loc.T(highSecurity
-                ? "A passphrase wraps the vault key. Ask Key asks for it every time it starts."
+                ? "A passphrase wraps the vault key. Enter it once each time Ask Key starts; sensitive actions then use Windows Hello."
                 : "Windows DPAPI wraps the vault key. Any program running as you can unwrap it.");
             DataFolderText.Text = VaultConfiguration.Default.LocalApplicationDataDirectory;
             EraseConfirmPanel.Visibility = Visibility.Collapsed;

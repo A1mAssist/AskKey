@@ -230,6 +230,10 @@ public sealed class AppHost : IDisposable
         try
         {
             Vault.Unlock(passphrase);
+            // The passphrase is this launch's strong factor; open the management
+            // window without immediately asking Hello a second time.
+            if (Vault.IsHighSecurityEnabled)
+                Vault.BeginManagementSession(new global::AskKey.Vault.ManagementAuthenticator(_ => true));
             IsLockedAtStartup = false;
             CredentialsChanged?.Invoke();
             return true;
