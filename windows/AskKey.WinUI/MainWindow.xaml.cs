@@ -60,7 +60,21 @@ public partial class MainWindow : Window
         AppWindow.Closing += AppWindow_Closing;
         NavList.SelectedIndex = 0;
         RefreshChrome();
-        if (!_host.Preferences.HasCompletedOnboarding) ContentHost.Content = _onboardingView;
+        if (!_host.Preferences.HasCompletedOnboarding)
+        {
+            ContentHost.Content = _onboardingView;
+            // First run is a single task: leaving the nav visible let the user navigate
+            // to Settings and lose the onboarding page without completing it.
+            Sidebar.Visibility = Visibility.Collapsed;
+            RootGrid.ColumnDefinitions[0].Width = new GridLength(0);
+        }
+    }
+
+    private void RestoreChrome()
+    {
+        if (Sidebar.Visibility == Visibility.Visible) return;
+        Sidebar.Visibility = Visibility.Visible;
+        RootGrid.ColumnDefinitions[0].Width = new GridLength(222);
     }
 
     public void ShowFromTray()
@@ -80,6 +94,7 @@ public partial class MainWindow : Window
 
     public void ShowActivity(ActivitySection section)
     {
+        RestoreChrome();
         NavList.SelectedIndex = 1;
         ContentHost.Content = _activityView;
         _activityView.Select(section);
@@ -87,6 +102,7 @@ public partial class MainWindow : Window
 
     public void ShowSettings()
     {
+        RestoreChrome();
         NavList.SelectedIndex = 3;
         ContentHost.Content = _settingsView;
         _settingsView.Refresh();
@@ -94,6 +110,7 @@ public partial class MainWindow : Window
 
     public void ShowCredentials(string? group = null)
     {
+        RestoreChrome();
         NavList.SelectedIndex = 0;
         ContentHost.Content = _credentialsView;
         _credentialsView.Refresh();
@@ -105,6 +122,7 @@ public partial class MainWindow : Window
 
     public void ShowAgentAccess()
     {
+        RestoreChrome();
         NavList.SelectedIndex = 2;
         ContentHost.Content = _agentAccessView;
         _agentAccessView.Refresh();

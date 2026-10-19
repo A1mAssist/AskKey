@@ -50,7 +50,7 @@
                 <TextBlock local:Loc.Key="Global shortcut" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
                 <TextBlock local:Loc.Key="Open Ask Key from any application." Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
               </StackPanel>
-              <ComboBox x:Name="HotkeyCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+              <ComboBox x:Name="HotkeyCombo" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource FormComboBoxStyle}"
                         DisplayMemberPath="Label" SelectionChanged="Hotkey_SelectionChanged"/>
             </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>
@@ -61,7 +61,7 @@
                 <TextBlock local:Loc.Key="Default window for “Allow for…” on read requests."
                            Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
               </StackPanel>
-              <ComboBox x:Name="AllowanceCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+              <ComboBox x:Name="AllowanceCombo" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource FormComboBoxStyle}"
                         DisplayMemberPath="Label" SelectionChanged="Allowance_SelectionChanged"/>
             </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>
@@ -72,7 +72,7 @@
                 <TextBlock local:Loc.Key="Match Windows or choose a fixed light or dark theme."
                            Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
               </StackPanel>
-              <ComboBox x:Name="AppearanceCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+              <ComboBox x:Name="AppearanceCombo" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource FormComboBoxStyle}"
                         SelectionChanged="Appearance_SelectionChanged">
                 <ComboBoxItem local:Loc.Key="System" Tag="system"/>
                 <ComboBoxItem local:Loc.Key="Light" Tag="light"/>
@@ -87,7 +87,7 @@
                 <TextBlock local:Loc.Key="Choose the language used by Ask Key."
                            Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
               </StackPanel>
-              <ComboBox x:Name="LanguageCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+              <ComboBox x:Name="LanguageCombo" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource FormComboBoxStyle}"
                         SelectionChanged="Language_SelectionChanged">
                 <ComboBoxItem local:Loc.Key="System" Tag="system"/>
                 <ComboBoxItem local:Loc.Key="Simplified Chinese" Tag="zh-Hans"/>
@@ -107,7 +107,7 @@
                 <TextBlock local:Loc.Key="After one Windows Hello confirmation, skip repeated checks for in-app management actions during this window."
                            Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
               </StackPanel>
-              <ComboBox x:Name="UnlockDurationCombo" Grid.Column="1" Style="{StaticResource FormComboBoxStyle}"
+              <ComboBox x:Name="UnlockDurationCombo" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource FormComboBoxStyle}"
                         DisplayMemberPath="Label" SelectionChanged="UnlockDuration_SelectionChanged"/>
             </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>

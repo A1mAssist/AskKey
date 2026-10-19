@@ -29,7 +29,7 @@
       </Grid>
     </Grid>
 
-    <Border Grid.Row="1" Grid.Column="0" Background="{ThemeResource SidebarBackgroundBrush}">
+    <Border x:Name="Sidebar" Grid.Row="1" Grid.Column="0" Background="{ThemeResource SidebarBackgroundBrush}">
       <Grid Margin="16,16,14,14">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
