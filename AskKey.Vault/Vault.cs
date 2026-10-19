@@ -149,9 +149,9 @@ public sealed partial class Vault : IDisposable
         }
     }
 
-    /// <summary>True when the vault key is wrapped with a user passphrase.</summary>
+    /// <summary>True when a passphrase or Windows Hello guard protects the vault key.</summary>
     public bool IsHighSecurityEnabled
-        => PassphraseAppKeyStore.IsEnabled(_configuration.KeyMaterialDirectory);
+        => IsPassphraseProtected || IsGuardUnlockEnabled;
 
     /// <summary>
     /// Re-wraps the in-memory vault key with a passphrase and removes the DPAPI copy.
@@ -186,6 +186,9 @@ public sealed partial class Vault : IDisposable
             _keyStore.DeletePendingKey();
             _keyStore.SavePendingKey(key);
             _keyStore.PromotePendingKey();
+            // Remove the guard copy before the passphrase copy: a crash in between
+            // leaves the passphrase as the recovery path instead of a silent DPAPI fallback.
+            GuardAppKeyStore.Delete(directory);
             PassphraseAppKeyStore.Delete(directory);
         }
     }

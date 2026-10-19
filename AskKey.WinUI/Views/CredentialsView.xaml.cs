@@ -77,9 +77,12 @@ public partial class CredentialsView : UserControl
 
     /// <summary>The storage claim must match the store actually in use, so high
     /// security mode never claims DPAPI protection.</summary>
-    private void RefreshProtectionNotice() => ProtectionNotice.Text = Loc.T(_host.Vault.IsHighSecurityEnabled
-        ? "Protected by your passphrase"
-        : "Protected by Windows DPAPI");
+    private void RefreshProtectionNotice() => ProtectionNotice.Text = Loc.T(
+        _host.Vault.IsGuardUnlockEnabled
+            ? "Protected by Windows Hello"
+            : _host.Vault.IsHighSecurityEnabled
+                ? "Protected by your passphrase"
+                : "Protected by Windows DPAPI");
 
     private async void Unlock_Click(object sender, RoutedEventArgs e)
     {

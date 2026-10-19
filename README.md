@@ -87,7 +87,7 @@ The tool reads the version from `AskKey.Integrations\AskKeyVersion.cs`, runs the
 
 The default output is `artifacts\publish`:
 
-- `AskKey-win.msi` — per-machine install in `%ProgramFiles%\Ask Key\current\`
+- `AskKey-win.msi` — per-machine install in `%ProgramFiles%\AskKey\current\`
 - `AskKey-win-Setup.exe` — per-user install in `%LocalAppData%\AskKey\current\`
 - `AskKey-win-Portable.zip`
 - `AskKey-<version>-full.nupkg`
@@ -95,13 +95,29 @@ The default output is `artifacts\publish`:
 
 Upload the complete release set together. Do not hand-edit the feed files.
 
+### Windows Hello Guard service
+
+Windows Hello unlock needs the per-machine `AskKeyGuard` service. Publish it before building the Guard installer:
+
+```text
+dotnet run --project .\tools\AskKey.Build -- guard
+```
+
+Then run elevated:
+
+```powershell
+& .\AskKey.Guard.Service\Install-GuardService.ps1 -ExecutablePath .\artifacts\guard\AskKey.Guard-<version>-win-x64\AskKey.Guard.Service.exe
+```
+
+The script installs to `%ProgramFiles%\AskKey\Guard\` and runs the service as `NT AUTHORITY\LocalService`. For the MSI flow, install the app first and `AskKeyGuard-<version>.msi` second; uninstall Guard first. Per-user installs cannot use Hello unlock. Stop and remove the service before uninstalling or replacing the per-machine app. The script is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the per-machine MSI for an unsigned app. See `docs/guard-msi.md`. A production release still needs code signing.
+
 Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it before Agent connections. Windows SmartScreen still warns for unsigned downloads. Signed builds require the host and helper to carry signatures from the same publisher.
 
 ## Install
 
 | Installer | Scope | Location | Elevation |
 |---|---|---|---|
-| `AskKey-win.msi` | Per-machine | `%ProgramFiles%\Ask Key\current\` | Yes (UAC) |
+| `AskKey-win.msi` | Per-machine | `%ProgramFiles%\AskKey\current\` | Yes (UAC) |
 | `AskKey-win-Setup.exe` | Per-user | `%LocalAppData%\AskKey\current\` | No |
 
 Both installers extract the payload behind a `current\` folder:
@@ -126,15 +142,15 @@ Any MCP stdio client can be configured manually with the installed helper:
 }
 ```
 
-For a per-machine install, use `C:\\Program Files\\Ask Key\\current\\Helpers\\askkey.exe` instead. Manual setup does not install discovery hooks or run the in-app connection check. Broker permissions, approval prompts and credential delivery protections still apply.
+For a per-machine install, use `C:\\Program Files\\AskKey\\current\\Helpers\\askkey.exe` instead. Manual setup does not install discovery hooks or run the in-app connection check. Broker permissions, approval prompts and credential delivery protections still apply.
 
 ## Security model
 
 The Agent is treated as only partly trusted: it may run commands as your Windows user, but it must not receive a stored value without the approval flow.
 
 - **Default mode** wraps the vault key with Windows DPAPI (`CurrentUser`). This protects the files at rest, but any process running as you can unwrap the same key.
-- **High security mode** wraps the vault key with a passphrase using PBKDF2-HMAC-SHA256 (600,000 iterations) and deletes the DPAPI copy. Ask Key asks for the passphrase every time it starts. The passphrase cannot be recovered.
-- In both modes, revealing or copying a stored value requires fresh system authentication.
+- **High security mode** wraps the vault key with a passphrase using PBKDF2-HMAC-SHA256 (600,000 iterations) and deletes the DPAPI copy. If the per-machine AskKey Guard service is installed, the passphrase unlocks the first launch and later starts can use Windows Hello; the passphrase remains the recovery path. Without the service, Ask Key asks for the passphrase every time. The passphrase cannot be recovered.
+- Revealing or copying a stored value requires device confirmation. After one Windows Hello confirmation, the configured unlock window (5–60 minutes) covers further in-app management actions.
 - The helper must sit beside the host inside an official install root; a relocated copy is refused.
 - Ask Key has no backup or recovery feature. Keep the originals of your credentials somewhere else.
 

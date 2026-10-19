@@ -87,7 +87,7 @@ dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <t
 
 默认输出到 `artifacts\publish`：
 
-- `AskKey-win.msi` — 全机器安装到 `%ProgramFiles%\Ask Key\current\`
+- `AskKey-win.msi` — 全机器安装到 `%ProgramFiles%\AskKey\current\`
 - `AskKey-win-Setup.exe` — 当前用户安装到 `%LocalAppData%\AskKey\current\`
 - `AskKey-win-Portable.zip`
 - `AskKey-<version>-full.nupkg`
@@ -95,13 +95,29 @@ dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <t
 
 发布时请把整套文件一起上传，不要手动改 feed 文件。
 
+### Windows Hello Guard 服务
+
+Windows Hello 解锁需要全机器的 `AskKeyGuard` 服务。先发布服务：
+
+```text
+dotnet run --project .\tools\AskKey.Build -- guard
+```
+
+然后以管理员身份运行：
+
+```powershell
+& .\AskKey.Guard.Service\Install-GuardService.ps1 -ExecutablePath .\artifacts\guard\AskKey.Guard-<version>-win-x64\AskKey.Guard.Service.exe
+```
+
+脚本会安装到 `%ProgramFiles%\AskKey\Guard\`，并以 `NT AUTHORITY\LocalService` 运行服务。MSI 流程先装应用，再装 `AskKeyGuard-<version>.msi`；卸载时先卸 Guard。当前用户安装无法使用 Hello 解锁。卸载或替换全机器应用前，先停止并删除服务。这个脚本是开发/修复路径；未签名应用用 `installer\Guard\build-guard-msi.ps1 -Unsigned` 构建全机器 MSI，详见 `docs/guard-msi.md`。正式发布仍需要代码签名。
+
 未签名构建会把 `Helpers\` 的 SHA-256 清单嵌入 Host，并在 Agent 连接前校验。Windows SmartScreen 仍会提示未签名下载。签名构建要求 Host 和 Helper 使用同一发布者证书。
 
 ## 安装
 
 | 安装器 | 范围 | 位置 | 提权 |
 |---|---|---|---|
-| `AskKey-win.msi` | 全机器 | `%ProgramFiles%\Ask Key\current\` | 需要 UAC |
+| `AskKey-win.msi` | 全机器 | `%ProgramFiles%\AskKey\current\` | 需要 UAC |
 | `AskKey-win-Setup.exe` | 当前用户 | `%LocalAppData%\AskKey\current\` | 不需要 |
 
 两个安装器都会把实际程序放在 `current\` 子目录：
@@ -126,15 +142,15 @@ dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <t
 }
 ```
 
-全机器安装请改用 `C:\\Program Files\\Ask Key\\current\\Helpers\\askkey.exe`。手动配置不会安装发现钩子，也不会执行应用内的连接检查；Broker 权限、审批和凭证交付保护仍然生效。
+全机器安装请改用 `C:\\Program Files\\AskKey\\current\\Helpers\\askkey.exe`。手动配置不会安装发现钩子，也不会执行应用内的连接检查；Broker 权限、审批和凭证交付保护仍然生效。
 
 ## 安全模型
 
 Agent 只被部分信任：它可以以你的 Windows 用户身份运行命令，但没有经过审批流程，不能拿到库里的凭证值。
 
 - **默认模式** 使用 Windows DPAPI（`CurrentUser`）包裹 vault key。它能保护静态文件，但任何以你的身份运行的程序都可以解开同一个 key。
-- **高安全模式** 使用你设置的口令，通过 PBKDF2-HMAC-SHA256（600,000 次迭代）派生 KEK 包裹 vault key，并删除 DPAPI 副本。每次启动都要输入口令，忘记后无法找回。
-- 两种模式下，查看或复制凭证值都需要重新进行系统认证。
+- **高安全模式** 使用你设置的口令，通过 PBKDF2-HMAC-SHA256（600,000 次迭代）派生 KEK 包裹 vault key，并删除 DPAPI 副本。安装全机器 AskKey Guard 服务后，首次启动输入一次口令，之后的启动可以用 Windows Hello 解锁；口令始终是恢复路径。没有安装服务时，每次启动都要输入口令。忘记口令后无法找回。
+- 查看或复制凭证值需要设备确认。Windows Hello 确认一次后，在设置选择的时间窗口（5–60 分钟）内进行应用内管理操作不再重复验证。
 - Helper 必须和 Host 一起放在官方安装根目录内；被复制到其他位置的 Helper 会被拒绝。
 - Ask Key 没有备份或恢复功能，请把原始凭证另外保存好。
 

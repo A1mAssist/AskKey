@@ -142,6 +142,29 @@ public sealed class PassphraseAppKeyStoreTests
         restarted.Dispose();
     }
     [Fact]
+    public void DisablingHighSecurityRemovesTheGuardCopyToo()
+    {
+        using var root = new TestDirectory();
+        var config = new VaultConfiguration(root.Combine("appdata"), root.Combine("local"));
+        PrivateFileSystem.CreatePrivateDirectory(config.ApplicationSupportDirectory);
+        var key = TestCredentials.Key(61);
+        var vault = new Vault(TestCredentials.NewStore(config.VaultFile, key), key, null, null,
+            root.Combine("deliveries"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory));
+
+        vault.EnableHighSecurity("correct horse battery");
+        vault.EnableGuardUnlock(new byte[32], "AskKey.Hello.test");
+        var guardPath = Path.Combine(config.KeyMaterialDirectory, GuardAppKeyStore.AppFileName);
+        Assert.True(File.Exists(guardPath));
+
+        vault.DisableHighSecurity("correct horse battery");
+        Assert.False(File.Exists(guardPath));
+        Assert.False(File.Exists(Path.Combine(config.KeyMaterialDirectory, PassphraseAppKeyStore.AppFileName)));
+        Assert.True(File.Exists(Path.Combine(config.KeyMaterialDirectory, DpapiAppKeyStore.AppFileName)));
+        Assert.False(vault.IsHighSecurityEnabled);
+        vault.Dispose();
+    }
+
+    [Fact]
     public void ACorruptIterationCountIsRejectedInsteadOfDeriving()
     {
         using var root = new TestDirectory();

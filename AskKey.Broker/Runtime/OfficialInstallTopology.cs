@@ -59,7 +59,7 @@ public static class OfficialInstallTopology
     // Setup.exe installs per-user; the MSI with --instLocation PerMachine installs
     // machine-wide. Both are official layouts, so both pass the topology gate.
     private const string PerUserFolderName = "AskKey";
-    private const string PerMachineFolderName = "Ask Key";
+    private const string PerMachineFolderName = "AskKey";
 
     public static string CanonicalAppPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), PerUserFolderName);
@@ -112,8 +112,8 @@ public static class OfficialInstallTopology
         var resolvedApp = Normalize(resolvePath(normalizedApp));
         // Accept the install root and the payload directory inside it: Velopack launches the
         // host from <root>\current, while Setup.exe --installto callers pass the root.
-        // Exact equality already pins the folder name, so "Ask Key" (MSI) and "AskKey"
-        // (Setup.exe) are both covered by their own entry.
+        // Exact equality already pins the folder name; both Velopack layouts use
+        // "AskKey" under Program Files or LocalAppData.
         var isOfficialPath = OfficialAppPaths.Any(canonical =>
             new[] { Normalize(canonical), PayloadPath(canonical) }.Any(candidate =>
                 string.Equals(normalizedApp, candidate, StringComparison.OrdinalIgnoreCase)

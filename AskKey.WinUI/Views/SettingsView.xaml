@@ -132,6 +132,16 @@
                             Click="HighSecurity_Click"/>
             </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14" HorizontalAlignment="Stretch">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Windows Hello unlock" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock x:Name="HelloUnlockText" Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+              </StackPanel>
+              <ToggleButton x:Name="HelloUnlockToggle" Grid.Column="1" Width="40" Margin="12,0,0,0"
+                            Style="{StaticResource SettingsSwitchStyle}" Click="HelloUnlock_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
             <Grid Margin="16,14">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <Button x:Name="AccessRecordsButton" Background="Transparent" BorderThickness="0" Padding="0"

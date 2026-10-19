@@ -1,3 +1,4 @@
+using AskKey.Guard;
 using AskKey.Vault;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -8,15 +9,51 @@ namespace AskKeyApp;
 public partial class OnboardingView : UserControl
 {
     private readonly AppHost _host;
+    private bool _guardCheckStarted;
+    private bool _guardAvailable = true;
 
     public OnboardingView(AppHost host)
     {
         _host = host;
         InitializeComponent();
+        Loaded += OnLoaded;
         UpdateLaunchCopy();
         UpdatePassphraseCopy();
         Loc.LanguageChanged += UpdateLaunchCopy;
         Loc.LanguageChanged += UpdatePassphraseCopy;
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_guardCheckStarted) return;
+        _guardCheckStarted = true;
+        try
+        {
+            if (!await HelloKeyManager.IsSupportedAsync())
+            {
+                _guardAvailable = false;
+                HelloUnlockCheck.IsChecked = false;
+                HelloUnlockCheck.IsEnabled = false;
+                return;
+            }
+            var status = await Task.Run(() => new GuardClient().Status());
+            if (!status.Ok)
+            {
+                _guardAvailable = false;
+                HelloUnlockCheck.IsChecked = false;
+                HelloUnlockCheck.IsEnabled = false;
+                return;
+            }
+            _guardAvailable = true;
+            HelloUnlockCheck.IsChecked = true;
+            HelloUnlockCheck.IsEnabled = true;
+        }
+        catch (Exception)
+        {
+            _guardAvailable = false;
+            HelloUnlockCheck.IsChecked = false;
+            HelloUnlockCheck.IsEnabled = false;
+        }
     }
 
     private void UpdateLaunchCopy()
@@ -28,7 +65,7 @@ public partial class OnboardingView : UserControl
 
     private async void Create_Click(object sender, RoutedEventArgs e)
     {
-        if (!EnsureHighSecurity()) return;
+        if (!await EnsureHighSecurityAsync()) return;
         try
         {
             if (_host.Vault.StoredCredentialCount() == 0) _host.Vault.BeginOnboardingCreation();
@@ -45,7 +82,7 @@ public partial class OnboardingView : UserControl
 
     private async void Import_Click(object sender, RoutedEventArgs e)
     {
-        if (!EnsureHighSecurity()) return;
+        if (!await EnsureHighSecurityAsync()) return;
         try
         {
             if (_host.Vault.StoredCredentialCount() == 0) _host.Vault.BeginOnboardingCreation();
@@ -62,16 +99,16 @@ public partial class OnboardingView : UserControl
         }
     }
 
-    private void Connect_Click(object sender, RoutedEventArgs e)
+    private async void Connect_Click(object sender, RoutedEventArgs e)
     {
-        if (!EnsureHighSecurity()) return;
+        if (!await EnsureHighSecurityAsync()) return;
         Finish();
         _host.ShowAgentAccess();
     }
 
-    private void Continue_Click(object sender, RoutedEventArgs e)
+    private async void Continue_Click(object sender, RoutedEventArgs e)
     {
-        if (!EnsureHighSecurity()) return;
+        if (!await EnsureHighSecurityAsync()) return;
         Finish();
         _host.ShowCredentials();
     }
@@ -93,6 +130,9 @@ public partial class OnboardingView : UserControl
             PassphraseToggle.IsChecked = true;
             PassphraseToggle.IsEnabled = false;
             PassphraseFields.Visibility = Visibility.Collapsed;
+            HelloUnlockCheck.Visibility = Visibility.Collapsed;
+            HelloUnlockHint.Visibility = Visibility.Collapsed;
+            HelloUnlockStatus.Visibility = Visibility.Collapsed;
             PassphraseHint.Text = Loc.T("High security mode is already on.");
             return;
         }
@@ -100,14 +140,18 @@ public partial class OnboardingView : UserControl
         PassphraseConfirmBox.PlaceholderText = Loc.T("Confirm the passphrase");
         var on = PassphraseToggle.IsChecked == true;
         PassphraseFields.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        HelloUnlockCheck.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        HelloUnlockCheck.IsEnabled = on && _guardAvailable;
+        HelloUnlockHint.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        if (!on) HelloUnlockStatus.Visibility = Visibility.Collapsed;
         PassphraseHint.Text = Loc.T(on
-            ? "The vault key is wrapped with your passphrase. Enter it once each time Ask Key starts; sensitive actions then use Windows Hello."
+            ? "The vault key is wrapped with a passphrase. Enter it once each launch; sensitive actions use Windows Hello."
             : "Windows DPAPI wraps the key. Any program running as you can decrypt it.");
     }
 
     /// <summary>Wraps the key before the first credential is saved; failure keeps the
     /// user on this page instead of silently leaving the weaker store in place.</summary>
-    private bool EnsureHighSecurity()
+    private async Task<bool> EnsureHighSecurityAsync()
     {
         if (PassphraseToggle.IsChecked != true || _host.Vault.IsHighSecurityEnabled) return true;
         var passphrase = PassphraseBox.Password;
@@ -123,11 +167,19 @@ public partial class OnboardingView : UserControl
         }
         try
         {
-            _host.Vault.EnableHighSecurity(passphrase);
+            await Task.Run(() => _host.Vault.EnableHighSecurity(passphrase));
             // The passphrase was just set; do not make the user pass a second
             // Hello gate before the first management window opens.
             _host.Vault.BeginManagementSession(ManagementAuthenticator.Allow);
             UpdatePassphraseCopy();
+            if (HelloUnlockCheck.IsChecked == true)
+            {
+                var hello = await _host.EnableGuardUnlockAsync();
+                HelloUnlockStatus.Text = Loc.T(hello.Ok
+                    ? "Windows Hello unlock is on."
+                    : "Windows Hello unlock could not be enabled. You can retry in Settings.");
+                HelloUnlockStatus.Visibility = Visibility.Visible;
+            }
             return true;
         }
         catch (Exception error)

@@ -3,6 +3,9 @@
   <Project Path="AskKey.Broker/AskKey.Broker.csproj" />
   <Project Path="AskKey.Integrations.TestFixture/AskKey.Integrations.TestFixture.csproj" />
   <Project Path="AskKey.Integrations.Tests/AskKey.Integrations.Tests.csproj" />
+  <Project Path="AskKey.Guard.Service/AskKey.Guard.Service.csproj" />
+  <Project Path="AskKey.Guard.Tests/AskKey.Guard.Tests.csproj" />
+  <Project Path="AskKey.Guard/AskKey.Guard.csproj" />
   <Project Path="AskKey.Helper.Tests/AskKey.Helper.Tests.csproj" />
   <Project Path="AskKey.Helper/AskKey.Helper.csproj" />
   <Project Path="AskKey.Integrations/AskKey.Integrations.csproj" />

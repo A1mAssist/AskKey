@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AskKey.Broker\AskKey.Broker.csproj" />
+    <ProjectReference Include="..\AskKey.Guard\AskKey.Guard.csproj" />
     <ProjectReference Include="..\AskKey.Helper\AskKey.Helper.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\AskKey.Integrations\AskKey.Integrations.csproj" />
     <ProjectReference Include="..\AskKey.System\AskKey.System.csproj" />

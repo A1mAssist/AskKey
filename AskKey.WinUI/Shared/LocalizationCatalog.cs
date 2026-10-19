@@ -124,11 +124,11 @@ internal static class LocalizationCatalog
         ["Passphrase (at least 8 characters)"] = "口令（至少 8 个字符）",
         ["If you forget it, the library cannot be opened. There is no recovery."] = "忘记口令后库将无法打开，无法找回。",
         ["High security mode is already on."] = "高安全模式已开启。",
-        ["The vault key is wrapped with your passphrase. Enter it once each time Ask Key starts; sensitive actions then use Windows Hello."] = "vault key 由你的口令包裹。每次启动时输入一次，之后的敏感操作由 Windows Hello 确认。",
+        ["The vault key is wrapped with a passphrase. Enter it once each launch; sensitive actions use Windows Hello."] = "vault key 由口令包裹。每次启动输入一次，敏感操作由 Windows Hello 确认。",
         ["Windows DPAPI wraps the key. Any program running as you can decrypt it."] = "Windows DPAPI 包裹密钥。任何以你的身份运行的程序都能解密。",
         ["Ask Key stores data under your Windows user profile."] = "请旨将数据存储在你的 Windows 用户目录下。",
-        ["A passphrase wraps the vault key. Enter it once each time Ask Key starts; sensitive actions then use Windows Hello."] =
-            "口令包裹保管库密钥。每次启动时输入一次，之后的敏感操作由 Windows Hello 确认。",
+        ["A passphrase wraps the vault key. Enter it once each launch; sensitive actions use Windows Hello."] =
+            "口令包裹保管库密钥。每次启动输入一次，敏感操作由 Windows Hello 确认。",
         ["Windows DPAPI wraps the vault key. Any program running as you can unwrap it."] =
             "Windows DPAPI 包裹保管库密钥，任何以你身份运行的程序都能解开它。",
         ["Turn on high security mode"] = "开启高安全模式",
@@ -148,6 +148,36 @@ internal static class LocalizationCatalog
         ["Unlock"] = "解锁",
         ["High security mode is on. Ask Key asks for this passphrase every time it starts."] =
             "高安全模式已开启。每次启动 Ask Key 都会要求输入此口令。",
+        ["Windows Hello unlock"] = "Windows Hello 解锁",
+        ["Use Windows Hello at startup"] = "启动时使用 Windows Hello",
+        ["Uses the per-machine Ask Key Guard service. If it is not installed, the passphrase remains the recovery."] =
+            "使用全机器安装的 Ask Key Guard 服务；未安装时仍以口令作为恢复方式。",
+        ["Windows Hello unlock is on."] = "Windows Hello 解锁已开启。",
+        ["Windows Hello unlock could not be enabled. You can retry in Settings."] =
+            "Windows Hello 解锁未能开启，可在设置中重试。",
+        ["Windows Hello could not unlock Ask Key, and no passphrase copy is available."] =
+            "Windows Hello 无法解锁请旨，且没有可用的口令副本。",
+        ["Ask Key Guard is not available. Install the per-machine package to use Windows Hello unlock."] =
+            "Ask Key Guard 服务不可用。请安装全机器版本后再使用 Windows Hello 解锁。",
+        ["Windows Hello unlocks Ask Key at startup."] = "启动时由 Windows Hello 解锁请旨。",
+        ["Use Windows Hello at startup. Requires the per-machine Ask Key Guard service."] =
+            "启动时使用 Windows Hello。需要全机器安装的 Ask Key Guard 服务。",
+        ["Turn on high security mode first."] = "请先开启高安全模式。",
+        ["Protected by Windows Hello"] = "由 Windows Hello 保护",
+        ["A passphrase wraps the vault key. Windows Hello unlocks it at startup."] =
+            "口令包裹保管库密钥，启动时由 Windows Hello 解锁。",
+        ["High security mode is on. Windows Hello unlocks Ask Key at startup; the passphrase remains the recovery."] =
+            "高安全模式已开启。启动时由 Windows Hello 解锁请旨，口令仍作为恢复方式。",
+        ["High security mode is on. Enter the passphrase at startup. Windows Hello unlock was not enabled."] =
+            "高安全模式已开启。启动时请输入口令；Windows Hello 解锁未启用。",
+        ["Windows Hello is not available for this account."] = "此账户无法使用 Windows Hello。",
+        ["Unlock Ask Key first."] = "请先解锁请旨。",
+        ["Ask Key Guard did not issue a challenge."] = "Ask Key Guard 未返回挑战。",
+        ["Ask Key Guard rejected the enrollment."] = "Ask Key Guard 拒绝了注册请求。",
+        ["Ask Key Guard is not running."] = "Ask Key Guard 未运行。",
+        ["Windows Hello was canceled."] = "Windows Hello 已取消。",
+        ["The Windows Hello key for Ask Key was not found. Re-enable Windows Hello unlock."] =
+            "找不到请旨的 Windows Hello 密钥，请重新开启 Windows Hello 解锁。",
         ["High security mode is off. Ask Key unlocks with Windows DPAPI again."] =
             "高安全模式已关闭。Ask Key 恢复使用 Windows DPAPI 解锁。",
         ["High security mode is on. Enter your passphrase to unlock Ask Key."] =

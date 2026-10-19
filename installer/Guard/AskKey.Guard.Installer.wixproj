@@ -1,0 +1,10 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0</ProductVersion>
+    <OutputName>AskKeyGuard-$(ProductVersion)</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <GuardPublishDir Condition="'$(GuardPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\AskKey.Guard.Service\bin\Release\net10.0-windows</GuardPublishDir>
+    <DefineConstants>ProductVersion=$(ProductVersion);GuardPublishDir=$(GuardPublishDir)</DefineConstants>
+  </PropertyGroup>
+</Project>

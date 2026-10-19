@@ -24,6 +24,7 @@ internal static partial class BuildTool
             {
                 "manifest" => RunManifest(args[1..]),
                 "publish" => await RunPublishAsync(args[1..]),
+                "guard" => await RunGuardAsync(args[1..]),
                 _ => throw new ArgumentException($"Unknown command: {args[0]}")
             };
         }
@@ -184,6 +185,62 @@ internal static partial class BuildTool
         return 0;
     }
 
+    private static async Task<int> RunGuardAsync(string[] args)
+    {
+        var root = FindRepoRoot();
+        var output = GetOption(args, "--output") ?? Path.Combine(root, "artifacts", "guard");
+        var certificate = GetOption(args, "--certificate-thumbprint");
+        var timestampUrl = GetOption(args, "--timestamp-url") ?? "http://timestamp.digicert.com";
+        var skipTests = args.Contains("--skip-tests", StringComparer.OrdinalIgnoreCase);
+
+        var solution = Path.Combine(root, "AskKey.slnx");
+        var project = Path.Combine(root, "AskKey.Guard.Service", "AskKey.Guard.Service.csproj");
+        var versionSource = Path.Combine(root, "AskKey.Integrations", "AskKeyVersion.cs");
+        if (!File.Exists(solution)) throw new FileNotFoundException("AskKey.slnx was not found.", solution);
+        if (!File.Exists(project)) throw new FileNotFoundException("AskKey.Guard.Service.csproj was not found.", project);
+        if (!File.Exists(versionSource)) throw new FileNotFoundException("AskKeyVersion.cs was not found.", versionSource);
+
+        var versionMatch = VersionPattern().Match(File.ReadAllText(versionSource));
+        if (!versionMatch.Success)
+            throw new InvalidOperationException("Could not read AskKeyVersion.Current.");
+        var version = versionMatch.Groups["version"].Value;
+
+        var publishDir = Path.Combine(output, $"AskKey.Guard-{version}-{Runtime}");
+        if (Directory.Exists(publishDir))
+            throw new InvalidOperationException($"Publish directory already exists: {publishDir}");
+
+        if (!skipTests)
+            Run("dotnet", ["test", solution, "-c", "Release", "--nologo", "-v", "q"], root);
+
+        var unsigned = string.IsNullOrWhiteSpace(certificate);
+        var publishArgs = new List<string>
+        {
+            "publish", project, "-c", "Release", "-r", Runtime, "--self-contained", "true",
+            "-o", publishDir, "--nologo", "-v", "minimal"
+        };
+        if (unsigned) publishArgs.Add("-p:AskKeyUnsigned=true");
+        Run("dotnet", publishArgs, root);
+
+        var executable = Path.Combine(publishDir, "AskKey.Guard.Service.exe");
+        if (!File.Exists(executable))
+            throw new FileNotFoundException("The Guard publish output is missing AskKey.Guard.Service.exe.", executable);
+
+        if (!unsigned)
+        {
+            var signtool = FindSigntool();
+            Run(signtool,
+                ["sign", "/sha1", certificate!, "/fd", "SHA256", "/tr", timestampUrl, "/td", "SHA256", executable],
+                root);
+            Run(signtool, ["verify", "/pa", "/all", executable], root);
+        }
+
+        Console.WriteLine($"Guard publish: {publishDir}");
+        Console.WriteLine($"Guard executable: {executable}");
+        if (unsigned)
+            Console.WriteLine("Unsigned Guard build: SmartScreen will warn. The app must also be built unsigned.");
+        return 0;
+    }
+
     private static string FindRepoRoot()
     {
         for (var directory = new DirectoryInfo(Directory.GetCurrentDirectory()); directory is not null; directory = directory.Parent)
@@ -252,6 +309,7 @@ internal static partial class BuildTool
     {
         Console.WriteLine("AskKey.Build manifest --root <helper-dir> --output <manifest-file>");
         Console.WriteLine("AskKey.Build publish [--output <dir>] [--certificate-thumbprint <thumbprint>] [--timestamp-url <url>] [--skip-tests]");
+        Console.WriteLine("AskKey.Build guard [--output <dir>] [--certificate-thumbprint <thumbprint>] [--timestamp-url <url>] [--skip-tests]");
     }
 
     [GeneratedRegex("Current\\s*=\\s*\"(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)\"")]

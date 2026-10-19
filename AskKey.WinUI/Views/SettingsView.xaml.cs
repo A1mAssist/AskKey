@@ -53,8 +53,20 @@ public partial class SettingsView : UserControl
             var highSecurity = _host.Vault.IsHighSecurityEnabled;
             HighSecurityToggle.IsChecked = highSecurity;
             HighSecurityText.Text = Loc.T(highSecurity
-                ? "A passphrase wraps the vault key. Enter it once each time Ask Key starts; sensitive actions then use Windows Hello."
+                ? (_host.Vault.IsGuardUnlockEnabled
+                    ? "A passphrase wraps the vault key. Windows Hello unlocks it at startup."
+                    : "A passphrase wraps the vault key. Enter it once each launch; sensitive actions use Windows Hello.")
                 : "Windows DPAPI wraps the vault key. Any program running as you can unwrap it.");
+            var helloUnlock = _host.Vault.IsGuardUnlockEnabled;
+            HelloUnlockToggle.IsChecked = helloUnlock;
+            HelloUnlockToggle.IsEnabled = highSecurity;
+            HelloUnlockText.Text = Loc.T(highSecurity
+                ? (helloUnlock
+                    ? "Windows Hello unlocks Ask Key at startup."
+                    : "Use Windows Hello at startup. Requires the per-machine Ask Key Guard service.")
+                : "Turn on high security mode first.");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+                HelloUnlockToggle, Loc.T("Windows Hello unlock"));
             DataFolderText.Text = VaultConfiguration.Default.LocalApplicationDataDirectory;
             EraseConfirmPanel.Visibility = Visibility.Collapsed;
             EraseWordBox.Text = "";
@@ -162,16 +174,52 @@ public partial class SettingsView : UserControl
     private async void HighSecurity_Click(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
-        // The toggle already flipped; both flows re-read the real state in Refresh().
-        if (_host.Vault.IsHighSecurityEnabled)
+        try
         {
-            await _host.DisableHighSecurityAsync();
+            // The toggle already flipped; both flows re-read the real state in Refresh().
+            if (_host.Vault.IsHighSecurityEnabled)
+            {
+                await _host.DisableHighSecurityAsync();
+            }
+            else
+            {
+                await _host.EnableHighSecurityAsync();
+            }
         }
-        else
+        catch (Exception error)
         {
-            await _host.EnableHighSecurityAsync();
+            _host.ShowError(error.Message);
         }
-        Refresh();
+        finally
+        {
+            Refresh();
+        }
+    }
+
+    private async void HelloUnlock_Click(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        try
+        {
+            if (HelloUnlockToggle.IsChecked == true)
+            {
+                var result = await _host.EnableGuardUnlockAsync();
+                if (!result.Ok)
+                    _host.ShowError(result.Error ?? "Windows Hello unlock could not be enabled.");
+            }
+            else
+            {
+                await _host.DisableGuardUnlockAsync();
+            }
+        }
+        catch (Exception error)
+        {
+            _host.ShowError(error.Message);
+        }
+        finally
+        {
+            Refresh();
+        }
     }
 
     private async void ReadAuth_Click(object sender, RoutedEventArgs e)
@@ -242,12 +290,12 @@ public partial class SettingsView : UserControl
     private void EraseWord_TextChanged(object sender, TextChangedEventArgs e)
         => EraseConfirmButton.IsEnabled = string.Equals(EraseWordBox.Text, EraseConfirmation, StringComparison.Ordinal);
 
-    private void EraseConfirm_Click(object sender, RoutedEventArgs e)
+    private async void EraseConfirm_Click(object sender, RoutedEventArgs e)
     {
         if (!string.Equals(EraseWordBox.Text, EraseConfirmation, StringComparison.Ordinal)) return;
         try
         {
-            _host.EraseLocalData(EraseConfirmation, EraseLanguage);
+            await _host.EraseLocalDataAsync(EraseConfirmation, EraseLanguage);
         }
         catch (Exception error)
         {

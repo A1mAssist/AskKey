@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="AskKey Guard"
+           Manufacturer="AskKey"
+           Version="$(var.ProductVersion)"
+           Language="1033"
+           Scope="perMachine"
+           UpgradeCode="D755B70F-0F91-4E1B-9C92-F5C407252BC9">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of AskKey Guard is already installed. Uninstall it before installing this version." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="AskKeyProgramFilesDir" Name="AskKey">
+        <Directory Id="GuardInstallDir" Name="Guard" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="AskKeyProgramDataDir" Name="AskKey">
+        <Directory Id="GuardDataDir" Name="Guard" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="GuardFeature" Title="AskKey Guard" Level="1">
+      <Component Id="GuardServiceComponent" Directory="GuardInstallDir" Guid="{63545573-2116-48C8-89EE-451E6F7DA7C3}">
+        <File Id="GuardServiceExe" Source="$(var.GuardPublishDir)\AskKey.Guard.Service.exe" KeyPath="yes" />
+        <ServiceInstall Id="AskKeyGuardService"
+                        Name="AskKeyGuard"
+                        DisplayName="Ask Key Guard"
+                        Description="Verifies Windows Hello signatures and releases the per-user Ask Key guard KEK."
+                        Type="ownProcess"
+                        Start="auto"
+                        ErrorControl="normal"
+                        Account="NT AUTHORITY\LocalService"
+                        Arguments="--service"
+                        Vital="yes" />
+        <ServiceControl Id="AskKeyGuardServiceControl"
+                        Name="AskKeyGuard"
+                        Start="install"
+                        Stop="both"
+                        Remove="uninstall"
+                        Wait="yes" />
+      </Component>
+
+      <Files Directory="GuardInstallDir" Include="$(var.GuardPublishDir)\**">
+        <Exclude Files="$(var.GuardPublishDir)\AskKey.Guard.Service.exe" />
+        <Exclude Files="$(var.GuardPublishDir)\win-x64\**" />
+        <Exclude Files="$(var.GuardPublishDir)\**\*.pdb" />
+      </Files>
+
+      <Component Id="GuardDataComponent" Directory="GuardDataDir" Guid="{6A7206DD-D540-43D1-9DB5-47E40440EC86}" KeyPath="yes" Permanent="yes">
+        <CreateFolder>
+          <PermissionEx Sddl="O:BAG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;LS)" />
+        </CreateFolder>
+      </Component>
+    </Feature>
+  </Package>
+</Wix>
