@@ -71,7 +71,7 @@ public sealed class HelperHostApplicationTests
     [Fact]
     public void ReleaseOpenAllowsUnsignedWhenTheBuildOptsIn()
     {
-        var app = OfficialInstallTopology.CanonicalAppPath;
+        var payload = OfficialInstallTopology.PayloadPath(OfficialInstallTopology.CanonicalAppPath);
         var helper = OfficialInstallTopology.CanonicalHelperPath;
         var opened = new List<string>();
         HelperHostApplication.OpenHost(
@@ -81,13 +81,13 @@ public sealed class HelperHostApplicationTests
             _ => HelperHostSigningFacts.Unsigned,
             path => path,
             allowUnsigned: true);
-        Assert.Equal(new[] { Path.Combine(app, OfficialInstallTopology.HostFileName) }, opened.ToArray());
+        Assert.Equal(new[] { Path.Combine(payload, OfficialInstallTopology.HostFileName) }, opened.ToArray());
     }
 
     [Fact]
     public void ReleaseOpenAllowsCanonicalPathOnlyWithMatchingPublisher()
     {
-        var app = OfficialInstallTopology.CanonicalAppPath;
+        var payload = OfficialInstallTopology.PayloadPath(OfficialInstallTopology.CanonicalAppPath);
         var helper = OfficialInstallTopology.CanonicalHelperPath;
         var opened = new List<string>();
         HelperHostApplication.OpenHost(
@@ -96,7 +96,7 @@ public sealed class HelperHostApplicationTests
             opened.Add,
             _ => new HelperHostSigningFacts { Publisher = "Ask Key", IsValid = true },
             path => path, allowUnsigned: false);
-        Assert.Equal(new[] { Path.Combine(app, OfficialInstallTopology.HostFileName) }, opened.ToArray());
+        Assert.Equal(new[] { Path.Combine(payload, OfficialInstallTopology.HostFileName) }, opened.ToArray());
     }
 
     [Fact]
@@ -127,6 +127,52 @@ public sealed class HelperHostApplicationTests
         {
             Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
         }
+    }
+
+    [Fact]
+    public void ReleaseOpenAcceptsTheVelopackPayloadDirectory()
+    {
+        var payload = OfficialInstallTopology.PayloadPath(OfficialInstallTopology.CanonicalAppPath);
+        var helper = Path.Combine(payload, OfficialInstallTopology.HelperRelativePath);
+        var opened = new List<string>();
+        HelperHostApplication.OpenHost(
+            helper,
+            isDevelopmentBuild: false,
+            opened.Add,
+            _ => HelperHostSigningFacts.Unsigned,
+            path => path,
+            allowUnsigned: true);
+        Assert.Equal(
+            new[] { Path.Combine(payload, OfficialInstallTopology.HostFileName) }, opened.ToArray());
+    }
+
+    [Fact]
+    public void ReleaseOpenAcceptsTheMachineWideProgramFilesInstall()
+    {
+        var payload = OfficialInstallTopology.PayloadPath(OfficialInstallTopology.CanonicalMachineAppPath);
+        var helper = Path.Combine(payload, OfficialInstallTopology.HelperRelativePath);
+        var opened = new List<string>();
+        HelperHostApplication.OpenHost(
+            helper,
+            isDevelopmentBuild: false,
+            opened.Add,
+            _ => HelperHostSigningFacts.Unsigned,
+            path => path,
+            allowUnsigned: true);
+        Assert.Equal(
+            new[] { Path.Combine(payload, OfficialInstallTopology.HostFileName) }, opened.ToArray());
+    }
+
+    [Fact]
+    public void TopologyStillRejectsAPayloadCopiedOutOfTheInstallRoot()
+    {
+        var payload = Path.Combine(
+            ProtocolTestSupport.NewDirectory(), OfficialInstallTopology.PayloadDirectoryName);
+        var decision = OfficialInstallTopology.Decide(
+            payload,
+            helperPath: Path.Combine(payload, OfficialInstallTopology.HelperRelativePath),
+            isDevelopmentBuild: false);
+        Assert.Equal(OfficialInstallDecisionKind.RelocatedOrRenamed, decision.Kind);
     }
 
     [Fact]

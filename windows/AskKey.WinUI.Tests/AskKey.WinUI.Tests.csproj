@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <AssemblyName>AskKeyApp.Tests</AssemblyName>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <UseWinUI>true</UseWinUI>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AskKey.WinUI\AskKey.WinUI.csproj" />
+  </ItemGroup>
+
+  <!-- The referenced WinUI app is self-contained, and its WindowsAppSDK payload replaces the
+       output layout, so the test platform assemblies the host needs never get copied next
+       to testhost.exe. Restore them from the app's own output, which is already correct. -->
+  <Target Name="RestoreTestPlatformAssemblies" AfterTargets="Build">
+    <ItemGroup>
+      <AppRuntimeAssembly Include="$(MSBuildProjectDirectory)\..\AskKey.WinUI\bin\$(Platform)\$(Configuration)\net10.0-windows10.0.26100.0\*.dll" />
+      <TestPlatformPackage Include="$(NuGetPackageRoot)microsoft.testplatform.testhost\17.14.1\lib\net8.0\*.dll" />
+      <TestPlatformPackage Include="$(NuGetPackageRoot)newtonsoft.json\13.0.3\lib\net6.0\Newtonsoft.Json.dll" />
+      <TestPlatformPackage Include="$(NuGetPackageRoot)xunit.extensibility.execution\2.9.3\lib\netstandard1.1\*.dll" />
+      <TestPlatformPackage Include="$(NuGetPackageRoot)xunit.assert\2.9.3\lib\net6.0\xunit.assert.dll" />
+      <TestPlatformPackage Include="$(NuGetPackageRoot)xunit.extensibility.core\2.9.3\lib\netstandard1.1\*.dll" />
+      <TestPlatformPackage Include="$(NuGetPackageRoot)xunit.runner.visualstudio\3.1.4\build\net8.0\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AppRuntimeAssembly)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(TestPlatformPackage)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

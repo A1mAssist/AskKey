@@ -44,7 +44,8 @@ public sealed class OfficialInstallTopologyException : Exception
 
 /// <summary>
 /// Windows counterpart of the macOS bundle/codesign topology: the official install
-/// lives under %LOCALAPPDATA%\AskKey and the helper must sit beside its host.
+/// lives under %LOCALAPPDATA%\AskKey (Velopack Setup.exe) or Program Files (per-machine
+/// MSI), and the helper must sit beside its host.
 /// </summary>
 public static class OfficialInstallTopology
 {
@@ -55,13 +56,40 @@ public static class OfficialInstallTopology
     public const string HelperDirectoryName = "Helpers";
     public const string HelperRelativePath = HelperDirectoryName + "\\" + HelperFileName;
 
+    // Setup.exe installs per-user; the MSI with --instLocation PerMachine installs
+    // machine-wide. Both are official layouts, so both pass the topology gate.
+    private const string PerUserFolderName = "AskKey";
+    private const string PerMachineFolderName = "Ask Key";
+
     public static string CanonicalAppPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AskKey");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), PerUserFolderName);
+
+    public static string CanonicalMachineAppPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), PerMachineFolderName);
+
+    public static IReadOnlyList<string> OfficialAppPaths { get; } =
+        new[] { CanonicalAppPath, CanonicalMachineAppPath };
+
+    /// <summary>
+    /// Velopack extracts the payload into <c>current\</c> behind a root execution stub,
+    /// so the folder the host actually runs from is one level below the install root.
+    /// </summary>
+    public const string PayloadDirectoryName = "current";
+
+    /// <summary>Maps an install root to the directory the host executable runs from.</summary>
+    public static string PayloadPath(string installRoot)
+        => Path.Combine(Normalize(installRoot), PayloadDirectoryName);
+
+    /// <summary>
+    /// The install roots the official packages create: per-user from Setup.exe, and
+    /// per-machine from the MSI. Each root maps to the payload directory the host runs from.
+    /// </summary>
+    public static IEnumerable<string> OfficialPayloadPaths => OfficialAppPaths.Select(PayloadPath);
 
     public static string CanonicalHelperPath => Path.Combine(
-        CanonicalAppPath, HelperDirectoryName, HelperFileName);
+        PayloadPath(CanonicalAppPath), HelperDirectoryName, HelperFileName);
 
-    public static string CanonicalHostPath => Path.Combine(CanonicalAppPath, HostFileName);
+    public static string CanonicalHostPath => Path.Combine(PayloadPath(CanonicalAppPath), HostFileName);
 
     public static OfficialInstallDecision Decide(
         string appPath,
@@ -81,11 +109,16 @@ public static class OfficialInstallTopology
         {
             return OfficialInstallDecision.DevelopmentAccepted(helper);
         }
-        var canonical = Normalize(CanonicalAppPath);
         var resolvedApp = Normalize(resolvePath(normalizedApp));
-        if (!string.Equals(normalizedApp, canonical, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(resolvedApp, canonical, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(Path.GetFileName(normalizedApp), "AskKey", StringComparison.OrdinalIgnoreCase))
+        // Accept the install root and the payload directory inside it: Velopack launches the
+        // host from <root>\current, while Setup.exe --installto callers pass the root.
+        // Exact equality already pins the folder name, so "Ask Key" (MSI) and "AskKey"
+        // (Setup.exe) are both covered by their own entry.
+        var isOfficialPath = OfficialAppPaths.Any(canonical =>
+            new[] { Normalize(canonical), PayloadPath(canonical) }.Any(candidate =>
+                string.Equals(normalizedApp, candidate, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(resolvedApp, candidate, StringComparison.OrdinalIgnoreCase)));
+        if (!isOfficialPath)
         {
             return OfficialInstallDecision.RelocatedOrRenamed;
         }
@@ -100,7 +133,7 @@ public static class OfficialInstallTopology
     {
         OfficialInstallDecisionKind.Accepted or OfficialInstallDecisionKind.DevelopmentAccepted => string.Empty,
         OfficialInstallDecisionKind.RelocatedOrRenamed =>
-            $"Ask Key must stay at {CanonicalAppPath}. Reinstall the official package, then open that copy.",
+            $"Ask Key must stay at {CanonicalAppPath} or {CanonicalMachineAppPath}. Reinstall the official package, then open that copy.",
         _ => "This Ask Key helper does not match the official app. Reinstall the official package, then try again.",
     };
 

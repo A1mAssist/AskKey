@@ -10,7 +10,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $solution = Join-Path $PSScriptRoot 'AskKey.slnx'
-$project = Join-Path $PSScriptRoot 'AskKey.App\AskKey.App.csproj'
+$project = Join-Path $PSScriptRoot 'AskKey.WinUI\AskKey.WinUI.csproj'
+$buildDir = Join-Path $PSScriptRoot 'AskKey.WinUI\bin\x64\Release\net10.0-windows10.0.26100.0'
 $versionSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AskKey.Integrations\AskKeyVersion.cs') -Raw
 if ($versionSource -notmatch 'Current\s*=\s*"(?<version>[0-9]+\.[0-9]+\.[0-9]+)"') {
     throw 'Could not read AskKeyVersion.Current.'
@@ -18,14 +19,10 @@ if ($versionSource -notmatch 'Current\s*=\s*"(?<version>[0-9]+\.[0-9]+\.[0-9]+)"
 $version = $Matches.version
 $artifactName = "AskKey-$version-$Runtime"
 $publishDir = Join-Path $OutputDirectory $artifactName
-$zipName = if ($CertificateThumbprint) { "$artifactName.zip" } else { "$artifactName-unsigned.zip" }
-$zipPath = Join-Path $OutputDirectory $zipName
+$releaseDir = Join-Path $OutputDirectory 'release'
 
 if (Test-Path -LiteralPath $publishDir) {
     throw "Publish directory already exists; choose an empty output directory: $publishDir"
-}
-if (Test-Path -LiteralPath $zipPath) {
-    throw "Archive already exists; choose an empty output directory: $zipPath"
 }
 
 if (-not $SkipTests) {
@@ -33,20 +30,27 @@ if (-not $SkipTests) {
     if ($LASTEXITCODE -ne 0) { throw "Tests failed with exit code $LASTEXITCODE." }
 }
 
-New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 $unsigned = -not $CertificateThumbprint
-$publishArgs = @(
-    'publish', $project, '-c', 'Release', '-r', $Runtime, '--self-contained', 'true',
-    '-p:PublishSingleFile=false', '-o', $publishDir, '--nologo', '-v', 'minimal'
+
+$buildArgs = @(
+    'build', $project, '-c', 'Release', '-p:Platform=x64', '--nologo', '-v', 'minimal'
 )
-if ($unsigned) { $publishArgs += '-p:AskKeyUnsigned=true' }
-& dotnet @publishArgs
-if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE." }
+if ($unsigned) { $buildArgs += '-p:AskKeyUnsigned=true' }
+& dotnet @buildArgs
+if ($LASTEXITCODE -ne 0) { throw "dotnet build failed with exit code $LASTEXITCODE." }
+
+# Copy the BUILD output, not `dotnet publish`. Publish drops every *.xbf and the Views\
+# folder, and the packaged app then fails at startup with XAML parsing failed.
+if (-not (Test-Path -LiteralPath $buildDir -PathType Container)) {
+    throw "Build output directory is missing: $buildDir"
+}
+Copy-Item -Path (Join-Path $buildDir '*') -Destination $publishDir -Recurse -Force
 
 $hostPath = Join-Path $publishDir 'AskKey.exe'
 $helperPath = Join-Path $publishDir 'Helpers\askkey.exe'
-foreach ($required in @($hostPath, $helperPath, (Join-Path $publishDir 'Helpers\hostfxr.dll'))) {
-    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+foreach ($required in @($hostPath, $helperPath, (Join-Path $publishDir 'App.xbf'), (Join-Path $publishDir 'Views'))) {
+    if (-not (Test-Path -LiteralPath $required)) {
         throw "The published layout is missing $required."
     }
 }
@@ -78,12 +82,25 @@ if ($CertificateThumbprint) {
     }
 }
 
-Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
-$hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
-Set-Content -LiteralPath "$zipPath.sha256" -Value "$hash  $zipName" -Encoding ascii
+New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+
+# Velopack: one `vpk pack` emits the whole set (Setup.exe, MSI, Portable.zip, full.nupkg) plus
+# assets.win.json / releases.win.json / RELEASES. Never rename or hand-edit those files.
+# --msi --instLocation PerMachine is what installs into Program Files; the one-click
+# Setup.exe is always per-user (%LocalAppData%\AskKey) and cannot be redirected at pack time.
+$packArgs = @(
+    'pack', '--packId', 'AskKey', '--packVersion', $version, '--packDir', $publishDir,
+    '--packTitle', 'Ask Key', '--packAuthors', 'A1mAssist',
+    '--mainExe', 'AskKey.exe', '--outputDir', $releaseDir,
+    '--msi', '--instLocation', 'PerMachine'
+)
+if (-not $unsigned) { $packArgs += '--signTool', 'signtool.exe' }
+& vpk @packArgs
+if ($LASTEXITCODE -ne 0) { throw "vpk pack failed with exit code $LASTEXITCODE." }
 
 Write-Output "Published: $publishDir"
-Write-Output "Archive:   $zipPath"
+Write-Output "Release:   $releaseDir"
+Get-ChildItem -LiteralPath $releaseDir | Select-Object Name, Length | Format-Table -AutoSize
 if ($unsigned) {
-    Write-Warning 'This build is unsigned. Agent connections use the embedded helper integrity manifest instead of Authenticode.'
+    Write-Warning 'Unsigned release: SmartScreen will warn on install. Agent connections rely on the embedded helper integrity manifest.'
 }

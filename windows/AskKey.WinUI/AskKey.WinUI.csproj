@@ -22,6 +22,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260709004" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,16 +39,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\AskKey.App\AccessRecordPresentation.cs" Link="Shared\AccessRecordPresentation.cs" />
-    <Compile Include="..\AskKey.App\AppPaths.cs" Link="Shared\AppPaths.cs" />
-    <Compile Include="..\AskKey.App\ApprovalDetailsContent.cs" Link="Shared\ApprovalDetailsContent.cs" />
-    <Compile Include="..\AskKey.App\CredentialTemplates.cs" Link="Shared\CredentialTemplates.cs" />
-    <Compile Include="..\AskKey.App\LocalizationCatalog.cs" Link="Shared\LocalizationCatalog.cs" />
-    <Compile Include="..\AskKey.App\Preferences.cs" Link="Shared\Preferences.cs" />
-    <Compile Include="..\AskKey.App\SessionPrivacyPolicy.cs" Link="Shared\SessionPrivacyPolicy.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <InternalsVisibleTo Include="AskKeyApp.Tests" />
   </ItemGroup>
 
@@ -61,6 +52,17 @@
       <HelperOutput Include="$(HelperOutputRoot)**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(HelperOutput)" DestinationFolder="$(OutDir)Helpers\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyHelperToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <HelperPublishRoot>$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Platform)\$(Configuration)\net10.0-windows\</HelperPublishRoot>
+      <HelperPublishRoot Condition="!Exists('$(HelperPublishRoot)')">$(MSBuildProjectDirectory)\..\AskKey.Helper\bin\$(Configuration)\net10.0-windows\</HelperPublishRoot>
+      <HelperPublishRoot Condition="'$(RuntimeIdentifier)' != ''">$(HelperPublishRoot)\$(RuntimeIdentifier)\</HelperPublishRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <HelperPublish Include="$(HelperPublishRoot)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HelperPublish)" DestinationFolder="$(PublishDir)Helpers\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="GenerateHelperIntegrityManifest" BeforeTargets="SplitResourcesByCulture"
           DependsOnTargets="ResolveProjectReferences"

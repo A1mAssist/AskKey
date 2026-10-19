@@ -12,7 +12,7 @@ This tree is the Windows port of AskKey. Credential management, the local Broker
 
 ```powershell
 dotnet test .\windows\AskKey.slnx
-dotnet run --project .\windows\AskKey.App\AskKey.App.csproj
+dotnet run --project .\windows\AskKey.WinUI\AskKey.WinUI.csproj -p:Platform=x64
 ```
 
 Debug builds set `ASKKEY_DEVELOPMENT=1` and use the `dev` data roots, so they do not touch a normal installed vault.
@@ -23,7 +23,9 @@ Debug builds set `ASKKEY_DEVELOPMENT=1` and use the `dev` data roots, so they do
 .\windows\publish-windows.ps1
 ```
 
-The script runs the tests, publishes a self-contained `win-x64` package, verifies the required `AskKey.exe` and `Helpers\askkey.exe` layout, and writes a versioned ZIP plus SHA-256 file under `windows\publish`.
+The script runs the tests, builds a self-contained `win-x64` payload, verifies the required `AskKey.exe` and `Helpers\askkey.exe` layout, then hands it to Velopack (`vpk pack`). It takes the version from `AskKeyVersion.Current` in `AskKey.Integrations\AskKeyVersion.cs`; bump that file to cut a release.
+
+`vpk pack` writes the whole release set into `windows\publish\release`: `AskKey-win-Setup.exe`, `AskKey-win.msi`, `AskKey-win-Portable.zip`, `AskKey-<version>-full.nupkg`, plus the update feed `assets.win.json`, `releases.win.json` and `RELEASES`. Upload all of them together and never hand-edit the feed files.
 
 To sign the host and helper with a certificate from the current user's certificate store:
 
@@ -31,16 +33,28 @@ To sign the host and helper with a certificate from the current user's certifica
 .\windows\publish-windows.ps1 -CertificateThumbprint <thumbprint>
 ```
 
-Signed builds require both files to be signed by the same publisher. Without a signature the script writes an artifact named `...-unsigned.zip`. That build embeds a manifest of every file under `Helpers\` and verifies it before Agent connections, so automatic setup still works; editing the helper payload invalidates the manifest and requires a rebuild. Windows SmartScreen still warns for unsigned downloads. `ASKKEY_DEVELOPMENT=1` remains a local-only bypass.
+Signed builds require both files to be signed by the same publisher. Without a signature the whole release set ships unsigned. That build embeds a manifest of every file under `Helpers\` and verifies it before Agent connections, so automatic setup still works; editing the helper payload invalidates the manifest and requires a rebuild. Windows SmartScreen still warns for unsigned downloads. `ASKKEY_DEVELOPMENT=1` remains a local-only bypass.
 
 ## Install
 
-1. Quit AskKey from the tray before replacing files.
-2. Extract the package into `%LOCALAPPDATA%\AskKey`, so the layout is `%LOCALAPPDATA%\AskKey\AskKey.exe` and `%LOCALAPPDATA%\AskKey\Helpers\askkey.exe`.
-3. Launch `%LOCALAPPDATA%\AskKey\AskKey.exe`.
+Two official installers ship in the release set, and they install to different places:
 
-The official helper topology requires that exact install location. Running from the download folder is only for development.
+| Installer | Install scope | Location | Elevation |
+|---|---|---|---|
+| `AskKey-win.msi` | Per-machine | `%ProgramFiles%\Ask Key\current\` | Yes (UAC) |
+| `AskKey-win-Setup.exe` | Per-user | `%LocalAppData%\AskKey\current\` | No |
 
-Credentials and key material are stored under `%APPDATA%\AskKey`; settings, delivery files and the installed app live under `%LOCALAPPDATA%\AskKey`. Deleting the install folder does not delete credentials. There is no automatic updater or installer yet.
+Both extract the payload into a `current\` subfolder behind a small execution stub, so the real host and helper are at:
+
+```
+<install root>\current\AskKey.exe
+<install root>\current\Helpers\askkey.exe
+```
+
+`OfficialInstallTopology` accepts exactly these two roots; a copy anywhere else is refused by the helper so an Agent cannot open a tampered host.
+
+To install machine-wide into Program Files, run the MSI. To place a per-user copy elsewhere, `Setup.exe --installto <dir>` overrides the default folder at install time, but the topology gate then requires the folder be named `AskKey` or `Ask Key`.
+
+Credentials and key material are stored under `%APPDATA%\AskKey`; settings and the broker pipe live under `%LOCALAPPDATA%\AskKey`. Neither follows the install folder, so deleting the install folder does not delete credentials.
 
 Live Windows Hello prompts, session lock/unlock, Authenticode signing and hardware-specific behavior must be verified on the target machine; unit tests do not establish those.
