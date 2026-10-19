@@ -93,11 +93,24 @@ public sealed class AppHost : IDisposable
             ShowError(error.Message);
         }
 
-        if (!_preferences.HasCompletedOnboarding
-            || !Environment.GetCommandLineArgs().Any(argument =>
-                string.Equals(argument, "--background", StringComparison.OrdinalIgnoreCase)))
+        var background = Environment.GetCommandLineArgs().Any(argument =>
+            string.Equals(argument, "--background", StringComparison.OrdinalIgnoreCase));
+        var showWindow = !_preferences.HasCompletedOnboarding || !background;
+        if (showWindow) ShowMainWindow();
+        if (!IsLockedAtStartup) return;
+        if (showWindow)
         {
-            ShowMainWindow();
+            // High security mode: the vault is locked until the passphrase arrives, so ask
+            // before the user starts browsing. Cancel leaves it locked and the page offers
+            // the same Unlock button.
+            _ = _dispatcher.TryEnqueue(async () => await UnlockAsync());
+        }
+        else
+        {
+            // A background start must not pop a dialog, but the user should know why
+            // Agent requests fail until they open the app.
+            _tray?.ShowNotification("Ask Key is locked",
+                "Open Ask Key and enter your passphrase to unlock.", ShowMainWindow);
         }
     }
 

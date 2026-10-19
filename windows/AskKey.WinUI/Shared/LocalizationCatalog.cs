@@ -133,6 +133,8 @@ internal static class LocalizationCatalog
         ["Confirm your passphrase"] = "确认口令",
         ["Enter it again"] = "再次输入",
         ["Enter your passphrase"] = "输入口令",
+        ["Ask Key is locked"] = "请旨已锁定",
+        ["Open Ask Key and enter your passphrase to unlock."] = "打开请旨并输入口令解锁。",
         ["The passphrases do not match."] = "两次输入的口令不一致。",
         ["Continue"] = "继续",
         ["Turn off"] = "关闭",
