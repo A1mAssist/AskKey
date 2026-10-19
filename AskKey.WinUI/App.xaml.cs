@@ -16,6 +16,7 @@ public partial class App : Application
 
     public App()
     {
+        TaskbarIdentity.Register();
         InitializeComponent();
         UnhandledException += OnUnhandledException;
     }

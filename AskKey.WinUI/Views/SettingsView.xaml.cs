@@ -299,7 +299,7 @@ public partial class SettingsView : UserControl
         }
         catch (Exception error)
         {
-            EraseFailureText.Text = error.Message;
+            EraseFailureText.Text = Loc.T(error.Message);
             EraseFailureText.Visibility = Visibility.Visible;
         }
     }

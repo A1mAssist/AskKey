@@ -80,7 +80,7 @@ public partial class AgentAccessView : UserControl
         }
         catch (Exception error)
         {
-            ShowRow(client, Loc.T("Not connected"), error.Message);
+            ShowRow(client, Loc.T("Not connected"), Loc.T(error.Message));
         }
         finally
         {
@@ -118,7 +118,7 @@ public partial class AgentAccessView : UserControl
         }
         catch (Exception error)
         {
-            ShowRow(client, Loc.T("Not connected"), error.Message);
+            ShowRow(client, Loc.T("Not connected"), Loc.T(error.Message));
         }
         finally
         {

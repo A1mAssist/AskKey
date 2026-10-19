@@ -175,7 +175,7 @@ public sealed class AppHost : IDisposable
         // Erasing is irreversible and must never inherit an open management session's
         // approval, so this asks Windows Hello even while a session is valid.
         if (!_authentication.Confirm(Loc.T("Erase the local Ask Key vault"))) return;
-        if (Vault.IsLocked) Vault.Unlock();
+        if (!await UnlockAsync()) return;
         if (!Vault.HasActiveManagementSession)
         {
             Vault.BeginManagementSession(new ManagementAuthenticator(_ => true));
