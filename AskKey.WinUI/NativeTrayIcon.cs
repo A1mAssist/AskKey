@@ -30,7 +30,7 @@ public sealed class NativeTrayIcon : IDisposable
     private const int TrayIconPixelSize = 32;
     private const int IdiApplication = 32512;
     private const uint RetryTimerId = 2;
-    private const int MaxReAddAttempts = 3;
+    private const int MaxReAddAttempts = 20;
 
     private readonly IntPtr _windowHandle;
     private readonly SubclassProcedure _subclassProcedure;
@@ -89,9 +89,11 @@ public sealed class NativeTrayIcon : IDisposable
 
         if (!AddIcon())
         {
-            RemoveWindowSubclass(_windowHandle, _subclassProcedure, IconId);
-            ReleaseOwnedIcon();
-            throw new InvalidOperationException("Windows could not create the Ask Key tray icon.");
+            // Explorer may not own the tray yet at login. Keep the icon and retry
+            // instead of failing startup with a modal error.
+            _reAddAttempts = 1;
+            if (SetTimer(_windowHandle, new UIntPtr(RetryTimerId), 500, IntPtr.Zero) == UIntPtr.Zero)
+                MarkUnavailable();
         }
     }
 
