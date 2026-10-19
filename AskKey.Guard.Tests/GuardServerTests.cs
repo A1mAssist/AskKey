@@ -218,9 +218,13 @@ public sealed class GuardServerTests
     {
         var machineRoot = OfficialInstallTopology.CanonicalMachineAppPath;
         Assert.Equal("AskKey", Path.GetFileName(machineRoot));
-        Assert.True(GuardCallerVerifier.IsOfficialMachineInstall(machineRoot));
-        Assert.True(GuardCallerVerifier.IsOfficialMachineInstall(
-            OfficialInstallTopology.PayloadPath(machineRoot)));
+        Assert.Equal("Ask Key", Path.GetFileName(OfficialInstallTopology.LegacyMachineAppPath));
+        foreach (var root in OfficialInstallTopology.MachineAppPaths)
+        {
+            Assert.True(GuardCallerVerifier.IsOfficialMachineInstall(root));
+            Assert.True(GuardCallerVerifier.IsOfficialMachineInstall(
+                OfficialInstallTopology.PayloadPath(root)));
+        }
 
         var perUser = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

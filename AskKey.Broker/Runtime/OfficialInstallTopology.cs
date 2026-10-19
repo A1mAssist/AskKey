@@ -60,6 +60,9 @@ public static class OfficialInstallTopology
     // machine-wide. Both are official layouts, so both pass the topology gate.
     private const string PerUserFolderName = "AskKey";
     private const string PerMachineFolderName = "AskKey";
+    // Velopack's per-machine MSI uses the pack title for the directory name,
+    // so a silent install can land in "Ask Key" instead of "AskKey".
+    private const string LegacyPerMachineFolderName = "Ask Key";
 
     public static string CanonicalAppPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), PerUserFolderName);
@@ -67,8 +70,14 @@ public static class OfficialInstallTopology
     public static string CanonicalMachineAppPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), PerMachineFolderName);
 
+    public static string LegacyMachineAppPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), LegacyPerMachineFolderName);
+
+    public static IReadOnlyList<string> MachineAppPaths { get; } =
+        new[] { CanonicalMachineAppPath, LegacyMachineAppPath };
+
     public static IReadOnlyList<string> OfficialAppPaths { get; } =
-        new[] { CanonicalAppPath, CanonicalMachineAppPath };
+        new[] { CanonicalAppPath, CanonicalMachineAppPath, LegacyMachineAppPath };
 
     /// <summary>
     /// Velopack extracts the payload into <c>current\</c> behind a root execution stub,
@@ -133,7 +142,7 @@ public static class OfficialInstallTopology
     {
         OfficialInstallDecisionKind.Accepted or OfficialInstallDecisionKind.DevelopmentAccepted => string.Empty,
         OfficialInstallDecisionKind.RelocatedOrRenamed =>
-            $"Ask Key must stay at {CanonicalAppPath} or {CanonicalMachineAppPath}. Reinstall the official package, then open that copy.",
+            $"Ask Key must stay at {CanonicalAppPath}, {CanonicalMachineAppPath}, or {LegacyMachineAppPath}. Reinstall the official package, then open that copy.",
         _ => "This Ask Key helper does not match the official app. Reinstall the official package, then try again.",
     };
 

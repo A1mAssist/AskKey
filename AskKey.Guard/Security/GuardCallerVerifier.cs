@@ -45,10 +45,9 @@ public sealed class GuardCallerVerifier : IGuardCallerVerifier
         }
 
         // Decide also accepts the per-user root. The production rule is narrower:
-        // Program Files machine root or its Velopack current payload.
-        var root = OfficialInstallTopology.CanonicalMachineAppPath;
-        return Matches(directory, root)
-            || Matches(directory, OfficialInstallTopology.PayloadPath(root));
+        // a Program Files machine root or its Velopack current payload.
+        return OfficialInstallTopology.MachineAppPaths.Any(root =>
+            Matches(directory, root) || Matches(directory, OfficialInstallTopology.PayloadPath(root)));
     }
 
     private static bool Matches(string directory, string expected)

@@ -15,7 +15,9 @@
       <MsiPackage Id="AskKeyApp"
                   SourceFile="$(var.AppMsi)"
                   Vital="yes"
-                  Compressed="yes" />
+                  Compressed="yes">
+        <MsiProperty Name="VELOPACK_INSTALLDIR" Value="[ProgramFiles64Folder]AskKey" />
+      </MsiPackage>
       <MsiPackage Id="AskKeyGuard"
                   SourceFile="$(var.GuardMsi)"
                   Vital="yes"

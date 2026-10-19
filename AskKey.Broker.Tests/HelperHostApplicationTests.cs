@@ -164,6 +164,16 @@ public sealed class HelperHostApplicationTests
     }
 
     [Fact]
+    public void TopologyAcceptsLegacyMachineFolder()
+    {
+        var payload = OfficialInstallTopology.PayloadPath(OfficialInstallTopology.LegacyMachineAppPath);
+        var helper = Path.Combine(payload, OfficialInstallTopology.HelperRelativePath);
+        var decision = OfficialInstallTopology.Decide(
+            payload, helperPath: helper, isDevelopmentBuild: false);
+        Assert.Equal(OfficialInstallDecisionKind.Accepted, decision.Kind);
+    }
+
+    [Fact]
     public void TopologyStillRejectsAPayloadCopiedOutOfTheInstallRoot()
     {
         var payload = Path.Combine(
