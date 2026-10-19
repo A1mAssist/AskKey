@@ -108,6 +108,26 @@ public sealed class AgentConnectorTests
     }
 
     [Fact]
+    public void CheckingAnAbsentClaudeEntryDoesNotSpawnTheSlowCli()
+    {
+        using var temp = new TempDirectory();
+        var home = temp.Combine("home");
+        Directory.CreateDirectory(home);
+        var helper = TestFiles.InstallFixture(temp.Combine("home", ".askkey", "askkey.exe"));
+        var claude = TestFiles.InstallFixture(temp.Combine("home", ".local", "bin", "claude.exe"));
+        // A present config file without the name is conclusive: no entry can exist.
+        File.WriteAllText(temp.Combine("home", ".claude.json"), "{\"mcpServers\":{}}");
+        var connector = new AgentConnector(
+            home, temp.Combine("support"), helper, "unused-pipe", "ok-test", claude,
+            signing: CodexHelperSigning.Development);
+
+        var status = connector.Check(AgentClientKind.ClaudeCode);
+
+        Assert.True(status.Installed);
+        Assert.False(status.McpConfigured);
+        Assert.False(File.Exists(temp.Combine("home", "claude-calls")));
+    }
+    [Fact]
     public void ConnectionRequiresTheCredentialDiscoveryHook()
     {
         using var temp = new TempDirectory();

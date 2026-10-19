@@ -189,6 +189,29 @@ public sealed class ClaudeCodeMCPAdapter
         => error is ClaudeCodeMCPException typed ? typed.Error.ToString() : "process_failed";
     internal sealed record Entry(ClaudeCodeMCPState State, bool Connected = false);
 
+    /// <summary>
+    /// Cheap negative check for the passive status row. Claude keeps every MCP entry
+    /// (user and project scope) in <c>~/.claude.json</c>, so a file that never mentions
+    /// the name cannot hold one. A positive result still goes through the CLI, which
+    /// stays authoritative; oversized or unreadable files fall back to the CLI too.
+    /// </summary>
+    internal bool ConfigurationMentionsAskKey()
+    {
+        try
+        {
+            var path = Path.Combine(HomeDirectory, ".claude.json");
+            var info = new FileInfo(path);
+            // A missing file is not evidence of absence: Claude creates it on first run
+            // and may be using a non-default location. Only a present file is conclusive.
+            if (!info.Exists || info.Length > 8 * 1024 * 1024) return true;
+            return File.ReadAllText(path, Encoding.UTF8).Contains("askkey", StringComparison.Ordinal);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
     internal Entry InspectEntry(bool cleanup = false)
     {
         var response = RunClaude(new[] { "mcp", "get", "askkey" }, cleanup);

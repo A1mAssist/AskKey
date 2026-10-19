@@ -164,10 +164,18 @@ public sealed class AgentConnector
             return new(AgentClientKind.ClaudeCode, false, false, false, false,
                 "Claude Code is not installed, or its CLI is not on PATH.");
         }
-        var plan = adapter.Plan();
-        var configured = plan.State == ClaudeCodeMCPState.Matching;
-        var connected = configured && adapter.Verify(plan.Version).Connected;
         var discovery = DiscoveryFor(AgentClientKind.ClaudeCode).HasExpected();
+        // Status must not pay for a capability preflight: `claude` costs seconds per
+        // spawn and an absent entry is provable from the config file alone.
+        if (!adapter.ConfigurationMentionsAskKey())
+        {
+            return Result(AgentClientKind.ClaudeCode, true, configured: false, discovery, connected: false);
+        }
+        var entry = adapter.InspectEntry();
+        var configured = entry.State == ClaudeCodeMCPState.Matching;
+        // `mcp get` already reports whether Claude can reach the server, so a second
+        // probe would only add latency to a passive status read.
+        var connected = configured && entry.Connected;
         return Result(AgentClientKind.ClaudeCode, true, configured, discovery, connected);
     }
 

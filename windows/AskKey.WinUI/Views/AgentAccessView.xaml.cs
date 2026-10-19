@@ -53,15 +53,14 @@ public partial class AgentAccessView : UserControl
         SetChecking();
         try
         {
-            var statuses = await Task.Run(async () =>
+            var connector = Connector();
+            // The four checks share no state, so they run together and each row updates
+            // as soon as its own client answers instead of waiting for the slowest.
+            await Task.WhenAll(ClientKinds.Select(async client =>
             {
-                var connector = Connector();
-                // The four checks share no state, so they run together instead of
-                // queueing behind the slowest one.
-                return await Task.WhenAll(ClientKinds.Select(client => Task.Run(() => connector.Check(client))));
-            });
-            if (generation != _statusGeneration) return;
-            foreach (var status in statuses) ApplyStatus(status);
+                var status = await Task.Run(() => connector.Check(client));
+                if (generation == _statusGeneration) ApplyStatus(status);
+            }));
         }
         catch (Exception error)
         {
