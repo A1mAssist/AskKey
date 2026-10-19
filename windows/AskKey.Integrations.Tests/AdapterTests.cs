@@ -739,6 +739,46 @@ public class ClaudeStartupNoticeTests
     }
 }
 
+public class ClaudeCodeMCPAdapterPreflightCacheTests
+{
+    private static ClaudeCodeMCPAdapter Adapter(TempDirectory temp, string helper, string brokerPipe)
+    {
+        var claude = TestFiles.InstallFixture(temp.Combine("home", ".local", "bin", "claude.exe"));
+        Directory.CreateDirectory(temp.Combine("project"));
+        File.WriteAllText(temp.Combine("home", "claude-command"), helper);
+        return new ClaudeCodeMCPAdapter(
+            temp.Combine("home"), temp.Combine("project"), helper, brokerPipe,
+            claude, CodexHelperSigning.Development);
+    }
+
+    [Fact]
+    public void PreflightIsCachedPerExecutableAndReProbesAfterTheBinaryChanges()
+    {
+        using var temp = new TempDirectory();
+        var helper = TestFiles.InstallFixture(temp.Combine("app", "askkey.exe"));
+        var adapter = Adapter(temp, helper, "ok-claude");
+        adapter.CommandTimeout = TimeSpan.FromSeconds(10);
+        var calls = temp.Combine("home", "claude-calls");
+
+        Assert.Equal("2.1.282", adapter.Preflight());
+        var first = File.ReadAllText(calls);
+        Assert.True(CountLines(first) >= 5, "preflight should probe --version plus four --help commands");
+        // Same executable: the version and the four --help probes are not repeated.
+        Assert.Equal("2.1.282", adapter.Preflight());
+        Assert.Equal(first, File.ReadAllText(calls));
+
+        // A newer CLI must be probed again, or a Claude upgrade stays invisible.
+        var claude = Path.Combine(adapter.HomeDirectory, ".local", "bin", "claude.exe");
+        File.SetLastWriteTimeUtc(claude, DateTime.UtcNow.AddMinutes(5));
+        File.WriteAllText(temp.Combine("home", "claude-version"), "2.2.0 (Claude Code)\n");
+        Assert.Equal("2.2.0", adapter.Preflight());
+        Assert.True(CountLines(File.ReadAllText(calls)) > CountLines(first));
+    }
+
+    private static int CountLines(string text) =>
+        text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
+}
+
 public class CursorProtocolFixtureTests
 {
     [Fact]

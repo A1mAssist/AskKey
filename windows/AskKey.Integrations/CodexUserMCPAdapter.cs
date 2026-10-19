@@ -64,6 +64,14 @@ public sealed class CodexUserMCPAdapter
 {
     public const int MaximumConfigBytes = 1_048_576;
 
+    // Both probes below talk to the packaged helper with constant input, so their
+    // verdicts depend only on that exe. Broker liveness and config state are
+    // deliberately still measured live on every check.
+    private static readonly global::System.Collections.Concurrent.ConcurrentDictionary<
+        string, string> HelperMcpCache = new();
+    private static readonly global::System.Collections.Concurrent.ConcurrentDictionary<
+        string, string> DiscoveryHelperCache = new();
+
     private readonly object _mutationLock = new();
 
     public CodexUserMCPAdapter(
@@ -567,6 +575,11 @@ public sealed class CodexUserMCPAdapter
     public void VerifyCommandDiscoveryHelper()
     {
         AssertTrustedHelper();
+        var stamp = HelperStamp();
+        if (DiscoveryHelperCache.TryGetValue(HelperPath, out var known) && known == stamp)
+        {
+            return;
+        }
         var response = IntegrationProcess.RunStrict(
             HelperPath, new[] { "hook", "capabilities" }, IntegrationProcess.PortableEnvironment());
         try
@@ -590,10 +603,29 @@ public sealed class CodexUserMCPAdapter
         {
             throw CodexUserMCPException.ConnectionFailed("helper");
         }
+        DiscoveryHelperCache[HelperPath] = stamp;
+    }
+
+    private string HelperStamp()
+    {
+        try
+        {
+            var info = new FileInfo(HelperPath);
+            return info.LastWriteTimeUtc.Ticks.ToString() + ":" + info.Length;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return "";
+        }
     }
 
     private void VerifyHelperMcp()
     {
+        var stamp = HelperStamp();
+        if (HelperMcpCache.TryGetValue(HelperPath, out var known) && known == stamp)
+        {
+            return;
+        }
         var identity = MCPHelperContract.Identity.AskKeyHelper;
         var environment = IntegrationProcess.PortableEnvironment();
         environment["ASKKEY_BROKER_PIPE"] = BrokerPipeFile;
@@ -615,5 +647,6 @@ public sealed class CodexUserMCPAdapter
         {
             throw CodexUserMCPException.ConnectionFailed("protocol");
         }
+        HelperMcpCache[HelperPath] = stamp;
     }
 }

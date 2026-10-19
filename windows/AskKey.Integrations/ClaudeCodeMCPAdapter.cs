@@ -312,12 +312,44 @@ public sealed class ClaudeCodeMCPAdapter
         }
     }
 
+    // The version and the four `--help` capability probes depend only on which
+    // claude binary is installed, so they are cached per executable+stamp.
+    // Anything that reads live configuration (InspectEntry, Verify) stays uncached.
+    private static readonly global::System.Collections.Concurrent.ConcurrentDictionary<
+        string, (string Stamp, string Version)> PreflightCache = new();
+
     internal string Preflight()
     {
         if (!IsRunnableCliFile(ClaudeExecutable))
         {
             throw new ClaudeCodeMCPException(ClaudeCodeMCPError.MissingExecutable);
         }
+        var stamp = FileStamp(ClaudeExecutable);
+        if (PreflightCache.TryGetValue(ClaudeExecutable, out var cached)
+            && cached.Stamp == stamp)
+        {
+            return cached.Version;
+        }
+        var version = PreflightUncached();
+        PreflightCache[ClaudeExecutable] = (stamp, version);
+        return version;
+    }
+
+    private static string FileStamp(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.LastWriteTimeUtc.Ticks.ToString() + ":" + info.Length;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return "";
+        }
+    }
+
+    private string PreflightUncached()
+    {
         var reported = RunClaude(new[] { "--version" });
         var text = reported.StdoutText.Trim();
         if (reported.Status != 0
