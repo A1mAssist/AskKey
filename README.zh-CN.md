@@ -14,6 +14,8 @@ Ask Key 把凭证加密保存在本机。Agent 只能按名称和元数据发现
 
 本仓库只包含 Windows 实现。发布工具使用 .NET，不包含 PowerShell 脚本。
 
+> **macOS 上游：** 原始 macOS 应用及共享的产品/安全文档维护在 [sudoHG/AskKey](https://github.com/sudoHG/AskKey)。本仓库不包含 macOS 源码。
+
 ## 功能
 
 - **查找凭证：** Agent 可以查询凭证名称、用途说明和变量映射，但拿不到值。

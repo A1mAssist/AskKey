@@ -14,6 +14,8 @@ Ask Key keeps credentials encrypted on your PC. Agents discover credentials by n
 
 This repository contains the Windows implementation only. The release tooling is .NET; there are no PowerShell build scripts.
 
+> **macOS upstream:** The original macOS app and shared product/security documentation live at [sudoHG/AskKey](https://github.com/sudoHG/AskKey). This repository does not vendor the macOS source tree.
+
 ## What it does
 
 - **Find keys:** agents can look up credential names, usage notes and variable mappings without receiving the values.
