@@ -34,7 +34,7 @@ New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 $unsigned = -not $CertificateThumbprint
 
 $buildArgs = @(
-    'build', $project, '-c', 'Release', '-p:Platform=x64', '--nologo', '-v', 'minimal'
+    'build', $project, '-c', 'Release', '-p:Platform=x64', "-p:Version=$version", '--nologo', '-v', 'minimal'
 )
 if ($unsigned) { $buildArgs += '-p:AskKeyUnsigned=true' }
 & dotnet @buildArgs
