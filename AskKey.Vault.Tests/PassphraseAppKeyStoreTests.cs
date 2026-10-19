@@ -18,6 +18,16 @@ public sealed class PassphraseAppKeyStoreTests
         }
     }
 
+    private sealed class FailingDeleteKeyStore : IAppKeyStore
+    {
+        public void SavePendingKey(byte[] data) { }
+        public byte[] LoadPendingKey() => throw new AppKeyStoreException(AppKeyStoreError.MissingPendingKey);
+        public void PromotePendingKey() { }
+        public byte[] LoadAppKey() => throw new AppKeyStoreException(AppKeyStoreError.MissingAppKey);
+        public void DeleteLegacyKey() { }
+        public void DeletePendingKey() => throw new IOException("synthetic DPAPI delete failure");
+        public void DeleteAppKey() { }
+    }
     [Fact]
     public void RoundTripsPendingAndAppKeys()
     {
@@ -206,6 +216,47 @@ public sealed class PassphraseAppKeyStoreTests
         restarted.Dispose();
     }
 
+    [Fact]
+    public void FailedDpapiRemovalLeavesHighSecurityOff()
+    {
+        using var root = new TestDirectory();
+        var config = new VaultConfiguration(root.Combine("appdata"), root.Combine("local"));
+        PrivateFileSystem.CreatePrivateDirectory(config.ApplicationSupportDirectory);
+        var key = TestCredentials.Key(64);
+        using var vault = new Vault(TestCredentials.NewStore(config.VaultFile, key), key, null, null,
+            root.Combine("deliveries"), config, new FailingDeleteKeyStore());
+
+        Assert.Throws<IOException>(() => vault.EnableHighSecurity("correct horse battery"));
+
+        Assert.False(vault.IsHighSecurityEnabled);
+        Assert.False(File.Exists(Path.Combine(config.KeyMaterialDirectory,
+            PassphraseAppKeyStore.AppFileName)));
+    }
+
+    [Fact]
+    public void HighSecurityUnlockRemovesLeftoverDpapiCopies()
+    {
+        using var root = new TestDirectory();
+        var config = new VaultConfiguration(root.Combine("appdata"), root.Combine("local"));
+        PrivateFileSystem.CreatePrivateDirectory(config.ApplicationSupportDirectory);
+        var key = TestCredentials.Key(65);
+        using (var first = new Vault(TestCredentials.NewStore(config.VaultFile, key), key, null, null,
+                   root.Combine("deliveries"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory)))
+        {
+            first.EnableHighSecurity("correct horse battery");
+        }
+
+        var dpapi = new DpapiAppKeyStore(config.KeyMaterialDirectory);
+        dpapi.SavePendingKey(key);
+        dpapi.PromotePendingKey();
+
+        using var restarted = new Vault(TestCredentials.NewStore(root.Combine("dummy.db"), key), null, null, null,
+            root.Combine("deliveries2"), config, dpapi);
+        restarted.Unlock("correct horse battery");
+
+        Assert.False(File.Exists(Path.Combine(config.KeyMaterialDirectory, DpapiAppKeyStore.PendingFileName)));
+        Assert.False(File.Exists(Path.Combine(config.KeyMaterialDirectory, DpapiAppKeyStore.AppFileName)));
+    }
     [Fact]
     public void LockRemovesRuntimeFileDeliveries()
     {

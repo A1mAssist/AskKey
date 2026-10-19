@@ -36,6 +36,33 @@ public sealed class FileDeliveryManagerTests
         Assert.Equal("secret", File.ReadAllText(delivery.Path));
     }
 
+    [Fact]
+    public void RetryDoesNotHoldTheOwnerLeaseWhileRemovingTheDirectory()
+    {
+        using var root = new TestDirectory();
+        var deliveryRoot = root.Combine("file-deliveries");
+        PrivateFileSystem.CreatePrivateDirectory(deliveryRoot);
+        var staleNamespace = CreateNamespace(deliveryRoot);
+        var staleInstance = CreateStaleInstance(staleNamespace);
+        var retry = default(Action);
+        var attempts = 0;
+
+        using var manager = new FileDeliveryManager(
+            Path.Combine(deliveryRoot, Guid.NewGuid().ToString("N")),
+            retryDelay: TimeSpan.FromMilliseconds(1),
+            schedule: (_, action) => retry = action,
+            removeItem: path =>
+            {
+                attempts++;
+                if (attempts == 1) throw new IOException("synthetic first failure");
+                Directory.Delete(path, recursive: true);
+            });
+
+        Assert.NotNull(retry);
+        retry!();
+        Assert.False(Directory.Exists(staleInstance));
+        Assert.Empty(manager.CleanupFailures);
+    }
     private static string CreateNamespace(string deliveryRoot)
     {
         var path = Path.Combine(deliveryRoot, Guid.NewGuid().ToString("N"));

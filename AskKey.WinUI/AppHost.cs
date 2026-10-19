@@ -193,10 +193,13 @@ public sealed class AppHost : IDisposable
     }
 
     public bool ConfirmManagement(string reason)
-        => Vault.HasActiveManagementSession || _authentication.Confirm(Loc.T(reason));
+        => !ManagementAuthenticationPolicy.RequiresConfirmation(Vault.HasActiveManagementSession, reason)
+            || _authentication.Confirm(Loc.T(reason));
 
-    public ManagementAuthenticator ManagementAuthenticator(string reason)
-        => new(_ => ConfirmManagement(reason));
+    public ManagementAuthenticator ManagementAuthenticator(string _)
+        => ManagementAuthenticationPolicy.From(
+            reason => _authentication.Confirm(Loc.T(reason)),
+            () => Vault.HasActiveManagementSession);
 
     public bool EnsureManagementSession(string reason)
     {
@@ -216,8 +219,9 @@ public sealed class AppHost : IDisposable
     public ManagementAuthenticator AuthenticateAndBeginManagement(string reason)
     {
         if (Vault.IsLocked) Vault.Unlock();
-        Vault.BeginManagementSession(ManagementAuthenticator(reason));
-        return new global::AskKey.Vault.ManagementAuthenticator(_ => true);
+        var authenticator = ManagementAuthenticator(reason);
+        Vault.BeginManagementSession(authenticator, reason);
+        return authenticator;
     }
 
     /// <summary>
@@ -556,7 +560,7 @@ public sealed class AppHost : IDisposable
 
     public FrozenCredentialWrite RevealCredentialWrite(BrokerPendingApproval pending)
     {
-        var authenticator = AuthenticateAndBeginManagement("View the credential change submitted for approval");
+        var authenticator = AuthenticateAndBeginManagement(CredentialManagementCopy.FrozenWriteRevealReason);
         return Vault.RevealFrozenCredentialWrite(pending.Request.OperationId,
             pending.RequestId, pending.Capability, authenticator);
     }
@@ -660,9 +664,9 @@ public sealed class AppHost : IDisposable
     private void ConfigureApprovals()
     {
         Vault.ApprovalRequests.ConfigureAuthentication(purpose =>
-            ConfirmManagement(purpose == BrokerAuthenticationPurpose.ReadApproval
+            _authentication.Confirm(Loc.T(purpose == BrokerAuthenticationPurpose.ReadApproval
                 ? "Approve this Agent read request"
-                : global::AskKey.Vault.CredentialManagementCopy.AgentWriteApprovalReason));
+                : global::AskKey.Vault.CredentialManagementCopy.AgentWriteApprovalReason)));
         Vault.ApprovalRequests.ConfigureObservers(
             _ => _dispatcher.TryEnqueue(() =>
             {
@@ -724,6 +728,10 @@ public sealed class AppHost : IDisposable
         {
             var changed = !_sessionLocked;
             _sessionLocked = true;
+            // The management window is user-presence bound; a screen lock or
+            // disconnect ends it even though the vault key stays resident for the
+            // Broker. The next management action must confirm again.
+            Vault.EndManagementSession();
             if (changed) _activeApproval?.DismissForPrivacy();
             RefreshPendingCount();
             return;
@@ -756,7 +764,8 @@ public sealed class AppHost : IDisposable
         _fileWrites = new BrokerFileWriteCoordinator(
             staging,
             Vault.ApprovalRequests,
-            () => ConfirmManagement(global::AskKey.Vault.CredentialManagementCopy.FrozenWriteRevealReason),
+            () => _authentication.Confirm(Loc.T(
+                global::AskKey.Vault.CredentialManagementCopy.FrozenWriteRevealReason)),
             file => Vault.CommitAgentFileWrite(file),
             (credentialId, previousDigest, request) =>
                 Vault.SubmitFileWriteApprovalIfCurrent(credentialId, previousDigest, request),

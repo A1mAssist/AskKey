@@ -81,6 +81,61 @@ public sealed class VaultFacadeTests
     }
 
     [Fact]
+    public void AllowedCreationAndPermissionChangesAskForTheGrantReason()
+    {
+        using var harness = new Harness();
+        harness.Vault.CreateTextCredential(new TextCredentialInput
+        {
+            Name = "Seed Credential",
+            Value = "synthetic-seed",
+        }, ManagementAuthenticator.Allow);
+        var prompts = 0;
+        var created = harness.Vault.CreateTextCredential(new TextCredentialInput
+        {
+            Name = "Allowed Grant",
+            Value = "synthetic-secret",
+            Permission = CredentialPermission.Allowed,
+        }, new ManagementAuthenticator(_ => { prompts++; return true; }));
+        Assert.Equal(1, prompts);
+
+        harness.Vault.UpdateCredentialMetadata(created.Id, "Allowed Grant Renamed",
+            "", null, CredentialPermission.Allowed, null,
+            new ManagementAuthenticator(_ => { prompts++; return true; }));
+        Assert.Equal(1, prompts);
+        Assert.Equal("Allowed Grant Renamed",
+            harness.Vault.ListTextCredentials().Single(item => item.Id == created.Id).Name);
+
+        harness.Vault.UpdateCredentialPermission(created.Id, CredentialPermission.Ask,
+            new ManagementAuthenticator(_ => { prompts++; return true; }));
+        harness.Vault.UpdateCredentialPermission(created.Id, CredentialPermission.Allowed,
+            new ManagementAuthenticator(_ => { prompts++; return true; }));
+        Assert.Equal(2, prompts);
+    }
+
+    [Fact]
+    public void RuntimeApprovalUsesWindowsCommandLineQuoting()
+    {
+        using var harness = new Harness();
+        var vault = harness.Vault;
+        vault.CreateTextCredential(new TextCredentialInput
+        {
+            Name = "Quoted Request",
+            Value = "synthetic-secret",
+            EnvironmentVariable = "QUOTED_TOKEN",
+            Permission = CredentialPermission.Ask,
+        }, ManagementAuthenticator.Allow);
+
+        var resolution = vault.BrokerTextCredentials(new BrokerTextRunRequest(
+            "quoted-run",
+            new[] { "tool.exe", "a b", "say \"hi\"" },
+            new[] { "Quoted Request" }), new BrokerCancellation());
+        Assert.Equal(BrokerTextCredentialResolution.Kind.ApprovalRequired, resolution.ResolutionKind);
+        var pending = Assert.Single(vault.ApprovalRequests.PendingRequests());
+        var commandLine = pending.Request.DisplayValue?.CommandLine ?? "";
+        Assert.Equal("tool.exe \"a b\" \"say \\\"hi\\\"\"", commandLine);
+        Assert.DoesNotContain("'", commandLine);
+    }
+    [Fact]
     public void RevealingAValueAsksAgainInsideAnActiveManagementSession()
     {
         using var harness = new Harness();

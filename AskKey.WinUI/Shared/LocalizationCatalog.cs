@@ -319,6 +319,8 @@ internal static class LocalizationCatalog
         ["Reveal"] = "显示",
         ["Reveal a credential"] = "查看凭证",
         ["Copy a credential"] = "复制凭证",
+        ["Ask Key could not copy without clipboard history. Copy was cancelled."] =
+            "请旨无法在不写入剪贴板历史的情况下复制，复制已取消。",
         ["Review"] = "查看",
         ["Revoke now"] = "立即收回",
         ["Save"] = "保存",

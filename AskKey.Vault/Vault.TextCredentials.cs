@@ -6,7 +6,8 @@ namespace AskKey.Vault;
 
 public sealed partial class Vault
 {
-    internal T PerformCredentialCreation<T>(ManagementAuthenticator authenticator, Func<T> create)
+    internal T PerformCredentialCreation<T>(ManagementAuthenticator authenticator, Func<T> create,
+        string authorizationReason = CredentialManagementCopy.ManageReason)
     {
         _ = RequireKey();
         var wasPaused = AgentAccessGate.BeginExclusiveChange();
@@ -17,7 +18,7 @@ public sealed partial class Vault
             if (!isFirst)
             {
                 RequireManagementSession();
-                AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+                AuthorizeManagement(authenticator, authorizationReason);
             }
             var created = create();
             NotifySnapshotRelevantChange();
@@ -56,15 +57,18 @@ public sealed partial class Vault
             var prepared = PreparedRecord(input, Guid.NewGuid().ToString(), key, existing: null);
             Store.InsertCredential(prepared);
             return ManagedCredential(prepared, key, includeSecrets: false);
-        });
+        }, input.Permission == CredentialPermission.Allowed
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
 
     public void UpdateCredentialPermission(string id, CredentialPermission permission,
         ManagementAuthenticator authenticator)
     {
         RequireManagementSession();
+        var current = Store.FetchCredential(id) ?? throw VaultException.NotFound(id);
         // Raising a credential to Allow keeps working after the session ends, so it always
         // asks for Windows Hello rather than inheriting the open session's approval.
-        AuthorizeManagement(authenticator, permission == CredentialPermission.Allowed
+        AuthorizeManagement(authenticator, GrantsAllowed(current, permission)
             ? CredentialManagementCopy.AllowPermissionReason
             : CredentialManagementCopy.ManageReason);
         _ = RequireKey();
@@ -82,7 +86,10 @@ public sealed partial class Vault
         CredentialPermission permission, DateTimeOffset? expiresAt, ManagementAuthenticator authenticator)
     {
         RequireManagementSession();
-        AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+        var current = Store.FetchCredential(id) ?? throw VaultException.NotFound(id);
+        AuthorizeManagement(authenticator, GrantsAllowed(current, permission)
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
         var key = RequireKey();
         var displayName = CredentialName.DisplayName(name);
         var nameIndex = CredentialIndex.Hash(CredentialName.Normalized(displayName), key);
@@ -138,7 +145,10 @@ public sealed partial class Vault
         ManagementAuthenticator authenticator)
     {
         RequireManagementSession();
-        AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+        var current = Store.FetchCredential(id) ?? throw VaultException.NotFound(id);
+        AuthorizeManagement(authenticator, GrantsAllowed(current, input.Permission)
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
         var key = RequireKey();
         var prepared = PerformCredentialMutation(id, () =>
         {

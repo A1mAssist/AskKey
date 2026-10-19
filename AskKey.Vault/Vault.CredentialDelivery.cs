@@ -411,15 +411,51 @@ public sealed partial class Vault
 
     private static string ShellQuotedDisplayArgument(string value)
     {
-        if (value.Any(character => char.IsControl(character)))
+        if (value.Length == 0) return "\"\"";
+
+        var quote = value.Any(character => char.IsWhiteSpace(character)
+            || character == '"' || char.IsControl(character));
+        if (!quote) return value;
+
+        // CommandLineToArgvW-compatible quoting: double the backslashes before a
+        // quote or the closing quote, and escape an embedded quote with a backslash.
+        var builder = new StringBuilder(value.Length + 2);
+        builder.Append('"');
+        var backslashes = 0;
+        foreach (var character in value)
         {
-            return "$'" + EscapedDisplayText(value).Replace("'", "\\'") + "'";
+            if (character == '\\')
+            {
+                backslashes++;
+                continue;
+            }
+            if (character == '"')
+            {
+                builder.Append('\\', backslashes * 2 + 1).Append('"');
+                backslashes = 0;
+                continue;
+            }
+            builder.Append('\\', backslashes);
+            backslashes = 0;
+            switch (character)
+            {
+                case '\n': builder.Append("\\n"); break;
+                case '\r': builder.Append("\\r"); break;
+                case '\t': builder.Append("\\t"); break;
+                default:
+                    if (char.IsControl(character))
+                    {
+                        builder.Append("\\x").Append(((int)character).ToString("x2", CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        builder.Append(character);
+                    }
+                    break;
+            }
         }
-        var safe = value.Length > 0 && value.All(character =>
-            character is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9'
-                or '_' or '.' or '/' or ':' or '@' or '%' or '+' or '=' or ',' or '-');
-        if (safe) return value;
-        return "'" + value.Replace("'", "'\\''") + "'";
+        builder.Append('\\', backslashes * 2).Append('"');
+        return builder.ToString();
     }
 
     private static string EscapedDisplayText(string value)

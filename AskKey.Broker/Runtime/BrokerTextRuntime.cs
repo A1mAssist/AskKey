@@ -217,12 +217,24 @@ public sealed class BrokerTextRuntime
         var path = environment.TryGetValue("PATH", out var declared) && declared.Length > 0
             ? declared
             : Environment.GetEnvironmentVariable("PATH") ?? "";
-        var extensions = new List<string> { "" };
-        var pathExt = environment.TryGetValue("PATHEXT", out var declaredExtensions)
-            && declaredExtensions.Length > 0
-            ? declaredExtensions
-            : Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD";
-        extensions.AddRange(pathExt.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        // An explicit extension is honored as written. A bare name may only bind to
+        // native executables; otherwise PATHEXT could silently select a .cmd/.bat
+        // script and make the approval describe a different execution model.
+        var extensions = new List<string>();
+        if (Path.HasExtension(file))
+        {
+            extensions.Add("");
+        }
+        else
+        {
+            var pathExt = environment.TryGetValue("PATHEXT", out var declaredExtensions)
+                && declaredExtensions.Length > 0
+                ? declaredExtensions
+                : Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD";
+            extensions.AddRange(pathExt.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(extension => extension.Equals(".EXE", StringComparison.OrdinalIgnoreCase)
+                    || extension.Equals(".COM", StringComparison.OrdinalIgnoreCase)));
+        }
         foreach (var directory in path.Split(Path.PathSeparator,
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {

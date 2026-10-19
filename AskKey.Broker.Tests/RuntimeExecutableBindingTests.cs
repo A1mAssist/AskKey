@@ -56,17 +56,21 @@ public sealed class RuntimeExecutableBindingTests
     }
 
     [Fact]
-    public void PathLookupFindsScriptExtensionsAndRejectsAbsentFiles()
+    public void PathLookupRequiresAnExplicitScriptExtension()
     {
         var directory = ProtocolTestSupport.NewDirectory();
         try
         {
             var script = Path.Combine(directory, "askkey-probe.cmd");
+            var executable = Path.Combine(directory, "askkey-native.exe");
             File.WriteAllText(script, "@echo off");
+            File.WriteAllText(executable, "native");
             var environment = new Dictionary<string, string> { ["PATH"] = directory };
 
-            Assert.True(PathsEqual(script, BrokerTextRuntime.ResolveInherited("askkey-probe", environment)));
+            // A bare name must not silently resolve to a batch script.
+            Assert.Null(BrokerTextRuntime.ResolveInherited("askkey-probe", environment));
             Assert.True(PathsEqual(script, BrokerTextRuntime.ResolveInherited("askkey-probe.cmd", environment)));
+            Assert.True(PathsEqual(executable, BrokerTextRuntime.ResolveInherited("askkey-native", environment)));
             Assert.Null(BrokerTextRuntime.ResolveInherited("askkey-absent", environment));
         }
         finally

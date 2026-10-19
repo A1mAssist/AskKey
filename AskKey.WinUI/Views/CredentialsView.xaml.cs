@@ -300,7 +300,7 @@ public partial class CredentialsView : UserControl
         if (_selected is null) return;
         try
         {
-            var auth = _host.AuthenticateAndBeginManagement("Reveal a credential");
+            var auth = _host.AuthenticateAndBeginManagement(CredentialManagementCopy.RevealReason);
             _revealed = _host.Vault.RevealTextCredential(_selected.Id, auth);
             RenderSelection();
             if (_revealed.PayloadKind == CredentialPayloadKind.Text && _revealed.Value is { } value)
@@ -327,7 +327,7 @@ public partial class CredentialsView : UserControl
         try
         {
             var revealed = _host.Vault.RevealTextCredential(_selected.Id,
-                _host.AuthenticateAndBeginManagement("Copy a credential"));
+                _host.AuthenticateAndBeginManagement(CredentialManagementCopy.RevealReason));
             var value = revealed.PayloadKind switch
             {
                 CredentialPayloadKind.Text => revealed.Value,

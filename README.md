@@ -10,18 +10,18 @@
   <a href="README.zh-CN.md">简体中文</a> · <a href="README.md">English</a>
 </p>
 
-Ask Key keeps credentials encrypted on your PC. Agents discover credentials by name and metadata, then ask the local Broker for access. You decide whether a request may proceed. Approved text values are delivered as environment variables to the target process, and file values as short-lived private files. The agent never receives the stored plaintext.
+Ask Key keeps credentials encrypted on your PC. Agents discover credentials by name and metadata, then ask the local Broker for access. You decide whether a request may proceed. Approved text values are delivered as environment variables to the target process, and file values as short-lived private files. Ask Key does not return stored plaintext directly to the Agent; an approved target process receives the value and can, like any process you run, copy or forward it.
 
 This repository contains the Windows implementation only. The release tooling is .NET; there are no PowerShell build scripts.
 
-> **macOS upstream:** The original macOS app and shared product/security documentation live at [sudoHG/AskKey](https://github.com/sudoHG/AskKey). This repository does not vendor the macOS source tree.
+> **macOS upstream:** The original macOS app and shared product/security documentation live at [sudoHG/AskKey](https://github.com/sudoHG/AskKey). This repository does not vendor the macOS source tree. This is an unofficial Windows port; the upstream project is not responsible for this build.
 
 ## What it does
 
 - **Find keys:** agents can look up credential names, usage notes and variable mappings without receiving the values.
 - **Control access:** use **Allow**, **Ask every time** or **Hidden** for each credential.
 - **Review writes:** creating, changing, deleting and reorganizing credentials can require approval. The approval is bound to the exact frozen contents shown to you.
-- **Keep values local:** Windows Hello or your PIN is required to reveal management values and frozen file contents.
+- **Keep values local:** revealing or copying a stored value and viewing frozen approval contents require fresh Windows Hello or PIN confirmation. Ordinary management actions reuse the configured 5- or 15-minute session.
 - **Protect the approval screen:** detailed approvals are dismissed when the session locks, disconnects or logs off, then restored when the session returns.
 - **Start quickly:** use presets for API access, SSH, GitHub Apps, cloud accounts and database connections.
 
@@ -67,7 +67,7 @@ dotnet test .\AskKey.slnx
 dotnet run --project .\AskKey.WinUI\AskKey.WinUI.csproj -p:Platform=x64
 ```
 
-Debug builds set `ASKKEY_DEVELOPMENT=1` and use separate development data roots, so they do not touch a normally installed vault.
+Debug builds do not set any environment variable automatically. To use separate development data roots, set `ASKKEY_DEVELOPMENT=1` before launching; otherwise a Debug build uses the normal `%APPDATA%\AskKey` and `%LOCALAPPDATA%\AskKey` paths.
 
 ## Publish
 
@@ -150,9 +150,13 @@ For a per-machine install, use `C:\\Program Files\\AskKey\\current\\Helpers\\ask
 The Agent is treated as only partly trusted: it may run commands as your Windows user, but it must not receive a stored value without the approval flow.
 
 - **Default mode** wraps the vault key with Windows DPAPI (`CurrentUser`). This protects the files at rest, but any process running as you can unwrap the same key.
-- **High security mode** wraps the vault key with a passphrase using PBKDF2-HMAC-SHA256 (600,000 iterations) and deletes the DPAPI copy. If the per-machine AskKey Guard service is installed, the passphrase unlocks the first launch and later starts can use Windows Hello; the passphrase remains the recovery path. Without the service, Ask Key asks for the passphrase every time. The passphrase cannot be recovered.
+- **High security mode** wraps the vault key with a passphrase using PBKDF2-HMAC-SHA256 (600,000 iterations) and deletes the DPAPI copy. If the per-machine AskKey Guard service is installed, the passphrase unlocks the first launch and later starts can use Windows Hello; the passphrase remains the recovery path. Without the service, Ask Key asks for the passphrase every time. Enabling this mode re-wraps the existing key; it does not rotate the key, so a key or DPAPI copy obtained before the switch remains usable if it still exists outside Ask Key. The passphrase cannot be recovered.
 - Revealing or copying a stored value requires device confirmation. After one Windows Hello confirmation, the configured unlock window (5–60 minutes) covers further in-app management actions.
+- **Fresh authentication:** revealing or copying a value, viewing frozen approval contents, approving Agent read/write requests, granting **Allow** to a credential, and erasing local data require a fresh Windows Hello or PIN confirmation even inside a management session. Ordinary management actions reuse the configured 5- or 15-minute session. Screen lock, disconnect, and logoff end that session.
+- **Process-memory boundary:** while the vault is unlocked, the vault key is resident in the Ask Key process. `Lock()` zeroizes it, but a screen lock does not lock the vault because the Broker must continue serving approvals. A process running as the same Windows user can read process memory; this is a limitation of both key modes.
+- **Install and integrity:** a Release build is unsigned unless a signing certificate is supplied. The unsigned build trusts the embedded helper manifest rooted in the host assembly, so same-user write access to the install folder remains a boundary. The per-machine MSI under Program Files removes the easy write path; a certificate is required for a stronger code-identity boundary. Signed builds require the host and helper to use the same publisher.
 - The helper must sit beside the host inside an official install root; a relocated copy is refused.
+- Caller names and purposes are self-reported declarations, not authenticated identity. An approved target process can copy or forward anything delivered to it. **Hidden** credentials are omitted from the catalog, but this does not stop a command that already received a value from forwarding it.
 - Ask Key has no backup or recovery feature. Keep the originals of your credentials somewhere else.
 
 Live Windows Hello prompts, session lock/unlock, Authenticode signing and hardware-specific behavior must be verified on the target machine; unit tests do not establish those.

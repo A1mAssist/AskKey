@@ -165,10 +165,36 @@ public sealed partial class Vault : IDisposable
         {
             var key = RequireKey();
             var directory = _configuration.KeyMaterialDirectory;
-            PassphraseAppKeyStore.Write(directory, PassphraseAppKeyStore.AppFileName, key, passphrase);
-            PassphraseAppKeyStore.Verify(directory, key, passphrase);
-            _keyStore.DeletePendingKey();
-            _keyStore.DeleteAppKey();
+            var wrappedWritten = false;
+            try
+            {
+                PassphraseAppKeyStore.Write(directory, PassphraseAppKeyStore.AppFileName, key, passphrase);
+                wrappedWritten = true;
+                PassphraseAppKeyStore.Verify(directory, key, passphrase);
+                _keyStore.DeletePendingKey();
+                _keyStore.DeleteAppKey();
+                if (File.Exists(Path.Combine(directory, DpapiAppKeyStore.PendingFileName))
+                    || File.Exists(Path.Combine(directory, DpapiAppKeyStore.AppFileName)))
+                {
+                    throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
+                }
+            }
+            catch
+            {
+                // The wrapped copy must not survive a failed DPAPI removal: otherwise
+                // IsHighSecurityEnabled would report a mode whose old key is still usable.
+                if (wrappedWritten)
+                {
+                    try { PassphraseAppKeyStore.Delete(directory); }
+                    catch { /* verified below */ }
+                    if (File.Exists(Path.Combine(directory, PassphraseAppKeyStore.PendingFileName))
+                        || File.Exists(Path.Combine(directory, PassphraseAppKeyStore.AppFileName)))
+                    {
+                        throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
+                    }
+                }
+                throw;
+            }
         }
     }
 
@@ -251,9 +277,10 @@ public sealed partial class Vault : IDisposable
         }
     }
 
-    public void BeginManagementSession(ManagementAuthenticator authenticator)
+    public void BeginManagementSession(ManagementAuthenticator authenticator,
+        string reason = CredentialManagementCopy.ManageReason)
     {
-        AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+        AuthorizeManagement(authenticator, reason);
         _ = RequireKey();
         lock (_stateLock) _managementSessionExpiresAt = _clock() + ManagementSessionIdleLimit;
     }
@@ -315,11 +342,17 @@ public sealed partial class Vault : IDisposable
     }
 
     /// <summary>Reasons that must never inherit an open session's approval.</summary>
-    internal static bool RequiresFreshAuthentication(string reason)
+    public static bool RequiresFreshAuthentication(string reason)
         => reason is CredentialManagementCopy.RevealReason
             or CredentialManagementCopy.FrozenWriteRevealReason
             or CredentialManagementCopy.AgentWriteApprovalReason
             or CredentialManagementCopy.AllowPermissionReason;
+
+    /// <summary>True when this edit grants Allow to a credential that does not already have it.</summary>
+    private static bool GrantsAllowed(CredentialRecord? existing, CredentialPermission permission)
+        => permission == CredentialPermission.Allowed
+            && (!CredentialPermissionExtensions.TryParse(existing?.Permission ?? "", out var current)
+                || current != CredentialPermission.Allowed);
 
     internal bool AccessRecordWriteFailed
     {
@@ -341,9 +374,10 @@ public sealed partial class Vault : IDisposable
         var paths = new VaultBootstrapPaths(configuration.ApplicationSupportDirectory,
             Path.GetDirectoryName(configuration.ApplicationSupportDirectory));
         var highSecurity = PassphraseAppKeyStore.IsEnabled(configuration.KeyMaterialDirectory);
-        var store = ReferenceEquals(configuration, _configuration)
+        var dpapiStore = ReferenceEquals(configuration, _configuration)
             ? _keyStore
             : DpapiAppKeyStore.ForConfiguration(configuration);
+        var store = dpapiStore;
         if (highSecurity)
         {
             if (string.IsNullOrEmpty(passphrase)) throw new AppKeyStoreException(AppKeyStoreError.PassphraseRequired);
@@ -354,6 +388,30 @@ public sealed partial class Vault : IDisposable
         {
             var (vaultStore, key) = VaultBootstrap.OpenCurrent(paths, store);
             Adopt(vaultStore, key);
+            if (highSecurity)
+            {
+                // Repair a crash between writing the wrapped copy and deleting the
+                // DPAPI slot. The passphrase has just proved ownership, so the old
+                // DPAPI copy must not remain usable.
+                try
+                {
+                    dpapiStore.DeletePendingKey();
+                    dpapiStore.DeleteAppKey();
+                }
+                catch
+                {
+                    Lock();
+                    throw;
+                }
+                if (File.Exists(Path.Combine(configuration.KeyMaterialDirectory,
+                        DpapiAppKeyStore.PendingFileName))
+                    || File.Exists(Path.Combine(configuration.KeyMaterialDirectory,
+                        DpapiAppKeyStore.AppFileName)))
+                {
+                    Lock();
+                    throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
+                }
+            }
         }
         finally
         {

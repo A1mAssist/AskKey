@@ -158,49 +158,52 @@ public sealed class FileDeliveryManager : IDisposable
         }
         try
         {
-            FileStream? owner = null;
-            try
+            if (entry.RequiresOwnerLease)
             {
-                if (entry.RequiresOwnerLease)
-                {
-                    var ownerPath = System.IO.Path.Combine(entry.Path, ".owner-lock");
-                    try
-                    {
-                        owner = new FileStream(ownerPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-                    }
-                    catch (IOException)
-                    {
-                        // The instance became live again; never remove it without its owner lease.
-                        Forget(token, entry.Path);
-                        return;
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        RecordCleanupFailure(token, entry.Path, "Temporary credential owner could not be locked.");
-                        return;
-                    }
-                }
+                var ownerPath = System.IO.Path.Combine(entry.Path, ".owner-lock");
                 try
                 {
-                    _removeItem(entry.Path);
-                    Forget(token, entry.Path);
+                    // Probe the lease, then release it before removing the directory: a
+                    // FileShare.None stream inside the directory makes the delete fail.
+                    using var owner = new FileStream(ownerPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
                 }
                 catch (FileNotFoundException)
                 {
-                    Forget(token, entry.Path);
+                    // The owner lease is already gone; proceed with the stale directory cleanup.
                 }
                 catch (DirectoryNotFoundException)
                 {
                     Forget(token, entry.Path);
+                    return;
                 }
-                catch (Exception exception)
+                catch (IOException)
                 {
-                    RecordCleanupFailure(token, entry.Path, exception.Message);
+                    // The instance became live again; never remove it without its owner lease.
+                    Forget(token, entry.Path);
+                    return;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    RecordCleanupFailure(token, entry.Path, "Temporary credential owner could not be locked.");
+                    return;
                 }
             }
-            finally
+            try
             {
-                owner?.Dispose();
+                _removeItem(entry.Path);
+                Forget(token, entry.Path);
+            }
+            catch (FileNotFoundException)
+            {
+                Forget(token, entry.Path);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                Forget(token, entry.Path);
+            }
+            catch (Exception exception)
+            {
+                RecordCleanupFailure(token, entry.Path, exception.Message);
             }
         }
         finally
