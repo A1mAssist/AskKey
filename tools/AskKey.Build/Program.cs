@@ -25,6 +25,7 @@ internal static partial class BuildTool
                 "manifest" => RunManifest(args[1..]),
                 "publish" => await RunPublishAsync(args[1..]),
                 "guard" => await RunGuardAsync(args[1..]),
+                "bundle" => RunBundle(args[1..]),
                 _ => throw new ArgumentException($"Unknown command: {args[0]}")
             };
         }
@@ -176,6 +177,24 @@ internal static partial class BuildTool
         }
         Run("vpk", packArgs, root);
 
+        var guardArgs = new List<string> { "--output", output, "--skip-tests" };
+        if (!unsigned)
+        {
+            guardArgs.Add("--certificate-thumbprint");
+            guardArgs.Add(certificate!);
+            guardArgs.Add("--timestamp-url");
+            guardArgs.Add(timestampUrl);
+        }
+        var guardExit = await RunGuardAsync(guardArgs.ToArray());
+        if (guardExit != 0) return guardExit;
+
+        var guardPublishDir = Path.Combine(output, $"AskKey.Guard-{version}-{Runtime}");
+        var guardMsi = BuildGuardMsi(root, version, guardPublishDir, releaseDir);
+        if (!unsigned) SignFile(root, guardMsi, certificate!, timestampUrl);
+
+        var bundle = BuildBundle(root, version, Path.Combine(releaseDir, "AskKey-win.msi"), guardMsi, releaseDir);
+        if (!unsigned) SignFile(root, bundle, certificate!, timestampUrl);
+
         Console.WriteLine($"Published: {publishDir}");
         Console.WriteLine($"Release:   {releaseDir}");
         foreach (var file in Directory.EnumerateFiles(releaseDir).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
@@ -239,6 +258,73 @@ internal static partial class BuildTool
         if (unsigned)
             Console.WriteLine("Unsigned Guard build: SmartScreen will warn. The app must also be built unsigned.");
         return 0;
+    }
+
+    private static int RunBundle(string[] args)
+    {
+        var root = FindRepoRoot();
+        var version = ReadVersion(root);
+        var releaseDir = GetOption(args, "--release") ?? Path.Combine(root, "artifacts", "publish", "release");
+        var appMsi = GetOption(args, "--app-msi") ?? Path.Combine(releaseDir, "AskKey-win.msi");
+        var guardMsi = GetOption(args, "--guard-msi")
+            ?? Path.Combine(root, "installer", "Guard", "bin", "Release", $"AskKeyGuard-{version}.msi");
+        var bundle = BuildBundle(root, version, appMsi, guardMsi, releaseDir);
+        Console.WriteLine($"Bundle: {bundle}");
+        return 0;
+    }
+
+    private static string ReadVersion(string root)
+    {
+        var versionSource = Path.Combine(root, "AskKey.Integrations", "AskKeyVersion.cs");
+        if (!File.Exists(versionSource)) throw new FileNotFoundException("AskKeyVersion.cs was not found.", versionSource);
+        var versionMatch = VersionPattern().Match(File.ReadAllText(versionSource));
+        if (!versionMatch.Success)
+            throw new InvalidOperationException("Could not read AskKeyVersion.Current.");
+        return versionMatch.Groups["version"].Value;
+    }
+
+    private static string BuildGuardMsi(string root, string version, string publishDir, string outputDir)
+    {
+        var project = Path.Combine(root, "installer", "Guard", "AskKey.Guard.Installer.wixproj");
+        if (!File.Exists(project))
+            throw new FileNotFoundException("AskKey.Guard.Installer.wixproj was not found.", project);
+        Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal",
+            $"-p:ProductVersion={version}", $"-p:GuardPublishDir={Path.GetFullPath(publishDir)}"], root);
+        var built = Path.Combine(root, "installer", "Guard", "bin", "Release", $"AskKeyGuard-{version}.msi");
+        if (!File.Exists(built)) throw new FileNotFoundException("The Guard MSI was not produced.", built);
+        Directory.CreateDirectory(outputDir);
+        var target = Path.Combine(outputDir, Path.GetFileName(built));
+        if (!string.Equals(Path.GetFullPath(built), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
+            File.Copy(built, target, overwrite: true);
+        return target;
+    }
+
+    private static string BuildBundle(string root, string version, string appMsi, string guardMsi, string outputDir)
+    {
+        var project = Path.Combine(root, "installer", "Bundle", "AskKey.Bundle.wixproj");
+        if (!File.Exists(project))
+            throw new FileNotFoundException("AskKey.Bundle.wixproj was not found.", project);
+        if (!File.Exists(appMsi)) throw new FileNotFoundException("The app MSI was not found.", appMsi);
+        if (!File.Exists(guardMsi)) throw new FileNotFoundException("The Guard MSI was not found.", guardMsi);
+        Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal",
+            $"-p:ProductVersion={version}", $"-p:AppMsi={Path.GetFullPath(appMsi)}",
+            $"-p:GuardMsi={Path.GetFullPath(guardMsi)}"], root);
+        var built = Path.Combine(root, "installer", "Bundle", "bin", "Release", $"AskKeySetup-{version}.exe");
+        if (!File.Exists(built)) throw new FileNotFoundException("The setup bundle was not produced.", built);
+        Directory.CreateDirectory(outputDir);
+        var target = Path.Combine(outputDir, Path.GetFileName(built));
+        if (!string.Equals(Path.GetFullPath(built), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
+            File.Copy(built, target, overwrite: true);
+        return target;
+    }
+
+    private static void SignFile(string root, string path, string certificate, string timestampUrl)
+    {
+        var signtool = FindSigntool();
+        Run(signtool,
+            ["sign", "/sha1", certificate, "/fd", "SHA256", "/tr", timestampUrl, "/td", "SHA256", path],
+            root);
+        Run(signtool, ["verify", "/pa", "/all", path], root);
     }
 
     private static string FindRepoRoot()
@@ -310,6 +396,7 @@ internal static partial class BuildTool
         Console.WriteLine("AskKey.Build manifest --root <helper-dir> --output <manifest-file>");
         Console.WriteLine("AskKey.Build publish [--output <dir>] [--certificate-thumbprint <thumbprint>] [--timestamp-url <url>] [--skip-tests]");
         Console.WriteLine("AskKey.Build guard [--output <dir>] [--certificate-thumbprint <thumbprint>] [--timestamp-url <url>] [--skip-tests]");
+        Console.WriteLine("AskKey.Build bundle [--release <dir>] [--app-msi <path>] [--guard-msi <path>]");
     }
 
     [GeneratedRegex("Current\\s*=\\s*\"(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)\"")]

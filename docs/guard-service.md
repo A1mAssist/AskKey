@@ -26,7 +26,7 @@ Development mode stores guard state under `%LOCALAPPDATA%\AskKey\Guard` instead 
 
 ## Install
 
-Run elevated:
+The release `AskKeySetup-<version>.exe` installs the app and this service together and uninstalls both. The elevated script below is the repair/development path:
 
 ```powershell
 & .\AskKey.Guard.Service\Install-GuardService.ps1

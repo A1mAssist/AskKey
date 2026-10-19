@@ -83,12 +83,14 @@ dotnet run --project .\tools\AskKey.Build -- publish
 dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <thumbprint>
 ```
 
-工具会从 `AskKey.Integrations\AskKeyVersion.cs` 读取版本号，运行测试，构建自包含 x64 包，校验 `AskKey.exe` 和 `Helpers\askkey.exe`，把卫星资源裁剪到 `zh-CN`，按需签名，然后调用 `vpk pack`。
+工具会从 `AskKey.Integrations\AskKeyVersion.cs` 读取版本号，运行测试，构建自包含 x64 包，校验 `AskKey.exe` 和 `Helpers\askkey.exe`，把卫星资源裁剪到 `zh-CN`，按需签名，调用 `vpk pack`，然后发布 Guard 服务、构建 Guard MSI，最后生成同时包含应用和 Guard 的 `AskKeySetup-<version>.exe`。
 
-默认输出到 `artifacts\publish`：
+默认输出到 `artifacts\publish\release`：
 
-- `AskKey-win.msi` — 全机器安装到 `%ProgramFiles%\AskKey\current\`
-- `AskKey-win-Setup.exe` — 当前用户安装到 `%LocalAppData%\AskKey\current\`
+- `AskKeySetup-<version>.exe` — **推荐安装器**，一次 UAC 安装应用和 Guard 服务
+- `AskKey-win.msi` — 仅应用，全机器安装到 `%ProgramFiles%\AskKey\current\`
+- `AskKeyGuard-<version>.msi` — 仅 Guard 服务，修复/高级安装使用
+- `AskKey-win-Setup.exe` — 当前用户安装，不含 Guard，不能使用 Hello 解锁
 - `AskKey-win-Portable.zip`
 - `AskKey-<version>-full.nupkg`
 - `assets.win.json`、`releases.win.json`、`RELEASES`
@@ -97,19 +99,15 @@ dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <t
 
 ### Windows Hello Guard 服务
 
-Windows Hello 解锁需要全机器的 `AskKeyGuard` 服务。先发布服务：
+正常安装使用 `AskKeySetup-<version>.exe`：它会先安装应用，再安装 Guard 服务；从“应用和功能”卸载时按相反顺序移除。单独的两个 MSI 只用于修复或高级部署；手动安装时先装应用，再装 `AskKeyGuard-<version>.msi`，卸载时先卸 Guard。当前用户安装（`AskKey-win-Setup.exe`）不能使用 Hello 解锁。
+
+开发时可单独发布服务：
 
 ```text
 dotnet run --project .\tools\AskKey.Build -- guard
 ```
 
-然后以管理员身份运行：
-
-```powershell
-& .\AskKey.Guard.Service\Install-GuardService.ps1 -ExecutablePath .\artifacts\guard\AskKey.Guard-<version>-win-x64\AskKey.Guard.Service.exe
-```
-
-脚本会安装到 `%ProgramFiles%\AskKey\Guard\`，并以 `NT AUTHORITY\LocalService` 运行服务。MSI 流程先装应用，再装 `AskKeyGuard-<version>.msi`；卸载时先卸 Guard。当前用户安装无法使用 Hello 解锁。卸载或替换全机器应用前，先停止并删除服务。这个脚本是开发/修复路径；未签名应用用 `installer\Guard\build-guard-msi.ps1 -Unsigned` 构建全机器 MSI，详见 `docs/guard-msi.md`。正式发布仍需要代码签名。
+`AskKey.Guard.Service\Install-GuardService.ps1` 是修复/开发安装路径；`installer\Guard\build-guard-msi.ps1 -Unsigned` 构建未签名 Guard MSI。已生成两个 MSI 后，可用 `dotnet run --project .\tools\AskKey.Build -- bundle` 重新生成 `AskKeySetup`。详见 `docs/guard-msi.md`。正式发布仍需要代码签名。
 
 未签名构建会把 `Helpers\` 的 SHA-256 清单嵌入 Host，并在 Agent 连接前校验。Windows SmartScreen 仍会提示未签名下载。签名构建要求 Host 和 Helper 使用同一发布者证书。
 
@@ -117,10 +115,13 @@ dotnet run --project .\tools\AskKey.Build -- guard
 
 | 安装器 | 范围 | 位置 | 提权 |
 |---|---|---|---|
-| `AskKey-win.msi` | 全机器 | `%ProgramFiles%\AskKey\current\` | 需要 UAC |
-| `AskKey-win-Setup.exe` | 当前用户 | `%LocalAppData%\AskKey\current\` | 不需要 |
+| `AskKeySetup-<version>.exe` | 全机器，应用 + Guard | `%ProgramFiles%\AskKey\current\` + `%ProgramFiles%\AskKey\Guard\` | 需要 UAC |
+| `AskKey-win.msi` + `AskKeyGuard-<version>.msi` | 全机器，分离安装/修复 | 同上 | 需要 UAC |
+| `AskKey-win-Setup.exe` | 当前用户，无 Guard | `%LocalAppData%\AskKey\current\` | 不需要 |
 
-两个安装器都会把实际程序放在 `current\` 子目录：
+推荐直接运行 `AskKeySetup-<version>.exe`。从“应用和功能”卸载时会一起移除应用和 Guard 服务。分离 MSI 只用于修复或高级部署；手动顺序是先应用、后 Guard，卸载时先 Guard。
+
+安装器会把实际程序放在 `current\` 子目录：
 
 ```text
 <安装根目录>\current\AskKey.exe

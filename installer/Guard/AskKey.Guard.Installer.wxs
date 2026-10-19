@@ -44,7 +44,6 @@
 
       <Files Directory="GuardInstallDir" Include="$(var.GuardPublishDir)\**">
         <Exclude Files="$(var.GuardPublishDir)\AskKey.Guard.Service.exe" />
-        <Exclude Files="$(var.GuardPublishDir)\win-x64\**" />
         <Exclude Files="$(var.GuardPublishDir)\**\*.pdb" />
       </Files>
 

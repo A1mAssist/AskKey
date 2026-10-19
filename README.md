@@ -83,12 +83,14 @@ To sign the host and helper with a certificate from the current user's certifica
 dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <thumbprint>
 ```
 
-The tool reads the version from `AskKey.Integrations\AskKeyVersion.cs`, runs the tests, builds the self-contained x64 payload, verifies `AskKey.exe` and `Helpers\askkey.exe`, trims satellite resources to `zh-CN`, signs when requested, and runs `vpk pack`.
+The tool reads the version from `AskKey.Integrations\AskKeyVersion.cs`, runs the tests, builds the self-contained x64 payload, verifies `AskKey.exe` and `Helpers\askkey.exe`, trims satellite resources to `zh-CN`, signs when requested, runs `vpk pack`, publishes the Guard service, builds the Guard MSI, and finally produces `AskKeySetup-<version>.exe` with both the app and Guard.
 
-The default output is `artifacts\publish`:
+The default output is `artifacts\publish\release`:
 
-- `AskKey-win.msi` — per-machine install in `%ProgramFiles%\AskKey\current\`
-- `AskKey-win-Setup.exe` — per-user install in `%LocalAppData%\AskKey\current\`
+- `AskKeySetup-<version>.exe` — **recommended installer**, one UAC prompt for the app and Guard
+- `AskKey-win.msi` — app only, per-machine install in `%ProgramFiles%\AskKey\current\`
+- `AskKeyGuard-<version>.msi` — Guard only, for repair or advanced deployment
+- `AskKey-win-Setup.exe` — per-user install without Guard; Hello unlock is unavailable
 - `AskKey-win-Portable.zip`
 - `AskKey-<version>-full.nupkg`
 - `assets.win.json`, `releases.win.json`, `RELEASES`
@@ -97,19 +99,15 @@ Upload the complete release set together. Do not hand-edit the feed files.
 
 ### Windows Hello Guard service
 
-Windows Hello unlock needs the per-machine `AskKeyGuard` service. Publish it before building the Guard installer:
+Normal installation uses `AskKeySetup-<version>.exe`: it installs the app first, then Guard, and removes both when uninstalled from Apps & Features. The two standalone MSIs are for repair or advanced deployment; manually install the app first and `AskKeyGuard-<version>.msi` second, and uninstall Guard first. The per-user `AskKey-win-Setup.exe` cannot use Hello unlock.
+
+For development, publish the service separately:
 
 ```text
 dotnet run --project .\tools\AskKey.Build -- guard
 ```
 
-Then run elevated:
-
-```powershell
-& .\AskKey.Guard.Service\Install-GuardService.ps1 -ExecutablePath .\artifacts\guard\AskKey.Guard-<version>-win-x64\AskKey.Guard.Service.exe
-```
-
-The script installs to `%ProgramFiles%\AskKey\Guard\` and runs the service as `NT AUTHORITY\LocalService`. For the MSI flow, install the app first and `AskKeyGuard-<version>.msi` second; uninstall Guard first. Per-user installs cannot use Hello unlock. Stop and remove the service before uninstalling or replacing the per-machine app. The script is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the per-machine MSI for an unsigned app. See `docs/guard-msi.md`. A production release still needs code signing.
+`AskKey.Guard.Service\Install-GuardService.ps1` is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the unsigned Guard MSI. After both MSIs exist, `dotnet run --project .\tools\AskKey.Build -- bundle` regenerates `AskKeySetup`. See `docs/guard-msi.md`. A production release still needs code signing.
 
 Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it before Agent connections. Windows SmartScreen still warns for unsigned downloads. Signed builds require the host and helper to carry signatures from the same publisher.
 
@@ -117,10 +115,13 @@ Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it
 
 | Installer | Scope | Location | Elevation |
 |---|---|---|---|
-| `AskKey-win.msi` | Per-machine | `%ProgramFiles%\AskKey\current\` | Yes (UAC) |
-| `AskKey-win-Setup.exe` | Per-user | `%LocalAppData%\AskKey\current\` | No |
+| `AskKeySetup-<version>.exe` | Per-machine, app + Guard | `%ProgramFiles%\AskKey\current\` + `%ProgramFiles%\AskKey\Guard\` | Yes (UAC) |
+| `AskKey-win.msi` + `AskKeyGuard-<version>.msi` | Per-machine, split/repair | Same as above | Yes (UAC) |
+| `AskKey-win-Setup.exe` | Per-user, no Guard | `%LocalAppData%\AskKey\current\` | No |
 
-Both installers extract the payload behind a `current\` folder:
+Run `AskKeySetup-<version>.exe` for normal installation. Uninstalling it from Apps & Features removes both the app and Guard. Use the split MSIs only for repair or advanced deployment: install the app first and Guard second; uninstall Guard first.
+
+The installer extracts the payload behind a `current\` folder:
 
 ```text
 <install root>\current\AskKey.exe

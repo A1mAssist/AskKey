@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
+  <Bundle UpgradeCode="A7C44B2E-8B7E-4C6D-9B2A-2E6A0F6B4D11"
+          Name="Ask Key"
+          Version="$(var.ProductVersion)"
+          Manufacturer="A1mAssist"
+          DisableModify="yes"
+          IconSourceFile="$(var.IconFile)">
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication Theme="hyperlinkLicense"
+                                              LicenseUrl="https://github.com/A1mAssist/AskKey/blob/main/LICENSE" />
+    </BootstrapperApplication>
+    <Chain>
+      <MsiPackage Id="AskKeyApp"
+                  SourceFile="$(var.AppMsi)"
+                  Vital="yes"
+                  Compressed="yes" />
+      <MsiPackage Id="AskKeyGuard"
+                  SourceFile="$(var.GuardMsi)"
+                  Vital="yes"
+                  Compressed="yes" />
+    </Chain>
+  </Bundle>
+</Wix>

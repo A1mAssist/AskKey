@@ -4,6 +4,8 @@
 
 `installer/Guard` builds a WiX Toolset 6 MSI for the AskKey Guard service. The package installs the self-contained `win-x64` service payload to `%ProgramFiles%\AskKey\Guard`, registers `AskKeyGuard` under `NT AUTHORITY\LocalService`, sets it to automatic startup, and starts it after installation.
 
+Normal users install `AskKeySetup-<version>.exe`, the Burn bundle in `installer/Bundle` that chains this MSI with the app MSI. This MSI remains the repair and advanced-deployment path.
+
 The MSI does not install, modify, or remove the per-user `%APPDATA%\AskKey` data. The Guard state directory is created with a protected DACL that grants full control to SYSTEM and Administrators, and full control to LocalService. That component is permanent so uninstall does not discard the service's `%ProgramData%\AskKey\Guard` state.
 
 ## Build
@@ -71,7 +73,7 @@ icacls "$env:ProgramData\AskKey\Guard"
 - The produced MSI is unsigned. Sign the MSI and the installed binaries before a production release.
 - The Guard service keeps its normal caller policy. Use the `-Unsigned` build switch for an unsigned `AskKey.exe`; otherwise Guard rejects that caller.
 - Installing or upgrading the MSI requires elevation. Building and inspecting it does not.
-- Install the app MSI first and this Guard MSI second; uninstall Guard first so the app uninstall cannot remove a running service's binary.
+- When using the split MSIs instead of the bundle, install the app MSI first and this Guard MSI second; uninstall Guard first so the app uninstall cannot remove a running service's binary.
 - This document and the build script do not install the MSI or change the service, ProgramData, or user data.
 - A rebuilt package with the same `ProductVersion` is not a major upgrade. Increment the version before installing over an existing 1.0.0 install.
 - The MSI does not include an MSI UI. It can be installed from an elevated prompt with `msiexec /i .\installer\Guard\bin\Release\AskKeyGuard-1.0.0.msi`.
