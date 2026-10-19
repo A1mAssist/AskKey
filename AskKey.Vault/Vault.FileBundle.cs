@@ -262,13 +262,18 @@ public sealed partial class Vault
             var prepared = PreparedFileRecord(input, Guid.NewGuid().ToString(), key, existing: null);
             Store.InsertCredential(prepared);
             return ManagedCredential(prepared, key, includeSecrets: false);
-        });
+        }, input.Permission == CredentialPermission.Allowed
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
 
     public ManagedTextCredential UpdateFileCredential(string id, FileCredentialInput input,
         ManagementAuthenticator authenticator)
     {
         RequireManagementSession();
-        AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+        var current = Store.FetchCredential(id) ?? throw VaultException.NotFound(id);
+        AuthorizeManagement(authenticator, GrantsAllowed(current, input.Permission)
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
         var key = RequireKey();
         var prepared = PerformCredentialMutation(id, () =>
         {
@@ -349,13 +354,18 @@ public sealed partial class Vault
             var prepared = PreparedBundleRecord(input, Guid.NewGuid().ToString(), key, existing: null);
             Store.InsertCredential(prepared);
             return ManagedCredential(prepared, key, includeSecrets: false);
-        });
+        }, input.Permission == CredentialPermission.Allowed
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
 
     public ManagedTextCredential UpdateBundleCredential(string id, BundleCredentialInput input,
         ManagementAuthenticator authenticator)
     {
         RequireManagementSession();
-        AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+        var current = Store.FetchCredential(id) ?? throw VaultException.NotFound(id);
+        AuthorizeManagement(authenticator, GrantsAllowed(current, input.Permission)
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
         var key = RequireKey();
         var prepared = PerformCredentialMutation(id, () =>
         {

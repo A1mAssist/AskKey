@@ -199,9 +199,13 @@ public partial class ImportCredentialWindow : Window
             var name = NameBox.Text.Trim();
             if (name.Length == 0) throw new InvalidOperationException(Loc.T("Enter a credential name."));
             var components = _rows.Select(row => row.ToInput()).ToList();
+            var authorizationReason = _conflict is null
+                && SelectedPermission == CredentialPermission.Allowed
+                ? CredentialManagementCopy.AllowPermissionReason
+                : "Import a credential";
             var auth = _host.Vault.StoredCredentialCount() == 0
                 ? ManagementAuthenticator.Allow
-                : _host.AuthenticateAndBeginManagement("Import a credential");
+                : _host.AuthenticateAndBeginManagement(authorizationReason);
             if (_conflict is not null) _host.Vault.ReplaceImportedBundleCredential(_conflict.Id, components, auth);
             else
             {

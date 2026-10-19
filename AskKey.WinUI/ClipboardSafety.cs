@@ -18,8 +18,10 @@ public static class ClipboardSafety
         }
         catch
         {
-            // Older Windows builds may reject the history/sync flags; copying is still useful.
-            try { Clipboard.SetContent(package); } catch { return; }
+            // Never fall back to a history-enabled plain copy: that silently
+            // undoes the privacy guarantee this path exists to provide.
+            Dialogs.ShowError("Ask Key could not copy without clipboard history. Copy was cancelled.");
+            return;
         }
         await Task.Delay(TimeSpan.FromSeconds(60));
         var dispatcher = App.CurrentWindow?.DispatcherQueue;

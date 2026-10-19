@@ -275,9 +275,13 @@ public partial class CredentialEditorWindow : Window
             if (name.Length == 0) throw new InvalidOperationException(Loc.T("Enter a credential name."));
             var expiry = ParseExpiry(ExpiryBox.Text);
             var group = string.IsNullOrWhiteSpace(GroupCombo.Text) ? null : GroupCombo.Text.Trim();
+            var authorizationReason = SelectedPermission == CredentialPermission.Allowed
+                && _existing?.Permission != CredentialPermission.Allowed
+                ? CredentialManagementCopy.AllowPermissionReason
+                : CredentialManagementCopy.ManageReason;
             var auth = _host.Vault.StoredCredentialCount() == 0
                 ? ManagementAuthenticator.Allow
-                : _host.AuthenticateAndBeginManagement(CredentialManagementCopy.ManageReason);
+                : _host.AuthenticateAndBeginManagement(authorizationReason);
 
             if (_existing is not null && !_secretsLoaded)
             {
