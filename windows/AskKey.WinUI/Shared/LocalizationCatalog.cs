@@ -120,6 +120,13 @@ internal static class LocalizationCatalog
         ["Confirm"] = "确认",
         ["Confirm before reading a credential"] = "读取凭证前确认",
         ["High security mode"] = "高安全模式",
+        ["Protect with a passphrase"] = "使用口令保护",
+        ["Passphrase (at least 8 characters)"] = "口令（至少 8 个字符）",
+        ["If you forget it, the library cannot be opened. There is no recovery."] = "忘记口令后库将无法打开，无法找回。",
+        ["High security mode is already on."] = "高安全模式已开启。",
+        ["The vault key is wrapped with your passphrase. Ask Key asks for it every time it starts."] = "vault key 由你的口令包裹。每次启动请旨都会要求输入。",
+        ["Windows DPAPI wraps the key. Any program running as you can decrypt it."] = "Windows DPAPI 包裹密钥。任何以你的身份运行的程序都能解密。",
+        ["Ask Key stores data under your Windows user profile."] = "请旨将数据存储在你的 Windows 用户目录下。",
         ["A passphrase wraps the vault key. Ask Key asks for it every time it starts."] =
             "口令包裹保管库密钥，每次启动都需要输入。",
         ["Windows DPAPI wraps the vault key. Any program running as you can unwrap it."] =

@@ -49,10 +49,30 @@
           </StackPanel>
         </Border>
 
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="18,16">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Protect with a passphrase" Style="{StaticResource HeadlineStyle}" FontSize="14"/>
+                <TextBlock x:Name="PassphraseHint" Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+              </StackPanel>
+              <ToggleButton x:Name="PassphraseToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
+                            IsChecked="True" Click="Passphrase_Click"/>
+</Grid>
+            <StackPanel x:Name="PassphraseFields" Margin="0,12,0,0">
+              <PasswordBox x:Name="PassphraseBox" PlaceholderText="Passphrase (at least 8 characters)"/>
+              <PasswordBox x:Name="PassphraseConfirmBox" PlaceholderText="Confirm the passphrase" Margin="0,8,0,0"/>
+              <TextBlock local:Loc.Key="If you forget it, the library cannot be opened. There is no recovery."
+                         Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <ToggleSwitch x:Name="LaunchCheck" IsOn="True" Margin="0,18,0,0"/>
         <Button local:Loc.Key="Continue to Ask Key" Style="{StaticResource PrimaryButtonStyle}" Margin="0,20,0,0"
                 HorizontalAlignment="Left" Click="Continue_Click"/>
-        <TextBlock local:Loc.Key="Ask Key stores data under your Windows user profile. Credentials are encrypted with DPAPI."
+        <TextBlock local:Loc.Key="Ask Key stores data under your Windows user profile."
                    Style="{StaticResource CaptionTextStyle}" Margin="0,14,0,0" TextWrapping="Wrap"/>
       </StackPanel>
     </ScrollViewer>
