@@ -53,13 +53,13 @@
           <StackPanel>
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <StackPanel>
+              <StackPanel Background="Transparent" Tapped="PassphraseRow_Tapped">
                 <TextBlock local:Loc.Key="Protect with a passphrase" Style="{StaticResource HeadlineStyle}" FontSize="14"/>
                 <TextBlock x:Name="PassphraseHint" Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" TextWrapping="Wrap"/>
               </StackPanel>
               <ToggleButton x:Name="PassphraseToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
                             IsChecked="True" Click="Passphrase_Click"/>
-</Grid>
+            </Grid>
             <StackPanel x:Name="PassphraseFields" Margin="0,12,0,0">
               <PasswordBox x:Name="PassphraseBox" PlaceholderText="Passphrase (at least 8 characters)"/>
               <PasswordBox x:Name="PassphraseConfirmBox" PlaceholderText="Confirm the passphrase" Margin="0,8,0,0"/>

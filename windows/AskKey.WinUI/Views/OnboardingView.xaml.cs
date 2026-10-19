@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 
 namespace AskKeyApp;
 
@@ -75,6 +76,14 @@ public partial class OnboardingView : UserControl
     }
 
     private void Passphrase_Click(object sender, RoutedEventArgs e) => UpdatePassphraseCopy();
+
+    /// <summary>The text column toggles too; the switch handles its own click.</summary>
+    private void PassphraseRow_Tapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (!PassphraseToggle.IsEnabled) return;
+        PassphraseToggle.IsChecked = PassphraseToggle.IsChecked != true;
+        UpdatePassphraseCopy();
+    }
 
     private void UpdatePassphraseCopy()
     {
