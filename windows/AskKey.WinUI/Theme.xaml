@@ -809,20 +809,12 @@
       <Setter.Value>
         <ControlTemplate TargetType="ToggleButton">
           <Grid x:Name="Root" Background="Transparent" HorizontalAlignment="Right">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="40" />
-              <ColumnDefinition Width="8" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
             <Grid Width="40" Height="20" VerticalAlignment="Center">
               <Border x:Name="Track" CornerRadius="10" Background="{ThemeResource SurfaceMutedBrush}" />
               <Ellipse x:Name="Knob" Width="12" Height="12" Fill="{ThemeResource TextPrimaryBrush}"
                        HorizontalAlignment="Left" Margin="4,0,0,0" />
             </Grid>
-            <ContentPresenter Grid.Column="2" Content="{TemplateBinding Content}"
-                              ContentTemplate="{TemplateBinding ContentTemplate}"
-                              Foreground="{TemplateBinding Foreground}"
-                              VerticalAlignment="Center" />
+
             <VisualStateManager.VisualStateGroups>
               <VisualStateGroup x:Name="CheckStates">
                 <VisualState x:Name="Unchecked">

@@ -31,7 +31,6 @@ public partial class SettingsView : UserControl
             RefreshChoices();
             var preferences = _host.Preferences;
             LaunchToggle.IsChecked = preferences.LaunchAtLogin;
-            LaunchToggle.Content = Loc.T(preferences.LaunchAtLogin ? "On" : "Off");
             HotkeyCombo.SelectedItem = HotkeyCombo.Items.OfType<HotkeyOption>()
                 .FirstOrDefault(option => option.Id == preferences.HotkeyShortcut);
             AllowanceCombo.SelectedItem = AllowanceCombo.Items.OfType<AllowanceOption>()
@@ -39,6 +38,11 @@ public partial class SettingsView : UserControl
                     (preferences.TimedAllowanceEnabled ? preferences.DefaultTimedAllowanceMinutes : 0))
                 ?? AllowanceCombo.Items.OfType<AllowanceOption>().First();
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AccessRecordsButton, Loc.T("Access records"));
+            // The switch shows no text, so its accessible name comes from the row title.
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(LaunchToggle, Loc.T("Launch at login"));
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ReadAuthToggle,
+                Loc.T("Confirm before reading a credential"));
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(HighSecurityToggle, Loc.T("High security mode"));
             SelectTag(AppearanceCombo, preferences.AppearanceMode);
             SelectTag(LanguageCombo, preferences.LanguageMode);
             ErasePromptText.Text = Loc.F("Type {0} to confirm", EraseConfirmation);
@@ -46,10 +50,8 @@ public partial class SettingsView : UserControl
                 .FirstOrDefault(option => option.Minutes * 60 == preferences.SessionTimeoutSeconds)
                 ?? UnlockDurationCombo.Items.OfType<UnlockDurationOption>().First();
             ReadAuthToggle.IsChecked = preferences.ReadApprovalAuthenticationEnabled;
-            ReadAuthToggle.Content = Loc.T(preferences.ReadApprovalAuthenticationEnabled ? "On" : "Off");
             var highSecurity = _host.Vault.IsHighSecurityEnabled;
             HighSecurityToggle.IsChecked = highSecurity;
-            HighSecurityToggle.Content = Loc.T(highSecurity ? "On" : "Off");
             HighSecurityText.Text = Loc.T(highSecurity
                 ? "A passphrase wraps the vault key. Ask Key asks for it every time it starts."
                 : "Windows DPAPI wraps the vault key. Any program running as you can unwrap it.");
@@ -83,7 +85,6 @@ public partial class SettingsView : UserControl
     {
         if (_loading) return;
         var enabled = LaunchToggle.IsChecked == true;
-        LaunchToggle.Content = Loc.T(enabled ? "On" : "Off");
         _host.Preferences.LaunchAtLogin = enabled;
         _host.Preferences.Save();
         try { StartupRegistration.Apply(enabled); }
@@ -177,7 +178,6 @@ public partial class SettingsView : UserControl
     {
         if (_loading) return;
         var enabled = ReadAuthToggle.IsChecked == true;
-        ReadAuthToggle.Content = Loc.T(enabled ? "On" : "Off");
         if (!enabled)
         {
             var warning = Loc.T("Turning this off lets one click release Agent read requests without confirming it is you. Credential changes still require authentication.");
@@ -186,7 +186,6 @@ public partial class SettingsView : UserControl
             {
                 _loading = true;
                 ReadAuthToggle.IsChecked = true;
-                ReadAuthToggle.Content = Loc.T("On");
                 _loading = false;
                 return;
             }
@@ -194,7 +193,6 @@ public partial class SettingsView : UserControl
             {
                 _loading = true;
                 ReadAuthToggle.IsChecked = true;
-                ReadAuthToggle.Content = Loc.T("On");
                 _loading = false;
                 return;
             }
