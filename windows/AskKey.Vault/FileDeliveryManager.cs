@@ -57,7 +57,7 @@ public sealed class FileDeliveryManager : IDisposable
             else if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
         });
         _synchronizeFile = synchronizeFile ?? (stream => stream.Flush(flushToDisk: true));
-        _namespaceRoot = System.IO.Path.GetFullPath(rootPath);
+        _namespaceRoot = System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(rootPath));
 
         using (AcquireNamespaceLock(_namespaceRoot))
         {
@@ -255,15 +255,71 @@ public sealed class FileDeliveryManager : IDisposable
 
     private void SweepCrashResidue()
     {
-        foreach (var path in Directory.EnumerateFileSystemEntries(_namespaceRoot))
+        SweepNamespace(_namespaceRoot, _instanceRoot, removeUnknownEntries: true);
+
+        // Vault gives each process a fresh GUID namespace under the delivery root.
+        // Sweep its siblings too, but only directories that match our namespace
+        // shape and remain owner-only.
+        // shortcut: unknown or non-GUID namespace layouts are retained, not guessed at.
+        var deliveryRoot = Directory.GetParent(_namespaceRoot)?.FullName;
+        if (deliveryRoot is null || !IsNamespaceDirectory(_namespaceRoot)) return;
+
+        IEnumerable<string> candidates;
+        try
         {
-            if (string.Equals(path, _instanceRoot, StringComparison.OrdinalIgnoreCase)) continue;
-            if (string.Equals(System.IO.Path.GetFileName(path), ".namespace-lock", StringComparison.OrdinalIgnoreCase))
+            candidates = Directory.EnumerateDirectories(deliveryRoot).ToList();
+        }
+        catch (IOException) { return; }
+        catch (UnauthorizedAccessException) { return; }
+
+        foreach (var candidate in candidates)
+        {
+            if (string.Equals(candidate, _namespaceRoot, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!IsNamespaceDirectory(candidate) || IsReparsePoint(candidate) || !IsPrivateDirectory(candidate)) continue;
+
+            NamespaceLock? lease;
+            try
             {
-                continue;
+                lease = TryAcquireNamespaceLock(candidate);
             }
+            catch (IOException) { continue; }
+            catch (UnauthorizedAccessException) { continue; }
+            if (lease is null) continue;
+
+            using (lease)
+            {
+                SweepNamespace(candidate, activeInstanceRoot: null, removeUnknownEntries: false);
+                try
+                {
+                    // Removes only an empty namespace; unknown entries stay put.
+                    Directory.Delete(candidate, recursive: false);
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+    }
+
+    private void SweepNamespace(string namespaceRoot, string? activeInstanceRoot, bool removeUnknownEntries)
+    {
+        List<string> entries;
+        try
+        {
+            entries = Directory.EnumerateFileSystemEntries(namespaceRoot).ToList();
+        }
+        catch (IOException) { return; }
+        catch (UnauthorizedAccessException) { return; }
+
+        foreach (var path in entries)
+        {
+            if (activeInstanceRoot is not null
+                && string.Equals(path, activeInstanceRoot, StringComparison.OrdinalIgnoreCase)) continue;
+            var name = System.IO.Path.GetFileName(path);
+            if (string.Equals(name, ".namespace-lock", StringComparison.OrdinalIgnoreCase)) continue;
+            if (IsReparsePoint(path)) continue;
+
             var requiresOwnerLease = Directory.Exists(path)
-                && System.IO.Path.GetFileName(path).StartsWith("instance-", StringComparison.Ordinal);
+                && name.StartsWith("instance-", StringComparison.Ordinal);
             if (requiresOwnerLease)
             {
                 var ownerPath = System.IO.Path.Combine(path, ".owner-lock");
@@ -271,6 +327,15 @@ public sealed class FileDeliveryManager : IDisposable
                 try
                 {
                     lease = new FileStream(ownerPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                }
+                catch (FileNotFoundException)
+                {
+                    // No owner lock means we cannot prove this is dead; retain it.
+                    continue;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    continue;
                 }
                 catch (IOException)
                 {
@@ -287,6 +352,11 @@ public sealed class FileDeliveryManager : IDisposable
                     lease?.Dispose();
                 }
             }
+            else if (!removeUnknownEntries)
+            {
+                continue;
+            }
+
             try
             {
                 _removeItem(path);
@@ -298,6 +368,32 @@ public sealed class FileDeliveryManager : IDisposable
                 TrackSweepFailure(path, requiresOwnerLease, exception.Message);
             }
         }
+    }
+
+    private static bool IsNamespaceDirectory(string path)
+    {
+        var name = System.IO.Path.GetFileName(System.IO.Path.TrimEndingDirectorySeparator(path));
+        return Guid.TryParseExact(name, "N", out _) || Guid.TryParseExact(name, "D", out _);
+    }
+
+    private static bool IsPrivateDirectory(string path)
+    {
+        try
+        {
+            return PrivateFileSystem.IsPrivateDirectory(path);
+        }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+    }
+
+    private static bool IsReparsePoint(string path)
+    {
+        try
+        {
+            return File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
+        }
+        catch (IOException) { return true; }
+        catch (UnauthorizedAccessException) { return true; }
     }
 
     private void TrackSweepFailure(string path, bool requiresOwnerLease, string message)
@@ -344,8 +440,7 @@ public sealed class FileDeliveryManager : IDisposable
 
     private static NamespaceLock AcquireNamespaceLock(string rootPath)
     {
-        var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rootPath)))[..32];
-        var mutex = new Mutex(false, "Local\\AskKey.FileDelivery." + digest);
+        var mutex = new Mutex(false, NamespaceMutexName(rootPath));
         try
         {
             if (!mutex.WaitOne(TimeSpan.FromSeconds(10)))
@@ -359,6 +454,35 @@ public sealed class FileDeliveryManager : IDisposable
             throw;
         }
         return new NamespaceLock(mutex);
+    }
+
+    private static NamespaceLock? TryAcquireNamespaceLock(string rootPath)
+    {
+        var mutex = new Mutex(false, NamespaceMutexName(rootPath));
+        try
+        {
+            if (!mutex.WaitOne(0))
+            {
+                mutex.Dispose();
+                return null;
+            }
+            return new NamespaceLock(mutex);
+        }
+        catch (AbandonedMutexException)
+        {
+            return new NamespaceLock(mutex);
+        }
+        catch
+        {
+            mutex.Dispose();
+            throw;
+        }
+    }
+
+    private static string NamespaceMutexName(string rootPath)
+    {
+        var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rootPath)))[..32];
+        return "Local\\AskKey.FileDelivery." + digest;
     }
 
     public void Dispose()

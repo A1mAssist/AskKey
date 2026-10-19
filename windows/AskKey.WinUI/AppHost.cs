@@ -44,10 +44,14 @@ public sealed class AppHost : IDisposable
     public int PendingCount => _pendingCount;
     public bool IsAgentAccessPaused { get; private set; }
 
+    /// <summary>True when high security mode prevented the automatic unlock at startup.</summary>
+    public bool IsLockedAtStartup { get; private set; }
+
     public event Action? PendingChanged;
     public event Action? CredentialsChanged;
     public event Action? AgentAccessChanged;
     public event Action? BrokerStateChanged;
+    public event Action? SettingsChanged;
 
     public string? BrokerFailure { get; private set; }
     public string? BrokerPipeName => _broker?.PipeName;
@@ -58,7 +62,17 @@ public sealed class AppHost : IDisposable
         _started = true;
         try
         {
-            Vault.Unlock();
+            try
+            {
+                Vault.Unlock();
+            }
+            catch (AppKeyStoreException error) when (error.Error is AppKeyStoreError.PassphraseRequired
+                                                      or AppKeyStoreError.PassphraseCancelled)
+            {
+                // High security mode: start the tray and Broker but leave the vault locked
+                // until the user enters the passphrase. Agent requests fail closed until then.
+                IsLockedAtStartup = true;
+            }
             Vault.SetManagementSessionIdleLimit(TimeSpan.FromSeconds(_preferences.SessionTimeoutSeconds));
             Vault.UpdateDefaultTimedAllowanceMinutes(_preferences.DefaultTimedAllowanceMinutes);
             Vault.ApprovalRequests.SetReadAuthenticationEnabled(_preferences.ReadApprovalAuthenticationEnabled);
@@ -142,7 +156,9 @@ public sealed class AppHost : IDisposable
 
     public void EraseLocalData(string confirmation, LocalVaultEraseLanguage language)
     {
-        if (!ConfirmManagement("Erase the local Ask Key vault")) return;
+        // Erasing is irreversible and must never inherit an open management session's
+        // approval, so this asks Windows Hello even while a session is valid.
+        if (!_authentication.Confirm(Loc.T("Erase the local Ask Key vault"))) return;
         if (Vault.IsLocked) Vault.Unlock();
         if (!Vault.HasActiveManagementSession)
         {
@@ -182,6 +198,85 @@ public sealed class AppHost : IDisposable
         if (Vault.IsLocked) Vault.Unlock();
         Vault.BeginManagementSession(ManagementAuthenticator(reason));
         return new global::AskKey.Vault.ManagementAuthenticator(_ => true);
+    }
+
+    /// <summary>
+    /// Opens the vault, asking for the passphrase first when high security mode is on.
+    /// Returns false when the user cancels or the passphrase is wrong; the vault then
+    /// stays locked rather than falling back to a weaker store.
+    /// </summary>
+    public async Task<bool> UnlockAsync()
+    {
+        if (!Vault.IsLocked) return true;
+        string? passphrase = null;
+        if (Vault.IsHighSecurityEnabled)
+        {
+            passphrase = await Dialogs.PasswordAsync(_mainWindow, "Unlock Ask Key", "Enter your passphrase");
+            if (passphrase is null) return false;
+        }
+        try
+        {
+            Vault.Unlock(passphrase);
+            IsLockedAtStartup = false;
+            CredentialsChanged?.Invoke();
+            return true;
+        }
+        catch (Exception error)
+        {
+            ShowError(error.Message);
+            return false;
+        }
+    }
+
+    /// <summary>Turning high security on or off always asks for Windows Hello.</summary>
+    public async Task EnableHighSecurityAsync()
+    {
+        if (Vault.IsHighSecurityEnabled) return;
+        if (!_authentication.Confirm(Loc.T("Turn on high security mode"))) return;
+        var passphrase = await Dialogs.PasswordAsync(_mainWindow, "Set a passphrase",
+            "Use at least 8 characters", "Continue");
+        if (passphrase is null) return;
+        if (passphrase.Length < 8)
+        {
+            ShowError("Use at least 8 characters.");
+            return;
+        }
+        var confirm = await Dialogs.PasswordAsync(_mainWindow, "Confirm the passphrase", "Enter it again", "Save");
+        if (confirm is null) return;
+        if (!string.Equals(passphrase, confirm, StringComparison.Ordinal))
+        {
+            ShowError("The passphrases do not match.");
+            return;
+        }
+        try
+        {
+            Vault.EnableHighSecurity(passphrase);
+            Dialogs.ShowInfo("High security mode is on. Ask Key asks for this passphrase every time it starts.");
+            SettingsChanged?.Invoke();
+        }
+        catch (Exception error)
+        {
+            ShowError(error.Message);
+        }
+    }
+
+    public async Task DisableHighSecurityAsync()
+    {
+        if (!Vault.IsHighSecurityEnabled) return;
+        if (!_authentication.Confirm(Loc.T("Turn off high security mode"))) return;
+        var passphrase = await Dialogs.PasswordAsync(_mainWindow, "Confirm your passphrase",
+            "Enter your passphrase", "Turn off");
+        if (passphrase is null) return;
+        try
+        {
+            Vault.DisableHighSecurity(passphrase);
+            Dialogs.ShowInfo("High security mode is off. Ask Key unlocks with Windows DPAPI again.");
+            SettingsChanged?.Invoke();
+        }
+        catch (Exception error)
+        {
+            ShowError(error.Message);
+        }
     }
 
     public void ToggleAgentAccess()
@@ -369,7 +464,7 @@ public sealed class AppHost : IDisposable
         Vault.ApprovalRequests.ConfigureAuthentication(purpose =>
             ConfirmManagement(purpose == BrokerAuthenticationPurpose.ReadApproval
                 ? "Approve this Agent read request"
-                : "Approve this Agent write request"));
+                : global::AskKey.Vault.CredentialManagementCopy.AgentWriteApprovalReason));
         Vault.ApprovalRequests.ConfigureObservers(
             _ => _dispatcher.TryEnqueue(() =>
             {
@@ -454,13 +549,16 @@ public sealed class AppHost : IDisposable
 
     private void StartBroker()
     {
+        // Outside development the host and helper must sit in an official install root
+        // with the expected layout; a helper dropped next to a rewritten host fails here.
+        _ = AppPaths.RequireOfficialHelperPath();
         var runtimeDirectory = Path.GetDirectoryName(BrokerConfiguration.ResolvePipeNameFile())!;
         Directory.CreateDirectory(runtimeDirectory);
         var staging = Path.Combine(runtimeDirectory, "file-write-staging");
         _fileWrites = new BrokerFileWriteCoordinator(
             staging,
             Vault.ApprovalRequests,
-            () => ConfirmManagement("View the frozen file submitted for approval"),
+            () => ConfirmManagement(global::AskKey.Vault.CredentialManagementCopy.FrozenWriteRevealReason),
             file => Vault.CommitAgentFileWrite(file),
             (credentialId, previousDigest, request) =>
                 Vault.SubmitFileWriteApprovalIfCurrent(credentialId, previousDigest, request),

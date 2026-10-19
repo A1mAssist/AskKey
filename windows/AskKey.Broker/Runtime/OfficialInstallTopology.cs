@@ -265,15 +265,19 @@ public static class HelperHostApplication
     {
         try
         {
-            // WinVerifyTrust-equivalent: the signer certificate embedded in the
-            // PE image. An unsigned file yields no certificate.
+            // Only a WinVerifyTrust pass counts as signed: a certificate embedded in the
+            // PE image says nothing about whether the signature still validates.
+            var signer = AuthenticodeVerifier.Shared.SignerSubject(path);
+            if (string.IsNullOrWhiteSpace(signer)) return HelperHostSigningFacts.Unsigned;
+#pragma warning disable SYSLIB0057 // Signed-file extraction has no X509CertificateLoader equivalent.
             using var certificate = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
+#pragma warning restore SYSLIB0057
             var publisher = certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
             return new HelperHostSigningFacts
             {
                 Publisher = string.IsNullOrWhiteSpace(publisher) ? null : publisher,
                 Thumbprint = certificate.Thumbprint,
-                IsValid = !string.IsNullOrWhiteSpace(publisher),
+                IsValid = true,
             };
         }
         catch (Exception)

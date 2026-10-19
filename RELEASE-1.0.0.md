@@ -79,5 +79,14 @@ RelocatedOrRenamed       <其他任意路径>   ← 这是对的，篡改过的�
 
 ## 已知未修（不是这次引入的）
 
-- `AskKey.Integrations.Tests` 6 个失败、`AskKey.Helper.Tests` 1 个失败，都是改动前就存在的（MCP fixture 和协议版本相关）。已在 stash 掉本次改动后复跑确认。
+- **（已修，2026-10-19）** MCP 测试夹具和协议版本断言停留在 `0.1.0`，而版本已定为 `1.0.0`，导致 `AskKey.Integrations.Tests` 6 个 + `AskKey.Helper.Tests` 1 个连接校验失败。已用干净 worktree 对过基线，确认是真 bug 而非基线噪声，两个文件改过来后全量测试全绿（407/407）。
+
+## 高安全模式（1.0.0 起可选）
+
+设置里可以打开。开启后 vault key 用 PBKDF2-HMAC-SHA256（600,000 次）派生的 KEK 包裹，DPAPI 副本被删除，Ask Key 每次启动都要口令。
+
+- 拿到 key 文件和数据库本身已经不够解密，这是针对「同用户任意进程能 DPAPI 解密」那条 P0 的实际对策。
+- 口令忘记 = 库永久打不开，没有后门，没有找回。
+- 关掉高安全模式会验证口令与当前 key 一致后才恢复 DPAPI 副本，口令错则什么都不会发生。
+- 管理会话只覆盖普通管理操作。查看凭证值、查看待审批的冻结文件、批准 Agent 写入、把凭证升为 Allow、擦除本地数据，每次都单独弹 Windows Hello。
 - `Setup.exe` 在 `%LOCALAPPDATA%\AskKey` 只有零散配置文件、没有 `current\` 时会报「拒绝访问」并失败退出。不丢数据，重装或先卸载即可，属于 Velopack 自身行为。

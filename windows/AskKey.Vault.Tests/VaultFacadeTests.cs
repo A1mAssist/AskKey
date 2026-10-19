@@ -66,10 +66,35 @@ public sealed class VaultFacadeTests
         }, ManagementAuthenticator.Allow);
         var prompts = 0;
 
+        // Metadata edits stay inside the session; granting Allow outlives it, so it asks again.
+        harness.Vault.UpdateTextCredential(created.Id, new TextCredentialInput
+        {
+            Name = "Reusable Token",
+            Value = "synthetic-secret",
+            UsageInstructions = "updated",
+        }, new ManagementAuthenticator(_ => { prompts++; return true; }));
+        Assert.Equal(0, prompts);
+
         harness.Vault.UpdateCredentialPermission(created.Id, CredentialPermission.Allowed,
             new ManagementAuthenticator(_ => { prompts++; return true; }));
+        Assert.Equal(1, prompts);
+    }
 
-        Assert.Equal(0, prompts);
+    [Fact]
+    public void RevealingAValueAsksAgainInsideAnActiveManagementSession()
+    {
+        using var harness = new Harness();
+        var created = harness.Vault.CreateTextCredential(new TextCredentialInput
+        {
+            Name = "Reveal Token",
+            Value = "synthetic-secret",
+        }, ManagementAuthenticator.Allow);
+        var prompts = 0;
+
+        harness.Vault.RevealTextCredential(created.Id,
+            new ManagementAuthenticator(_ => { prompts++; return true; }));
+
+        Assert.Equal(1, prompts);
     }
 
     [Fact]

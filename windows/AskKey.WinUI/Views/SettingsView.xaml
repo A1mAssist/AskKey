@@ -122,6 +122,16 @@
                             Click="ReadAuth_Click"/>
             </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14" HorizontalAlignment="Stretch">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="High security mode" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock x:Name="HighSecurityText" Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ToggleButton x:Name="HighSecurityToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
+                            Click="HighSecurity_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
             <Grid Margin="16,14">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <Button x:Name="AccessRecordsButton" Background="Transparent" BorderThickness="0" Padding="0"

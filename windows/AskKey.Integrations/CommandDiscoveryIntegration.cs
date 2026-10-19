@@ -81,6 +81,7 @@ public enum CommandDiscoveryHookConfigurationError
     FileTooLarge,
     MultipleExpectedHooks,
     CustomHookMismatch,
+    UntrustedHelper,
     OwnedFileConflict,
     ConcurrentModification,
     BackupFailed,
@@ -104,6 +105,7 @@ public sealed class CommandDiscoveryHookConfigurationException : Exception
         CommandDiscoveryHookConfigurationError.FileTooLarge => "The command-hook file is too large.",
         CommandDiscoveryHookConfigurationError.MultipleExpectedHooks => "Multiple Ask Key command hooks were found.",
         CommandDiscoveryHookConfigurationError.CustomHookMismatch => "An Ask Key command hook has been customized.",
+        CommandDiscoveryHookConfigurationError.UntrustedHelper => "The Ask Key helper is not trusted, so Ask Key cannot verify it.",
         CommandDiscoveryHookConfigurationError.OwnedFileConflict => "The Grok command-hook file contains unknown settings.",
         CommandDiscoveryHookConfigurationError.ConcurrentModification => "The command-hook file changed after review.",
         CommandDiscoveryHookConfigurationError.BackupFailed => "The command-hook backup failed.",
@@ -224,9 +226,17 @@ public static class CommandDiscoveryIntegration
         => new(client.HooksPath(home), backupDirectory, client.Definition(helper), client.Format());
 
     /// <summary>Probes the installed helper's real command surface, so an old helper
-    /// cannot leave a new rule pointing at an unsupported command.</summary>
-    public static void VerifyHelper(this CommandDiscoveryClient client, string helper, string workingDirectory)
+    /// cannot leave a new rule pointing at an unsupported command. Trust is settled
+    /// before the helper ever runs, exactly like the Codex path.</summary>
+    public static void VerifyHelper(
+        this CommandDiscoveryClient client, string helper, string workingDirectory, Func<string, bool>? isTrusted = null)
     {
+        if (!HelperTrust.IsExecutableRegularFile(helper)
+            || !(isTrusted ?? CodexHelperSigning.Executable.IsTrusted)(helper))
+        {
+            throw new CommandDiscoveryHookConfigurationException(
+                CommandDiscoveryHookConfigurationError.UntrustedHelper);
+        }
         RunResult result;
         try
         {

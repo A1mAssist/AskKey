@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AskKey.Broker.Runtime;
 
 namespace AskKey.Integrations.Tests;
 

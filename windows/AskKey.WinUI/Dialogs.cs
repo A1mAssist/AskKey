@@ -44,6 +44,30 @@ internal static class Dialogs
         return result == ContentDialogResult.Primary ? input.Text.Trim() : null;
     }
 
+    /// <summary>
+    /// Password entry for high security mode. Returns null when the user cancels, so the
+    /// caller can leave the vault locked instead of treating cancel as an empty passphrase.
+    /// </summary>
+    public static async Task<string?> PasswordAsync(Window? owner, string title, string prompt,
+        string primaryText = "Unlock")
+    {
+        var root = Root(owner);
+        if (root is null) return null;
+        var input = new PasswordBox { PlaceholderText = Loc.T(prompt) };
+        var dialog = new ContentDialog
+        {
+            XamlRoot = root,
+            Title = Loc.T(title),
+            Content = input,
+            PrimaryButtonText = Loc.T(primaryText),
+            CloseButtonText = Loc.T("Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            RequestedTheme = ThemeFor(owner),
+        };
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary ? input.Password : null;
+    }
+
     public static void ShowError(string message)
         => MessageBoxW(OwnerHandle(), Loc.T(message), Loc.T("Ask Key"), 0x00000000 | 0x00000030 | 0x00040000);
 

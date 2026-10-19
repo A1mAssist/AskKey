@@ -341,6 +341,42 @@ public sealed class RestrictedProcessTests
         }
     }
 
+    /// <summary>
+    /// The timeout must not depend on a wall clock, so it cannot be stretched or
+    /// collapsed by a system time change such as a UTC midnight crossing.
+    /// </summary>
+    [Fact]
+    public void TimeoutUsesAMonotonicClockAndIsUnaffectedByWallClockChanges()
+    {
+        var result = RestrictedProcess.Run(new RestrictedProcessRequest
+        {
+            Executable = Cmd,
+            Arguments = new[] { "/c", "ping -n 30 127.0.0.1 >nul" },
+            Environment = PathEnvironment,
+            Timeout = TimeSpan.FromMilliseconds(300),
+            MaximumOutputBytes = 4_096,
+            TerminationGrace = TimeSpan.FromMilliseconds(50),
+        });
+        Assert.True(result.TimedOut);
+    }
+
+    [Fact]
+    public void AProcessThatFinishesInsideTheBudgetIsNotReportedAsTimedOut()
+    {
+        // The wall-clock implementation could subtract a negative elapsed span after a
+        // backwards time adjustment and time out a process that already finished.
+        var result = RestrictedProcess.Run(new RestrictedProcessRequest
+        {
+            Executable = Cmd,
+            Arguments = new[] { "/c", "exit 0" },
+            Environment = PathEnvironment,
+            Timeout = TimeSpan.FromSeconds(30),
+            MaximumOutputBytes = 4_096,
+        });
+        Assert.False(result.TimedOut);
+        Assert.Equal(0, result.Status);
+    }
+
     [Fact]
     public void InteractiveSessionSpeaksLineDelimitedJson()
     {

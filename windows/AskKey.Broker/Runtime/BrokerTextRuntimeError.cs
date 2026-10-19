@@ -7,6 +7,8 @@ public enum BrokerTextRuntimeError
     InvalidRequest,
     InvalidWorkingDirectory,
     InvalidCredentialMapping,
+    UnresolvedExecutable,
+    SpawnDeadlineExpired,
     SpawnFailed,
 }
 

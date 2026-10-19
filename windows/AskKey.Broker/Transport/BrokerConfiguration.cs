@@ -3,8 +3,8 @@ using AskKey.Broker.Protocol;
 namespace AskKey.Broker.Transport;
 
 /// <summary>
-/// Runtime pipe location. Order: explicit debug isolation, then (Debug builds only)
-/// <c>ASKKEY_BROKER_PIPE</c>, then <c>%LOCALAPPDATA%\AskKey\dev</c> or <c>...\AskKey</c>.
+/// Runtime pipe location. Order: explicit debug isolation (Debug builds only), then
+/// <c>ASKKEY_BROKER_PIPE</c>, then <c>%LOCALAPPDATA%\AskKey\dev</c> (Debug builds only) or <c>%LOCALAPPDATA%\AskKey</c>.
 /// </summary>
 public static class BrokerConfiguration
 {
@@ -35,8 +35,7 @@ public static class BrokerConfiguration
         {
             return BrokerRuntimeDirectory.PipeNameFile(root);
         }
-        if (DebugRunDirectory.IsDebugBuild
-            && Environment.GetEnvironmentVariable(PipeOverrideVariable) is { Length: > 0 } overridden)
+        if (Environment.GetEnvironmentVariable(PipeOverrideVariable) is { Length: > 0 } overridden)
         {
             if (!global::System.IO.Path.IsPathFullyQualified(overridden))
             {
@@ -44,7 +43,14 @@ public static class BrokerConfiguration
             }
             return global::System.IO.Path.GetFullPath(overridden);
         }
-        var subdirectory = DebugRunDirectory.IsDebugBuild ? "dev" : string.Empty;
+        // `ASKKEY_BROKER_PIPE` stays honoured in Release: the MCP adapters write it into each
+        // client config so a helper spawned by Claude/Cursor/Grok/Codex finds this Broker.
+        // Only the Debug-only `dev` subdirectory is compiled out of Release.
+#if DEBUG
+        var subdirectory = "dev";
+#else
+        var subdirectory = string.Empty;
+#endif
         var directory = global::System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "AskKey",

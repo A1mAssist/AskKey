@@ -62,7 +62,11 @@ public sealed partial class Vault
         ManagementAuthenticator authenticator)
     {
         RequireManagementSession();
-        AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+        // Raising a credential to Allow keeps working after the session ends, so it always
+        // asks for Windows Hello rather than inheriting the open session's approval.
+        AuthorizeManagement(authenticator, permission == CredentialPermission.Allowed
+            ? CredentialManagementCopy.AllowPermissionReason
+            : CredentialManagementCopy.ManageReason);
         _ = RequireKey();
         PerformCredentialMutation(id, () =>
         {

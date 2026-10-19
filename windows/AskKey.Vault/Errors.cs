@@ -110,6 +110,10 @@ public enum AppKeyStoreError
     MissingAppKey,
     SecurityFailure,
     ConflictingKey,
+    /// <summary>High security mode is on and the caller supplied no passphrase.</summary>
+    PassphraseRequired,
+    /// <summary>The user dismissed the passphrase prompt.</summary>
+    PassphraseCancelled,
 }
 
 public sealed class AppKeyStoreException : Exception
@@ -129,6 +133,8 @@ public sealed class AppKeyStoreException : Exception
         AppKeyStoreError.MissingPendingKey => "The pending vault key is missing.",
         AppKeyStoreError.MissingAppKey => "The App-owned vault key is missing.",
         AppKeyStoreError.ConflictingKey => "A different vault key already exists and was not overwritten.",
+        AppKeyStoreError.PassphraseRequired => "High security mode is on. Enter your passphrase to unlock Ask Key.",
+        AppKeyStoreError.PassphraseCancelled => "Passphrase entry was cancelled.",
         _ => $"The vault key store failed (status {status}).",
     };
 }

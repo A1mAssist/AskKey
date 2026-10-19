@@ -40,6 +40,7 @@ public partial class CredentialsView : UserControl
                 return;
             }
             var selectedId = _selected?.Id;
+            RefreshProtectionNotice();
             _credentials = _host.Vault.ListTextCredentials();
             _selected = selectedId is null ? null : _credentials.FirstOrDefault(item => item.Id == selectedId);
             _revealed = null;
@@ -63,14 +64,26 @@ public partial class CredentialsView : UserControl
     {
         LockedPanel.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
         if (!locked) return;
+        RefreshProtectionNotice();
         CredentialList.ItemsSource = null;
         DetailScroll.Visibility = Visibility.Collapsed;
         NoSelection.Visibility = Visibility.Visible;
         CountText.Text = "";
+        // Never leave a revealed secret on screen after the session ends or the vault locks.
+        _revealed = null;
+        RevealedValue.Text = "";
+        RevealedValue.Visibility = Visibility.Collapsed;
     }
 
-    private void Unlock_Click(object sender, RoutedEventArgs e)
+    /// <summary>The storage claim must match the store actually in use, so high
+    /// security mode never claims DPAPI protection.</summary>
+    private void RefreshProtectionNotice() => ProtectionNotice.Text = Loc.T(_host.Vault.IsHighSecurityEnabled
+        ? "Protected by your passphrase"
+        : "Protected by Windows DPAPI");
+
+    private async void Unlock_Click(object sender, RoutedEventArgs e)
     {
+        if (!await _host.UnlockAsync()) return;
         if (!_host.EnsureManagementSession("Unlock Ask Key management")) return;
         _host.NotifyCredentialsChanged();
     }

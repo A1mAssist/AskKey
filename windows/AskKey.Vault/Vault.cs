@@ -135,12 +135,58 @@ public sealed partial class Vault : IDisposable
 
     // MARK: - Lifecycle
 
-    public void Unlock()
+    /// <summary>
+    /// Opens the library. In high security mode the caller must supply the passphrase;
+    /// a null passphrase fails with <see cref="AppKeyStoreError.PassphraseRequired"/>
+    /// instead of silently falling back to a weaker store.
+    /// </summary>
+    public void Unlock(string? passphrase = null)
     {
         lock (_lifecycleLock)
         {
             RecoverInterruptedLocalErase();
-            OpenBootstrappedLibrary(_configuration);
+            OpenBootstrappedLibrary(_configuration, passphrase);
+        }
+    }
+
+    /// <summary>True when the vault key is wrapped with a user passphrase.</summary>
+    public bool IsHighSecurityEnabled
+        => PassphraseAppKeyStore.IsEnabled(_configuration.KeyMaterialDirectory);
+
+    /// <summary>
+    /// Re-wraps the in-memory vault key with a passphrase and removes the DPAPI copy.
+    /// The vault must be unlocked. The wrapped file is written and verified first, so a
+    /// failure leaves the existing DPAPI key intact.
+    /// </summary>
+    public void EnableHighSecurity(string passphrase)
+    {
+        if (string.IsNullOrEmpty(passphrase)) throw new ArgumentException("Passphrase is required.", nameof(passphrase));
+        lock (_lifecycleLock)
+        {
+            var key = RequireKey();
+            var directory = _configuration.KeyMaterialDirectory;
+            PassphraseAppKeyStore.Write(directory, PassphraseAppKeyStore.AppFileName, key, passphrase);
+            PassphraseAppKeyStore.Verify(directory, key, passphrase);
+            _keyStore.DeletePendingKey();
+            _keyStore.DeleteAppKey();
+        }
+    }
+
+    /// <summary>
+    /// Unwraps with <paramref name="passphrase"/> and restores the DPAPI-protected key,
+    /// then deletes the wrapped copy. A wrong passphrase changes nothing.
+    /// </summary>
+    public void DisableHighSecurity(string passphrase)
+    {
+        lock (_lifecycleLock)
+        {
+            var key = RequireKey();
+            var directory = _configuration.KeyMaterialDirectory;
+            PassphraseAppKeyStore.Verify(directory, key, passphrase);
+            _keyStore.DeletePendingKey();
+            _keyStore.SavePendingKey(key);
+            _keyStore.PromotePendingKey();
+            PassphraseAppKeyStore.Delete(directory);
         }
     }
 
@@ -166,12 +212,18 @@ public sealed partial class Vault : IDisposable
     public void Lock()
     {
         ApprovalRequests.RevokeAllTimedAllowances();
+        // Delivered plaintext outliving the locked vault would defeat the lock.
+        CleanupRuntimeFileDeliveries();
+        byte[]? key;
         lock (_stateLock)
         {
+            key = _key;
             _key = null;
             _store?.BindCredentialAuthenticationKey(null);
             _managementSessionExpiresAt = null;
         }
+        // Drop the key material from memory instead of leaving it for the GC to move.
+        if (key is not null) System.Security.Cryptography.CryptographicOperations.ZeroMemory(key);
     }
 
     public bool HasActiveManagementSession
@@ -247,13 +299,24 @@ public sealed partial class Vault : IDisposable
     internal void AuthorizeManagement(ManagementAuthenticator authenticator, string reason)
     {
         // A valid management session already represents a recent Windows Hello
-        // confirmation; the configured idle window is the reuse period.
-        lock (_stateLock)
+        // confirmation; the configured idle window is the reuse period. Operations that
+        // hand an Agent plaintext or grant a lasting permission still ask again.
+        if (!RequiresFreshAuthentication(reason))
         {
-            if (IsManagementSessionValidLocked()) return;
+            lock (_stateLock)
+            {
+                if (IsManagementSessionValidLocked()) return;
+            }
         }
         if (!authenticator.Confirm(reason)) throw VaultException.ManagementAuthenticationRequired();
     }
+
+    /// <summary>Reasons that must never inherit an open session's approval.</summary>
+    internal static bool RequiresFreshAuthentication(string reason)
+        => reason is CredentialManagementCopy.RevealReason
+            or CredentialManagementCopy.FrozenWriteRevealReason
+            or CredentialManagementCopy.AgentWriteApprovalReason
+            or CredentialManagementCopy.AllowPermissionReason;
 
     internal bool AccessRecordWriteFailed
     {
@@ -269,14 +332,30 @@ public sealed partial class Vault : IDisposable
 
     internal void SetAccessRecordWriteFailed(bool failed) => AccessRecordWriteFailed = failed;
 
-    private void OpenBootstrappedLibrary(VaultConfiguration configuration)
+    private void OpenBootstrappedLibrary(VaultConfiguration configuration, string? passphrase = null)
     {
         if (Key is not null && _store is not null) return;
         var paths = new VaultBootstrapPaths(configuration.ApplicationSupportDirectory,
             Path.GetDirectoryName(configuration.ApplicationSupportDirectory));
-        var (store, key) = VaultBootstrap.OpenCurrent(paths,
-            ReferenceEquals(configuration, _configuration) ? _keyStore : DpapiAppKeyStore.ForConfiguration(configuration));
-        Adopt(store, key);
+        var highSecurity = PassphraseAppKeyStore.IsEnabled(configuration.KeyMaterialDirectory);
+        var store = ReferenceEquals(configuration, _configuration)
+            ? _keyStore
+            : DpapiAppKeyStore.ForConfiguration(configuration);
+        if (highSecurity)
+        {
+            if (string.IsNullOrEmpty(passphrase)) throw new AppKeyStoreException(AppKeyStoreError.PassphraseRequired);
+            store = new PassphraseAppKeyStore(configuration.KeyMaterialDirectory,
+                new FixedPassphraseProvider(passphrase));
+        }
+        try
+        {
+            var (vaultStore, key) = VaultBootstrap.OpenCurrent(paths, store);
+            Adopt(vaultStore, key);
+        }
+        finally
+        {
+            (store as PassphraseAppKeyStore)?.ClearSecret();
+        }
     }
 
     internal VaultConfiguration Configuration => _configuration;

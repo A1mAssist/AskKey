@@ -106,7 +106,10 @@ $packArgs = @(
     '--mainExe', 'AskKey.exe', '--outputDir', $releaseDir,
     '--msi', '--instLocation', 'PerMachine'
 )
-if (-not $unsigned) { $packArgs += '--signTool', 'signtool.exe' }
+# Velopack signs the installer packages itself; the payload is signed above.
+if (-not $unsigned) {
+    $packArgs += '--signParams', "/sha1 $CertificateThumbprint /fd SHA256 /tr $TimestampUrl /td SHA256"
+}
 & vpk @packArgs
 if ($LASTEXITCODE -ne 0) { throw "vpk pack failed with exit code $LASTEXITCODE." }
 

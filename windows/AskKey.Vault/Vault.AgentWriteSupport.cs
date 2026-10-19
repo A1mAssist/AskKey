@@ -208,7 +208,7 @@ public sealed partial class Vault
         string capability,
         ManagementAuthenticator authenticator)
     {
-        AuthorizeManagement(authenticator, CredentialManagementCopy.RevealReason);
+        AuthorizeManagement(authenticator, CredentialManagementCopy.FrozenWriteRevealReason);
         return AgentTextWrites.Synchronized(() =>
         {
             var frozen = ActiveFrozenWrite(operationId, requestId, capability);

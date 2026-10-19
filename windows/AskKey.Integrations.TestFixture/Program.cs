@@ -20,6 +20,14 @@ return name switch
 static int Helper(string[] arguments)
 {
     var broker = Environment.GetEnvironmentVariable("ASKKEY_BROKER_PIPE") ?? "";
+    // Any execution is observable, so tests can assert the helper never ran.
+    try
+    {
+        File.WriteAllText(
+            Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "helper-ran"),
+            string.Join(' ', arguments));
+    }
+    catch (IOException) { }
     if (arguments.Length >= 1 && arguments[0] == "hook")
     {
         if (arguments.Length >= 2 && arguments[1] == "capabilities")
@@ -86,7 +94,7 @@ static int Helper(string[] arguments)
             result = new
             {
                 protocolVersion,
-                serverInfo = new { name = "askkey", version = "0.1.0" },
+                serverInfo = new { name = "askkey", version = "1.0.0" },
             },
         });
         var tools = JsonSerializer.Serialize(new

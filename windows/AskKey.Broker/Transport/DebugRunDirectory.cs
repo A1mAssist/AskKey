@@ -25,7 +25,11 @@ public static class DebugRunDirectory
         => IsDebugBuild ? Resolve(Environment.GetEnvironmentVariables(), RealDataDirectories()) : null;
 
     /// <summary>Overridden by tests so the check does not depend on the real profile.</summary>
+#if DEBUG
     internal static bool IsDebugBuild { get; set; } = true;
+#else
+    internal static bool IsDebugBuild { get; set; }
+#endif
 
     internal static string? Resolve(
         global::System.Collections.IDictionary environment,

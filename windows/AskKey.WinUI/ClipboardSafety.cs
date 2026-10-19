@@ -8,7 +8,19 @@ public static class ClipboardSafety
     {
         var package = new DataPackage();
         package.SetText(value);
-        Clipboard.SetContent(package);
+        try
+        {
+            Clipboard.SetContentWithOptions(package, new ClipboardContentOptions
+            {
+                IsAllowedInHistory = false,
+                IsRoamable = false,
+            });
+        }
+        catch
+        {
+            // Older Windows builds may reject the history/sync flags; copying is still useful.
+            try { Clipboard.SetContent(package); } catch { return; }
+        }
         await Task.Delay(TimeSpan.FromSeconds(60));
         var dispatcher = App.CurrentWindow?.DispatcherQueue;
         if (dispatcher is null) return;

@@ -2,7 +2,7 @@ using global::System.Runtime.InteropServices;
 using global::System.Security.Cryptography;
 using global::System.Security.Cryptography.X509Certificates;
 
-namespace AskKey.Integrations;
+namespace AskKey.Broker.Runtime;
 
 /// <summary>Signature facts for one PE file. A null subject means the file is unsigned
 /// or its signature does not validate, so callers must treat it as untrusted.</summary>

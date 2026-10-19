@@ -64,7 +64,8 @@ public static class RestrictedProcess
                 process.StandardInput.Close();
             }
 
-            var start = Clock(request.UsesMonotonicClock);
+            var elapsed = new Stopwatch();
+            elapsed.Start();
             var timedOut = false;
             while (true)
             {
@@ -75,7 +76,7 @@ public static class RestrictedProcess
                     throw new RestrictedProcessException(RestrictedProcessFailureKind.Cancelled);
                 }
                 if (process.WaitForExit(5)) break;
-                if (Clock(request.UsesMonotonicClock) - start < request.Timeout) continue;
+                if (elapsed.Elapsed < request.Timeout) continue;
                 timedOut = true;
                 WindowsJob.Terminate(job, 1);
                 if (request.TerminationGrace > TimeSpan.Zero)
@@ -173,7 +174,4 @@ public static class RestrictedProcess
     private static bool IsCancelled(RestrictedProcessRequest request)
         => request.IsCancelled?.Invoke() == true
             || RestrictedProcessCancellation.Current?.Invoke() == true;
-
-    private static TimeSpan Clock(bool monotonic)
-        => monotonic ? TimeSpan.FromTicks(Environment.TickCount64 * TimeSpan.TicksPerMillisecond) : DateTime.UtcNow.TimeOfDay;
 }

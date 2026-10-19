@@ -47,6 +47,12 @@ public partial class SettingsView : UserControl
                 ?? UnlockDurationCombo.Items.OfType<UnlockDurationOption>().First();
             ReadAuthToggle.IsChecked = preferences.ReadApprovalAuthenticationEnabled;
             ReadAuthToggle.Content = Loc.T(preferences.ReadApprovalAuthenticationEnabled ? "On" : "Off");
+            var highSecurity = _host.Vault.IsHighSecurityEnabled;
+            HighSecurityToggle.IsChecked = highSecurity;
+            HighSecurityToggle.Content = Loc.T(highSecurity ? "On" : "Off");
+            HighSecurityText.Text = Loc.T(highSecurity
+                ? "A passphrase wraps the vault key. Ask Key asks for it every time it starts."
+                : "Windows DPAPI wraps the vault key. Any program running as you can unwrap it.");
             DataFolderText.Text = VaultConfiguration.Default.LocalApplicationDataDirectory;
             EraseConfirmPanel.Visibility = Visibility.Collapsed;
             EraseWordBox.Text = "";
@@ -150,6 +156,21 @@ public partial class SettingsView : UserControl
             ?? combo.Items.OfType<ComboBoxItem>().FirstOrDefault();
         combo.SelectedItem = null;
         combo.SelectedItem = selected;
+    }
+
+    private async void HighSecurity_Click(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        // The toggle already flipped; both flows re-read the real state in Refresh().
+        if (_host.Vault.IsHighSecurityEnabled)
+        {
+            await _host.DisableHighSecurityAsync();
+        }
+        else
+        {
+            await _host.EnableHighSecurityAsync();
+        }
+        Refresh();
     }
 
     private async void ReadAuth_Click(object sender, RoutedEventArgs e)

@@ -74,7 +74,6 @@ public sealed class RestrictedProcessRequest
     public bool WriteInputBeforeSpawn { get; init; }
     public int? MaximumInputBytes { get; init; }
     public required TimeSpan Timeout { get; init; }
-    public bool UsesMonotonicClock { get; init; }
     public bool CaptureStderr { get; init; } = true;
     public required int MaximumOutputBytes { get; init; }
     public bool TruncateOutput { get; init; } = true;

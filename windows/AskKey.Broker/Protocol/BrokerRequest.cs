@@ -22,7 +22,7 @@ public sealed class BrokerRequest
 public sealed class BrokerTextRunRequest : IEquatable<BrokerTextRunRequest>
 {
     public string OperationId { get; }
-    public IReadOnlyList<string> Command { get; }
+    public IReadOnlyList<string> Command { get; private set; }
     public IReadOnlyList<string> CredentialNames { get; }
     public string? WorkingDirectory { get; }
     public IReadOnlyDictionary<string, string> InheritedEnvironment { get; }
@@ -45,6 +45,24 @@ public sealed class BrokerTextRunRequest : IEquatable<BrokerTextRunRequest>
         InheritedEnvironment = inheritedEnvironment ?? new Dictionary<string, string>();
         CallerName = SanitizeDeclaration(callerName);
         CallerPurpose = SanitizeDeclaration(callerPurpose);
+    }
+
+    /// <summary>
+    /// Rewrites the target executable to the absolute path the Broker will spawn, so
+    /// the approved display and the running process name the same file. Returns false
+    /// when the executable cannot be resolved; the caller must fail before approval.
+    /// </summary>
+    public bool BindExecutable(Func<string, string?> resolve)
+    {
+        if (Command.Count == 0) return false;
+        var executable = resolve(Command[0]);
+        if (executable is not { Length: > 0 } || !Path.IsPathFullyQualified(executable)) return false;
+        if (string.Equals(executable, Command[0], StringComparison.Ordinal)) return true;
+        var bound = new string[Command.Count];
+        for (var index = 0; index < Command.Count; index++) bound[index] = Command[index];
+        bound[0] = executable;
+        Command = bound;
+        return true;
     }
 
     public static string? SanitizeDeclaration(string? raw)

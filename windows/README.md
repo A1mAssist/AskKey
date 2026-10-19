@@ -8,6 +8,28 @@ This tree is the Windows port of AskKey. Credential management, the local Broker
 - .NET 10 SDK for building and testing. The published package is self-contained and does not require a separate .NET runtime.
 - Windows Hello or a PIN for management and credential reveal operations.
 
+## Security model
+
+The Agent is treated as only partly trusted: it may run commands as your Windows user, but
+it must not receive a stored value without the approval flow.
+
+- **Default mode** wraps the vault key with Windows DPAPI (`CurrentUser`). That protects the
+  files at rest — copying `%APPDATA%\AskKey` to another account or machine reveals nothing.
+  It does **not** isolate one program from another. Any process running as you, including an
+  Agent's shell, can call DPAPI and unwrap the same key. DPAPI's boundary is the user
+  account, not the Ask Key executable.
+- **High security mode** (Settings) wraps the vault key with a passphrase you choose and
+  deletes the DPAPI copy. Reading the key files is then not enough to decrypt the library,
+  and Ask Key asks for the passphrase every time it starts. The passphrase cannot be
+  recovered: if you forget it, the library cannot be opened.
+- In both modes the Agent never gets a stored value without the approval flow. What neither
+  mode defends against is malicious code running as you while Ask Key is unlocked and
+  holding the key in memory.
+
+The helper `askkey.exe` must sit beside the host inside an official install directory; a
+relocated copy is refused. Unsigned builds trust the helper through an embedded integrity
+manifest instead of a publisher signature.
+
 ## Build and test
 
 ```powershell

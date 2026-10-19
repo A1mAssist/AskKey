@@ -299,7 +299,7 @@ public sealed class AgentConnector
             _helper,
             Path.Combine(_support, "client-backups", $"{Id(client)}-discovery"));
         return new(
-            () => discoveryClient.VerifyHelper(_helper, _home),
+            () => discoveryClient.VerifyHelper(_helper, _home, _signing.IsTrusted),
             () =>
             {
                 var plan = configuration.Preview();

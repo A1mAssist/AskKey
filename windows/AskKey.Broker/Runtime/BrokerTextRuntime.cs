@@ -53,6 +53,9 @@ public sealed class BrokerTextDeliveryLease : IDisposable
         lock (_lock)
         {
             if (_finishAction is null) throw new BrokerTextRuntimeException(BrokerTextRuntimeError.InvalidRequest);
+            // An approval that took too long to action must not spawn a stale command.
+            if (SpawnDeadline is { } deadline && DateTimeOffset.UtcNow > deadline)
+                throw new BrokerTextRuntimeException(BrokerTextRuntimeError.SpawnDeadlineExpired);
             _beginSpawnAuthorization();
             try
             {
@@ -160,8 +163,12 @@ public sealed class BrokerTextRuntime
     public delegate BrokerTextCredentialResolution CredentialResolver(
         BrokerTextRunRequest request, BrokerCancellation cancellation);
 
+    /// <summary>Maps the requested executable to the absolute path to spawn.</summary>
+    public delegate string? ExecutableResolver(string name, BrokerTextRunRequest request);
+
     private readonly BrokerRuntimeOperations _operations;
     private readonly CredentialResolver _resolveCredentials;
+    private readonly ExecutableResolver _resolveExecutable;
     private readonly Action _beforeSpawn;
     private readonly Action _afterAuthorization;
     private readonly Action _beforeSystemSpawn;
@@ -177,16 +184,64 @@ public sealed class BrokerTextRuntime
         Action? afterSpawn = null,
         TimeSpan? terminationGrace = null,
         TimeSpan? forceKillGrace = null,
-        int receiptCapacity = BrokerLimits.MaximumRuntimeReceiptCount)
+        int receiptCapacity = BrokerLimits.MaximumRuntimeReceiptCount,
+        ExecutableResolver? resolveExecutable = null)
     {
         _operations = new BrokerRuntimeOperations(receiptCapacity);
         _resolveCredentials = resolveCredentials;
+        // Default: resolve against the request's own inherited PATH, so a bare name
+        // cannot be reinterpreted later from a different environment.
+        _resolveExecutable = resolveExecutable ?? ((name, request) =>
+            ResolveInherited(name, request.InheritedEnvironment));
         _beforeSpawn = beforeSpawn ?? (() => { });
         _afterAuthorization = afterAuthorization ?? (() => { });
         _beforeSystemSpawn = beforeSystemSpawn ?? (() => { });
         _afterSpawn = afterSpawn ?? (() => { });
         _terminationGrace = ValidDuration(terminationGrace) ?? TimeSpan.FromSeconds(0.5);
         _forceKillGrace = ValidDuration(forceKillGrace) ?? TimeSpan.FromSeconds(1);
+    }
+
+    /// <summary>
+    /// PATH lookup scoped to the request's inherited environment: the client declares
+    /// PATH as part of the request, and only a fully absolute result is accepted.
+    /// </summary>
+    internal static string? ResolveInherited(string name, IReadOnlyDictionary<string, string> environment)
+    {
+        if (Path.IsPathFullyQualified(name)) return File.Exists(name) ? Path.GetFullPath(name) : null;
+        var file = Path.GetFileName(name.Trim());
+        if (file.Length == 0) return null;
+        // The request's own declared PATH wins; a request that declares none is resolved
+        // against the Broker's PATH, which is what CreateProcess would have used anyway.
+        // Either way the result is an absolute path, so the approved command and the
+        // spawned file cannot drift apart.
+        var path = environment.TryGetValue("PATH", out var declared) && declared.Length > 0
+            ? declared
+            : Environment.GetEnvironmentVariable("PATH") ?? "";
+        var extensions = new List<string> { "" };
+        var pathExt = environment.TryGetValue("PATHEXT", out var declaredExtensions)
+            && declaredExtensions.Length > 0
+            ? declaredExtensions
+            : Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD";
+        extensions.AddRange(pathExt.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        foreach (var directory in path.Split(Path.PathSeparator,
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            foreach (var extension in extensions)
+            {
+                string candidate;
+                try
+                {
+                    candidate = Path.GetFullPath(Path.Combine(directory.Trim(), file + extension));
+                }
+                catch (Exception exception) when (exception is ArgumentException or NotSupportedException
+                    or PathTooLongException or global::System.Security.SecurityException)
+                {
+                    continue;
+                }
+                if (File.Exists(candidate)) return candidate;
+            }
+        }
+        return null;
     }
 
     internal static void ValidateRequestBeforeReceipt(BrokerTextRunRequest request)
@@ -221,6 +276,14 @@ public sealed class BrokerTextRuntime
         BrokerCancellation? cancellation = null)
     {
         cancellation ??= new BrokerCancellation();
+        // Bind after validation but before Perform, so the receipt digest covers the bound
+        // command (a retransmission of the same request sees an identical payload) and
+        // the approved display names the executable the Broker actually spawns.
+        ValidateRequestBeforeReceipt(request);
+        if (!request.BindExecutable(name => _resolveExecutable(name, request)))
+        {
+            throw new BrokerTextRuntimeException(BrokerTextRuntimeError.UnresolvedExecutable);
+        }
         return _operations.Perform(request, cancellation, () => RunOnce(request, channel, cancellation));
     }
 

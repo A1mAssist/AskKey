@@ -221,3 +221,67 @@ public class CommandDiscoveryHookTests
         Assert.Equal(before, File.ReadAllBytes(path));
     }
 }
+public sealed class CommandDiscoveryHelperTrustOrderTests
+{
+    [Fact]
+    public void AnUntrustedHelperIsRejectedWithoutEverRunning()
+    {
+        // The fixture helper writes a marker whenever it executes, so the marker proves
+        // whether the probe reached the helper at all.
+        using var temp = new TempDirectory();
+        var helper = TestFiles.InstallFixture(temp.Combine("app", "askkey.exe"));
+        var marker = temp.Combine("app", "helper-ran");
+
+        var error = Assert.Throws<CommandDiscoveryHookConfigurationException>(() =>
+            CommandDiscoveryClient.Claude.VerifyHelper(helper, temp.Root, _ => false));
+
+        Assert.Equal(CommandDiscoveryHookConfigurationError.UntrustedHelper, error.Error);
+        Assert.False(File.Exists(marker), "the helper must not run before trust is settled");
+        Assert.Contains("not trusted", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ANonExecutableHelperIsRejectedWithoutEverRunning()
+    {
+        using var temp = new TempDirectory();
+        var helper = temp.Write("app/askkey.exe", "this is not a PE image");
+
+        var error = Assert.Throws<CommandDiscoveryHookConfigurationException>(() =>
+            CommandDiscoveryClient.Grok.VerifyHelper(helper, temp.Root, _ => true));
+
+        Assert.Equal(CommandDiscoveryHookConfigurationError.UntrustedHelper, error.Error);
+    }
+    [Fact]
+    public void ATrustedHelperStillHasToReportItsCapabilities()
+    {
+        // Trust passing is necessary, not sufficient: the probe result still decides.
+        using var temp = new TempDirectory();
+        var helper = TestFiles.InstallFixture(temp.Combine("app", "askkey.exe"));
+        var marker = temp.Combine("app", "helper-ran");
+
+        CommandDiscoveryClient.Cursor.VerifyHelper(helper, temp.Root, _ => true);
+
+        // A trusted helper does run, so the same marker proves the check is meaningful.
+        Assert.True(File.Exists(marker));
+    }
+
+    [Fact]
+    public void AgentConnectRefusesAnUntrustedHelperBeforeTouchingTheClientConfiguration()
+    {
+        using var temp = new TempDirectory();
+        var home = temp.Combine("home");
+        Directory.CreateDirectory(home);
+        var helper = TestFiles.WriteExecutable(temp.Combine("home", ".askkey", "askkey.exe"));
+        var claude = TestFiles.InstallFixture(temp.Combine("home", ".local", "bin", "claude.exe"));
+        var connector = new AgentConnector(
+            home, temp.Combine("support"), helper, "unused-pipe", "ok-test", claude,
+            signing: new CodexHelperSigning(_ => false));
+
+        var status = connector.Connect(AgentClientKind.ClaudeCode);
+
+        Assert.False(status.Connected);
+        Assert.Contains("not trusted", status.Message, StringComparison.OrdinalIgnoreCase);
+        // No discovery hook and no MCP configuration may be written.
+        Assert.False(File.Exists(temp.Combine("home", ".claude", "settings.json")));
+    }
+}

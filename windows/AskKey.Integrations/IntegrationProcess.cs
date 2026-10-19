@@ -31,7 +31,6 @@ internal static class IntegrationProcess
                     WriteInputBeforeSpawn = true,
                     MaximumInputBytes = 4096,
                     Timeout = TimeSpan.FromSeconds(2),
-                    UsesMonotonicClock = true,
                     CaptureStderr = false,
                     MaximumOutputBytes = 1_048_576,
                     TruncateOutput = false,
@@ -50,7 +49,7 @@ internal static class IntegrationProcess
     }
 
     /// <summary>Grok policy: chdir, write stdin after spawn, capture stderr,
-    /// truncate at the caller cap, wall clock, TERM grace, timeout returns a result.</summary>
+    /// truncate at the caller cap, TERM grace, timeout returns a result.</summary>
     public static RunResult RunCaptured(
         string executable,
         IReadOnlyList<string> arguments,
@@ -72,7 +71,6 @@ internal static class IntegrationProcess
                 StandardInput = input,
                 WriteInputBeforeSpawn = false,
                 Timeout = timeout,
-                UsesMonotonicClock = false,
                 CaptureStderr = true,
                 MaximumOutputBytes = maximumBytes,
                 TruncateOutput = true,
