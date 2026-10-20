@@ -9,7 +9,8 @@
     <IconFile Condition="'$(IconFile)' == ''">$(MSBuildThisFileDirectory)..\..\..\src\AskKey.WinUI\Assets\AskKey.ico</IconFile>
     <LicenseFile Condition="'$(LicenseFile)' == ''">$(MSBuildThisFileDirectory)..\text\LICENSE.rtf</LicenseFile>
     <BaLogo Condition="'$(BaLogo)' == ''">$(MSBuildThisFileDirectory)..\text\logo.png</BaLogo>
-    <DefineConstants>ProductVersion=$(ProductVersion);AppMsi=$(AppMsi);GuardMsi=$(GuardMsi);IconFile=$(IconFile);LicenseFile=$(LicenseFile);BaLogo=$(BaLogo)</DefineConstants>
+    <ThemeFile Condition="'$(ThemeFile)' == ''">$(MSBuildThisFileDirectory)RtfTheme.xml</ThemeFile>
+    <DefineConstants>ProductVersion=$(ProductVersion);AppMsi=$(AppMsi);GuardMsi=$(GuardMsi);IconFile=$(IconFile);LicenseFile=$(LicenseFile);BaLogo=$(BaLogo);ThemeFile=$(ThemeFile)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="WixToolset.BootstrapperApplications.wixext" Version="6.0.2" />

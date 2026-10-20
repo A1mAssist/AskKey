@@ -14,7 +14,9 @@
            variable is internal and a Bundle-level WixVariable does not reach it. -->
       <bal:WixStandardBootstrapperApplication Theme="rtfLicense"
                                               LicenseFile="$(var.LicenseFile)"
-                                              LogoFile="$(var.BaLogo)" />
+                                              LogoFile="$(var.BaLogo)"
+                                              ThemeFile="$(var.ThemeFile)" />
+      <Payload Name="AskKey.ico" SourceFile="$(var.IconFile)" Compressed="yes" />
     </BootstrapperApplication>
     <Chain>
       <MsiPackage Id="AskKeyApp"

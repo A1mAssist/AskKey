@@ -180,6 +180,12 @@ internal static partial class BuildTool
                 "Only zh-CN may ship, but these locales survived the trim: " + string.Join(", ", strayLocales));
         }
 
+        // Symbols are build artifacts; shipping them puts debug data in Program Files.
+        foreach (var symbol in Directory.EnumerateFiles(publishDir, "*.pdb", SearchOption.AllDirectories))
+        {
+            File.Delete(symbol);
+        }
+
         // A second host binary anywhere under the payload means an intermediate tree was
         // copied in; fail the build rather than shipping a stale copy in Program Files.
         // The filename match is case-insensitive on Windows, so the helper's own
