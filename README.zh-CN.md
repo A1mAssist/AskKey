@@ -10,9 +10,9 @@
   <a href="README.zh-CN.md">简体中文</a> · <a href="README.md">English</a>
 </p>
 
-Ask Key 把凭证加密保存在本机。Agent 只能按名称和元数据发现凭证，然后向本地 Broker 请求访问；是否放行由你决定。获批的文本值会作为环境变量传给目标进程，文件值会作为短期私有文件交付。请旨不会把库里的明文直接返回给 Agent；获批的目标进程会收到值，并且和你运行的任何进程一样可以复制或转发它。
+Ask Key 把凭证加密保存在本机。Agent 只能按名称和元数据发现凭证，然后向本地 Broker 请求访问；是否放行由你决定。获批的文本值会作为环境变量传给目标进程，文件值会作为短期私有文件交付。Ask Key 不会把库里的明文直接返回给 Agent；获批的目标进程会收到值，并且和你运行的任何进程一样可以复制或转发它。
 
-本仓库只包含 Windows 实现。发布工具使用 .NET，不包含 PowerShell 脚本。
+本仓库只包含 Windows 实现。主程序是 WinUI 3 / .NET 应用，发布工具也是 .NET 项目。
 
 > **macOS 上游：** 原始 macOS 应用及共享的产品/安全文档维护在 [sudoHG/AskKey](https://github.com/sudoHG/AskKey)。本仓库不包含 macOS 源码。 这是非官方的 Windows 移植版本，上游项目不对本构建负责。
 
@@ -119,7 +119,7 @@ dotnet run --project .\src\AskKey.Build -- guard
 | `AskKey-win.msi` + `AskKeyGuard-<version>.msi` | 全机器，分离安装/修复 | 同上 | 需要 UAC |
 | `AskKey-win-Setup.exe` | 当前用户，无 Guard | `%LocalAppData%\AskKey\current\` | 不需要 |
 
-推荐直接运行 `AskKeySetup-<version>.exe`。从“应用和功能”卸载时会一起移除应用和 Guard 服务。分离 MSI 只用于修复或高级部署；手动顺序是先应用、后 Guard，卸载时先 Guard。
+从 [Releases](https://github.com/A1mAssist/AskKey/releases) 下载 `AskKeySetup-<version>.exe`，推荐直接运行它。从“应用和功能”卸载时会一起移除应用和 Guard 服务。分离 MSI 只用于修复或高级部署；手动顺序是先应用、后 Guard，卸载时先 Guard。
 
 安装器会把实际程序放在 `current\` 子目录：
 

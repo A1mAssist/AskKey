@@ -12,7 +12,7 @@
 
 Ask Key keeps credentials encrypted on your PC. Agents discover credentials by name and metadata, then ask the local Broker for access. You decide whether a request may proceed. Approved text values are delivered as environment variables to the target process, and file values as short-lived private files. Ask Key does not return stored plaintext directly to the Agent; an approved target process receives the value and can, like any process you run, copy or forward it.
 
-This repository contains the Windows implementation only. The release tooling is .NET; there are no PowerShell build scripts.
+This repository contains the Windows implementation only. The app is a WinUI 3 / .NET application, and the release tooling is also .NET.
 
 > **macOS upstream:** The original macOS app and shared product/security documentation live at [sudoHG/AskKey](https://github.com/sudoHG/AskKey). This repository does not vendor the macOS source tree. This is an unofficial Windows port; the upstream project is not responsible for this build.
 
@@ -119,7 +119,7 @@ Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it
 | `AskKey-win.msi` + `AskKeyGuard-<version>.msi` | Per-machine, split/repair | Same as above | Yes (UAC) |
 | `AskKey-win-Setup.exe` | Per-user, no Guard | `%LocalAppData%\AskKey\current\` | No |
 
-Run `AskKeySetup-<version>.exe` for normal installation. Uninstalling it from Apps & Features removes both the app and Guard. Use the split MSIs only for repair or advanced deployment: install the app first and Guard second; uninstall Guard first.
+Download `AskKeySetup-<version>.exe` from [Releases](https://github.com/A1mAssist/AskKey/releases) and run it for normal installation. Uninstalling it from Apps & Features removes both the app and Guard. Use the split MSIs only for repair or advanced deployment: install the app first and Guard second; uninstall Guard first.
 
 The installer extracts the payload behind a `current\` folder:
 
