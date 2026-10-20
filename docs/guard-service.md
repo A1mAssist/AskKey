@@ -66,13 +66,14 @@ Remove-Item 'C:\ProgramData\AskKey\Guard' -Recurse -Force
 ## Protocol
 
 - 4-byte little-endian length + UTF-8 JSON, max 64 KiB
-- Request: `{ "v":2, "op":"status"|"challenge"|"consume"|"consume-enroll"|"unenroll", "nonce":base64?, "proof":base64? }`
+- Request: `{ "v":2, "op":"status"|"challenge"|"consume"|"consume-enroll"|"unenroll"|"reset", "nonce":base64?, "proof":base64? }`
 - Response: `{ "v":2, "ok":true|false, "error":string?, "nonce":base64?, "kek":base64?, "enrolled":bool? }`
 - `status`: returns whether the caller SID has an enrollment
 - `challenge`: creates a nonce for the caller SID
 - `consume(nonce)`: requires an existing enrollment, consumes the nonce once, returns the per-user KEK
 - `consume-enroll(nonce, proof)`: first enrollment. Checks the proof (32 bytes) against the stored one before consuming the nonce, stores the proof for the SID, returns the per-user KEK
 - `unenroll(proof)`: verifies the stored vault-key proof, then removes only that SID's enrollment files
+- `reset(nonce)`: consumes a fresh nonce and removes that SID's enrollment without the old proof. The passphrase reset uses it because the forgotten passphrase destroyed the key that produced the proof; the caller check still requires a signed Ask Key image
 - Errors: `caller_rejected`, `not_enrolled`, `bad_nonce`, `bad_proof`, `protocol`
 
 The proof is an HMAC of the vault key, so it binds the enrollment to one vault. A first enrollment
@@ -100,6 +101,7 @@ take over an existing SID's enrollment.
 - Enrollment: after passphrase high security is enabled, challenge -> Windows Hello -> consume-enroll (returns KEK) -> `Vault.EnableGuardUnlock(kek)`.
 - Disable: remove the guard copy, unenroll with the current vault proof; keep the passphrase copy.
 - Erase local data: unenroll with the current vault proof before the vault key disappears, then delete the guard file.
+- Forgot passphrase: the passphrase is the only factor that opens the vault, so the app resets the Guard enrollment, erases the local library without the key, and returns to onboarding.
 - OOBE/settings: add a Hello unlock toggle. If the guard service is unavailable, keep passphrase-only and explain the per-machine requirement.
 
 The nonce is taken before the Hello prompt, so a slow prompt cannot outlive its challenge.

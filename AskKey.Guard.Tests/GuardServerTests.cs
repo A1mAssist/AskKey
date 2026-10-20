@@ -117,6 +117,42 @@ public sealed class GuardServerTests
     }
 
     [Fact]
+    public void ResetDropsTheEnrollmentWithoutTheOldProof()
+    {
+        using var context = new GuardTestServer();
+        var kek = Enroll(context, GuardTestSupport.NewProof());
+        Assert.True(context.Client.Status().Enrolled);
+
+        var challenge = context.Client.Challenge();
+        var reset = context.Client.Reset(challenge.Nonce!);
+        Assert.True(reset.Ok, reset.Error);
+        Assert.False(context.Client.Status().Enrolled);
+
+        // Nothing is enrolled until the new vault proves itself; the KEK itself is stable.
+        var consume = context.Client.Consume(context.Client.Challenge().Nonce!);
+        Assert.False(consume.Ok);
+        Assert.Equal(GuardErrors.NotEnrolled, consume.Error);
+        Assert.Equal(kek, Enroll(context, GuardTestSupport.NewProof()));
+    }
+
+    [Fact]
+    public void ResetNeedsAFreshNonce()
+    {
+        using var context = new GuardTestServer();
+        Enroll(context, GuardTestSupport.NewProof());
+
+        var challenge = context.Client.Challenge();
+        Assert.True(context.Client.Reset(challenge.Nonce!).Ok);
+        var replay = context.Client.Reset(challenge.Nonce!);
+        Assert.False(replay.Ok);
+        Assert.Equal(GuardErrors.BadNonce, replay.Error);
+
+        var missing = context.Client.Send(new GuardRequest { Operation = GuardOperations.Reset });
+        Assert.False(missing.Ok);
+        Assert.Equal(GuardErrors.Protocol, missing.Error);
+    }
+
+    [Fact]
     public void ChallengeExpiresAfterFiveMinutes()
     {
         var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);

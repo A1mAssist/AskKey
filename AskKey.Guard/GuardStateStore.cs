@@ -81,6 +81,29 @@ public sealed class GuardStateStore
         }
     }
 
+    /// <summary>Removes this SID's enrollment without a proof. The signed app reaches this
+    /// path only after the old vault key is gone for good.</summary>
+    public bool TryReset(string sid)
+    {
+        lock (_gate)
+        {
+            try
+            {
+                var directory = UserDirectory(sid);
+                if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+    }
+
     /// <summary>Stores the consent enrollment for this SID.</summary>
     public bool TryEnroll(string sid, ReadOnlySpan<byte> proof)
     {

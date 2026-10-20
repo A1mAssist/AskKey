@@ -223,6 +223,52 @@ public sealed class AppHost : IDisposable
         Quit();
     }
 
+    /// <summary>
+    /// The passphrase is the only factor that opens a high-security vault. When it is
+    /// gone, erase the unreadable ciphertext and drop the enrollment that can never
+    /// match a new vault key.
+    /// </summary>
+    public async Task ForgotPassphraseAsync()
+    {
+        var reset = await TryResetGuardAsync();
+        var language = Loc.Current == AppLanguage.SimplifiedChinese
+            ? LocalVaultEraseLanguage.SimplifiedChinese
+            : LocalVaultEraseLanguage.English;
+        Vault.ResetLocalLibrary(language.ConfirmationText(), language);
+        _expiryReminders?.ClearLedger();
+        _preferences.HasCompletedOnboarding = false;
+        _preferences.Save();
+        await Dialogs.InfoAsync(_mainWindow, "Local data erased", reset
+            ? "Local Ask Key data was erased. Ask Key will close; start it again to set up a new passphrase."
+            : Loc.F("Local Ask Key data was erased, but the Ask Key Guard service still holds "
+                + "this account's Windows Hello enrollment. Windows Hello unlock cannot be "
+                + "enabled again on this PC until an administrator removes {0}.",
+                GuardPaths.DataRoot(GuardProtocol.IsDevelopmentEnvironment)
+                    + "\\users\\" + (CurrentUserSid() ?? "<your account>")));
+        Quit();
+    }
+
+    /// <summary>Drops a dead enrollment; the old proof can never be presented again.</summary>
+    private async Task<bool> TryResetGuardAsync()
+    {
+        try
+        {
+            var guard = new GuardClient();
+            var status = await Task.Run(guard.Status);
+            if (!status.Ok) return false;
+            if (status.Enrolled != true) return true;
+            var challenge = await Task.Run(guard.Challenge);
+            if (!challenge.Ok || challenge.Nonce is null) return false;
+            var response = await Task.Run(() => guard.Reset(challenge.Nonce));
+            return response.Ok;
+        }
+        catch (Exception error)
+        {
+            System.Diagnostics.Debug.WriteLine(error);
+            return false;
+        }
+    }
+
     public bool ConfirmManagement(string reason)
         => !ManagementAuthenticationPolicy.RequiresConfirmation(Vault.HasActiveManagementSession, reason)
             || _authentication.Confirm(Loc.T(reason));

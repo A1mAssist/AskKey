@@ -59,6 +59,14 @@ public sealed class GuardClient
             Proof = proof,
         });
 
+    /// <summary>Drops this SID's enrollment without the old vault proof (forgot passphrase).</summary>
+    public GuardResponse Reset(byte[] nonce)
+        => Send(new GuardRequest
+        {
+            Operation = GuardOperations.Reset,
+            Nonce = nonce,
+        });
+
     public GuardResponse Unenroll(byte[] proof)
         => Send(new GuardRequest
         {

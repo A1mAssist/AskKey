@@ -151,6 +151,14 @@ internal static class LocalizationCatalog
         ["Use Windows Hello to unlock Ask Key."] = "使用 Windows Hello 解锁请旨。",
         ["Use passphrase instead"] = "改用口令",
         ["Windows Hello could not unlock Ask Key."] = "Windows Hello 无法解锁请旨。",
+        ["Forgot passphrase?"] = "忘记口令？",
+        ["Erase local data and start over"] = "清除本地数据并重新开始",
+        ["This permanently deletes every credential, key and record on this PC. It cannot be undone."] =
+            "这会永久删除本机的所有凭证、密钥和记录，无法撤销。",
+        ["Erase"] = "抹除",
+        ["Local data erased"] = "本地数据已清除",
+        ["Local Ask Key data was erased. Ask Key will close; start it again to set up a new passphrase."] =
+            "本地数据已清除。请旨将关闭，重新启动后可设置新口令。",
         ["The passphrases do not match."] = "两次输入的口令不一致。",
         ["Continue"] = "继续",
         ["Turn off"] = "关闭",

@@ -667,6 +667,33 @@ public sealed class VaultFacadeTests
     }
 
     [Fact]
+    public void ResetWithoutTheKeyErasesALockedVault()
+    {
+        using var root = new TestDirectory();
+        var configuration = new VaultConfiguration(root.Combine("appdata"), root.Combine("localdata"));
+        PrivateFileSystem.CreatePrivateDirectory(configuration.ApplicationSupportDirectory);
+        var key = TestCredentials.Key(44);
+        var keys = new MemoryAppKeyStore { AppKey = key };
+        using var store = TestCredentials.NewStore(configuration.VaultFile, key);
+        using var vault = new Vault(store, key, () => Now,
+            new BrokerApprovalStateMachine(clock: () => Now, authenticate: _ => true),
+            root.Combine("deliveries-reset"), configuration, keys);
+        vault.Lock();
+        Assert.True(vault.IsLocked);
+
+        var mismatch = Assert.Throws<LocalVaultEraseException>(() =>
+            vault.ResetLocalLibrary("erase", LocalVaultEraseLanguage.English));
+        Assert.Equal(LocalVaultEraseError.ConfirmationMismatch, mismatch.Error);
+
+        vault.ResetLocalLibrary("ERASE", LocalVaultEraseLanguage.English);
+
+        Assert.True(vault.IsLocked);
+        Assert.False(File.Exists(configuration.VaultFile));
+        Assert.Null(keys.AppKey);
+        Assert.False(File.Exists(configuration.LocalEraseJournalFile));
+    }
+
+    [Fact]
     public void InvalidEraseJournalFailsClosed()
     {
         using var root = new TestDirectory();

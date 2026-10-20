@@ -169,6 +169,7 @@ public partial class MainWindow : Window
         var passphrase = _host.Vault.IsPassphraseProtected;
         if (!hello) _showPassphrase = true;
         var showPassphrase = passphrase && (!hello || _showPassphrase);
+        ForgotPassphraseButton.Visibility = passphrase ? Visibility.Visible : Visibility.Collapsed;
         HelloButton.Visibility = hello ? Visibility.Visible : Visibility.Collapsed;
         UsePassphraseButton.Visibility = hello && !_showPassphrase
             ? Visibility.Visible
@@ -191,6 +192,23 @@ public partial class MainWindow : Window
     {
         _showPassphrase = true;
         RefreshLock();
+    }
+
+    private async void ForgotPassphrase_Click(object sender, RoutedEventArgs e)
+    {
+        var confirmed = await Dialogs.ConfirmAsync(this,
+            "Erase local data and start over",
+            "This permanently deletes every credential, key and record on this PC. It cannot be undone.",
+            "Erase", destructive: true);
+        if (!confirmed) return;
+        try
+        {
+            await _host.ForgotPassphraseAsync();
+        }
+        catch (Exception error)
+        {
+            ShowLockError(error.Message);
+        }
     }
 
     private async void Unlock_Click(object sender, RoutedEventArgs e) => await TryUnlockAsync();

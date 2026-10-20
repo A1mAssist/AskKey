@@ -35,6 +35,10 @@ public static class GuardOperations
     /// <summary>First enrollment: the app proves the vault key it wraps, and the
     /// service stores that proof so a later replacement cannot point at another vault.</summary>
     public const string ConsumeEnroll = "consume-enroll";
+
+    /// <summary>Drops this SID's enrollment without the old proof. A forgotten passphrase
+    /// destroys the key that produced the proof, so no proof can ever be presented again.</summary>
+    public const string Reset = "reset";
 }
 
 public static class GuardErrors

@@ -79,6 +79,23 @@ internal static class Dialogs
     public static void ShowInfo(string message)
         => MessageBoxW(OwnerHandle(), Loc.T(message), Loc.T("Ask Key"), 0x00000000 | 0x00000040 | 0x00040000);
 
+    /// <summary>Waits for the user, so the caller can safely quit afterwards.</summary>
+    public static async Task InfoAsync(Window? owner, string title, string message)
+    {
+        var root = Root(owner);
+        if (root is null) return;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = root,
+            Title = Loc.T(title),
+            Content = new TextBlock { Text = Loc.T(message), TextWrapping = TextWrapping.Wrap },
+            CloseButtonText = Loc.T("Close"),
+            DefaultButton = ContentDialogButton.Close,
+            RequestedTheme = ThemeFor(owner),
+        };
+        await dialog.ShowAsync();
+    }
+
     private static XamlRoot? Root(Window? owner)
         => (owner ?? App.CurrentWindow)?.Content?.XamlRoot;
 

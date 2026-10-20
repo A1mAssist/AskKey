@@ -179,6 +179,26 @@ public sealed partial class Vault
         }
     }
 
+    /// <summary>
+    /// Erases the local library without the vault key. A forgotten passphrase leaves no
+    /// key to authenticate with, and the ciphertext is unrecoverable; the typed
+    /// confirmation is the gate.
+    /// </summary>
+    public void ResetLocalLibrary(string confirmation, LocalVaultEraseLanguage language)
+    {
+        if (confirmation != language.ConfirmationText())
+        {
+            throw new LocalVaultEraseException(LocalVaultEraseError.ConfirmationMismatch);
+        }
+
+        lock (_localEraseLock)
+        {
+            var journal = LocalEraseJournal;
+            if (journal.Load() is null) journal.Save(LocalVaultEraseState.Confirmed);
+            RecoverLocalEraseForward(journal);
+        }
+    }
+
     public void RecoverInterruptedLocalErase()
     {
         lock (_localEraseLock)

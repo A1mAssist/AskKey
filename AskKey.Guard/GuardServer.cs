@@ -255,6 +255,22 @@ public sealed class GuardServer : IDisposable
                 }
                 return GuardResponse.Success(kek: _store.DeriveUserKek(caller.Sid));
 
+            case GuardOperations.Reset:
+                // The old vault key is gone, so its enrollment proof can never be shown
+                // again. The caller is already pinned to a signed Ask Key image; drop only
+                // this SID's files so the next vault can enroll.
+                if (request.Nonce is null)
+                {
+                    return GuardResponse.Failure(GuardErrors.Protocol);
+                }
+                if (!_nonces.Consume(caller.Sid, request.Nonce))
+                {
+                    return GuardResponse.Failure(GuardErrors.BadNonce);
+                }
+                return _store.TryReset(caller.Sid)
+                    ? GuardResponse.Success(enrolled: false)
+                    : GuardResponse.Failure(GuardErrors.Protocol);
+
             case GuardOperations.Unenroll:
                 if (request.Proof is null)
                 {
