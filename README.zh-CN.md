@@ -49,7 +49,7 @@ Helper 只把本次请求选中的凭证交给目标命令。Broker 负责权限
 | `src\AskKey.Integrations` | Codex、Claude Code、Cursor、Grok 客户端接入 |
 | `src\AskKey.System` | 受限进程和 Windows 运行时集成 |
 | `src\*.Tests` | 单元测试和集成测试 |
-| `tools/AskKey.Build` | .NET 发布工具：Helper 清单、构建、签名和 Velopack 打包 |
+| `src\AskKey.Build` | .NET 发布工具：Helper 清单、构建、签名和 Velopack 打包 |
 
 ## 环境要求
 
@@ -74,13 +74,13 @@ dotnet run --project .\src\AskKey.WinUI\AskKey.WinUI.csproj -p:Platform=x64
 发布工具是 .NET 项目，不是 PowerShell 脚本：
 
 ```text
-dotnet run --project .\tools\AskKey.Build -- publish
+dotnet run --project .\src\AskKey.Build -- publish
 ```
 
 使用当前用户证书商店里的证书签名 Host 和 Helper：
 
 ```text
-dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <thumbprint>
+dotnet run --project .\src\AskKey.Build -- publish --certificate-thumbprint <thumbprint>
 ```
 
 工具会从 `src\AskKey.Integrations\AskKeyVersion.cs` 读取版本号，运行测试，构建自包含 x64 包，校验 `AskKey.exe` 和 `Helpers\askkey.exe`，把卫星资源裁剪到 `zh-CN`，按需签名，调用 `vpk pack`，然后发布 Guard 服务、构建 Guard MSI，最后生成同时包含应用和 Guard 的 `AskKeySetup-<version>.exe`。
@@ -104,10 +104,10 @@ dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <t
 开发时可单独发布服务：
 
 ```text
-dotnet run --project .\tools\AskKey.Build -- guard
+dotnet run --project .\src\AskKey.Build -- guard
 ```
 
-`src\AskKey.Guard.Service\Install-GuardService.ps1` 是修复/开发安装路径；`installer\Guard\build-guard-msi.ps1 -Unsigned` 构建未签名 Guard MSI。已生成两个 MSI 后，可用 `dotnet run --project .\tools\AskKey.Build -- bundle` 重新生成 `AskKeySetup`。详见 `docs/guard-msi.md`。正式发布仍需要代码签名。
+`src\AskKey.Guard.Service\Install-GuardService.ps1` 是修复/开发安装路径；`installer\Guard\build-guard-msi.ps1 -Unsigned` 构建未签名 Guard MSI。已生成两个 MSI 后，可用 `dotnet run --project .\src\AskKey.Build -- bundle` 重新生成 `AskKeySetup`。详见 `docs/guard-msi.md`。正式发布仍需要代码签名。
 
 未签名构建会把 `Helpers\` 的 SHA-256 清单嵌入 Host，并在 Agent 连接前校验。Windows SmartScreen 仍会提示未签名下载。签名构建要求 Host 和 Helper 使用同一发布者证书。
 

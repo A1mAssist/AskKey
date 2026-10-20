@@ -40,7 +40,7 @@ The WiX 6.0.2 SDK and its build tasks are restored by NuGet/MSBuild. No global `
 
 The packaging project excludes PDBs from the installation payload. All remaining published files are harvested, including runtime files under `runtimes\`.
 
-`GuardPublishDir` must point at a publish directory, not at the service's `bin` tree: the `bin` tree also contains the RID-specific intermediate copy of the whole payload, and the harvest is recursive. `tools\AskKey.Build` passes a clean publish directory explicitly, and `build-guard-msi.ps1` clears and republishes its directory before building.
+`GuardPublishDir` must point at a publish directory, not at the service's `bin` tree: the `bin` tree also contains the RID-specific intermediate copy of the whole payload, and the harvest is recursive. `src\AskKey.Build` passes a clean publish directory explicitly, and `build-guard-msi.ps1` clears and republishes its directory before building.
 
 ## Installation behavior
 

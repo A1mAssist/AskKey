@@ -49,7 +49,7 @@ The helper runs the target command with only the credentials selected for that r
 | `src\AskKey.Integrations` | Codex, Claude Code, Cursor and Grok client setup |
 | `src\AskKey.System` | Restricted process and Windows runtime integration |
 | `src\*.Tests` | Unit and integration tests |
-| `tools/AskKey.Build` | .NET release tool: helper manifest, build, signing and Velopack packaging |
+| `src\AskKey.Build` | .NET release tool: helper manifest, build, signing and Velopack packaging |
 
 ## Requirements
 
@@ -74,13 +74,13 @@ Debug builds do not set any environment variable automatically. To use separate 
 The release tool is a .NET project, not a PowerShell script:
 
 ```text
-dotnet run --project .\tools\AskKey.Build -- publish
+dotnet run --project .\src\AskKey.Build -- publish
 ```
 
 To sign the host and helper with a certificate from the current user's certificate store:
 
 ```text
-dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <thumbprint>
+dotnet run --project .\src\AskKey.Build -- publish --certificate-thumbprint <thumbprint>
 ```
 
 The tool reads the version from `src\AskKey.Integrations\AskKeyVersion.cs`, runs the tests, builds the self-contained x64 payload, verifies `AskKey.exe` and `Helpers\askkey.exe`, trims satellite resources to `zh-CN`, signs when requested, runs `vpk pack`, publishes the Guard service, builds the Guard MSI, and finally produces `AskKeySetup-<version>.exe` with both the app and Guard.
@@ -104,10 +104,10 @@ Normal installation uses `AskKeySetup-<version>.exe`: it installs the app first,
 For development, publish the service separately:
 
 ```text
-dotnet run --project .\tools\AskKey.Build -- guard
+dotnet run --project .\src\AskKey.Build -- guard
 ```
 
-`src\AskKey.Guard.Service\Install-GuardService.ps1` is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the unsigned Guard MSI. After both MSIs exist, `dotnet run --project .\tools\AskKey.Build -- bundle` regenerates `AskKeySetup`. See `docs/guard-msi.md`. A production release still needs code signing.
+`src\AskKey.Guard.Service\Install-GuardService.ps1` is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the unsigned Guard MSI. After both MSIs exist, `dotnet run --project .\src\AskKey.Build -- bundle` regenerates `AskKeySetup`. See `docs/guard-msi.md`. A production release still needs code signing.
 
 Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it before Agent connections. Windows SmartScreen still warns for unsigned downloads. Signed builds require the host and helper to carry signatures from the same publisher.
 
