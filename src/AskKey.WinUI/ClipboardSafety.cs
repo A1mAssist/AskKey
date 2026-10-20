@@ -26,7 +26,9 @@ public static class ClipboardSafety
             return;
         }
         var generation = BeginCopy();
-        await Task.Delay(TimeSpan.FromSeconds(60));
+        // Long enough to paste into a credential form after copying from the vault;
+        // the live clipboard is still excluded from history and roaming.
+        await Task.Delay(TimeSpan.FromMinutes(5));
         var dispatcher = App.CurrentWindow?.DispatcherQueue;
         if (dispatcher is null) return;
         dispatcher.TryEnqueue(async () =>

@@ -131,6 +131,8 @@
   </ResourceDictionary.ThemeDictionaries>
 
   <FontFamily x:Key="UiFont">Segoe UI Variable Text, Microsoft YaHei UI, Segoe UI</FontFamily>
+  <!-- Default control templates, including the text context menu, resolve this key. -->
+  <FontFamily x:Key="ContentControlThemeFontFamily">Segoe UI Variable Text, Microsoft YaHei UI, Segoe UI</FontFamily>
   <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Microsoft YaHei UI, Segoe UI</FontFamily>
   <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
   <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>

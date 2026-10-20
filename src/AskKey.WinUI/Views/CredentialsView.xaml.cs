@@ -135,6 +135,16 @@ public partial class CredentialsView : UserControl
         SectionSubtitle.Text = _ungrouped ? Loc.T("Credentials without a group.")
             : _groupFilter is not null ? Loc.T("Credentials in this group.")
             : Loc.T("Each credential is delivered and authorized as one complete set.");
+
+        if (_selected is not null && _items.All(item => item.Credential.Id != _selected.Id))
+        {
+            _selected = null;
+            _revealed = null;
+            _refreshing = true;
+            CredentialList.SelectedItem = null;
+            _refreshing = false;
+            RenderSelection();
+        }
     }
 
     private void Search_TextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
@@ -159,6 +169,7 @@ public partial class CredentialsView : UserControl
         DetailScroll.Visibility = Visibility.Visible;
 
         var credential = _selected;
+        var revealed = _revealed?.Id == credential.Id ? _revealed : null;
         DetailName.Text = credential.Name;
         DetailSubtitle.Text = $"{KindLabel(credential.PayloadKind)} · {(credential.GroupName ?? Loc.T("Ungrouped"))}";
         EditButton.IsEnabled = true;
@@ -166,8 +177,10 @@ public partial class CredentialsView : UserControl
         RevealButton.IsEnabled = true;
         CopyButton.IsEnabled = true;
         ComponentList.ItemsSource = Components(credential);
-        RevealedValue.Visibility = Visibility.Collapsed;
-        RevealedValue.Text = "";
+        Loc.SetKey(RevealButton, revealed is null ? "Reveal" : "Hide");
+        var revealedText = revealed is { PayloadKind: CredentialPayloadKind.Text } ? revealed.Value : null;
+        RevealedValue.Text = revealedText ?? "";
+        RevealedValue.Visibility = string.IsNullOrEmpty(revealedText) ? Visibility.Collapsed : Visibility.Visible;
 
         _refreshing = true;
         try
@@ -190,8 +203,9 @@ public partial class CredentialsView : UserControl
         var instructions = credential.UsageInstructions;
         InstructionsPanel.Visibility = string.IsNullOrWhiteSpace(instructions) ? Visibility.Collapsed : Visibility.Visible;
         InstructionsText.Text = instructions;
-        NotesPanel.Visibility = Visibility.Collapsed;
-        NotesText.Text = "";
+        var notes = revealed?.PrivateNotes;
+        NotesPanel.Visibility = string.IsNullOrWhiteSpace(notes) ? Visibility.Collapsed : Visibility.Visible;
+        NotesText.Text = notes ?? "";
         ExpiryText.Text = credential.ExpiresAt is { } expiry
             ? Loc.F("Expires {0}", expiry.ToLocalTime().ToString("g", Loc.Culture))
             : Loc.T("No expiry");
@@ -298,22 +312,17 @@ public partial class CredentialsView : UserControl
     private void Reveal_Click(object sender, RoutedEventArgs e)
     {
         if (_selected is null) return;
+        if (_revealed?.Id == _selected.Id)
+        {
+            _revealed = null;
+            RenderSelection();
+            return;
+        }
         try
         {
             var auth = _host.AuthenticateAndBeginManagement(CredentialManagementCopy.RevealReason);
             _revealed = _host.Vault.RevealTextCredential(_selected.Id, auth);
             RenderSelection();
-            if (_revealed.PayloadKind == CredentialPayloadKind.Text && _revealed.Value is { } value)
-            {
-                RevealedValue.Text = value;
-                RevealedValue.Visibility = Visibility.Visible;
-            }
-            if (_revealed.PayloadKind == CredentialPayloadKind.Bundle)
-            {
-                NotesPanel.Visibility = string.IsNullOrWhiteSpace(_revealed.PrivateNotes)
-                    ? Visibility.Collapsed : Visibility.Visible;
-                NotesText.Text = _revealed.PrivateNotes ?? "";
-            }
         }
         catch (Exception error)
         {

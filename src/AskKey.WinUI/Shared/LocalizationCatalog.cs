@@ -354,7 +354,7 @@ internal static class LocalizationCatalog
         ["Select a credential"] = "选择一份凭证",
         ["Settings"] = "设置",
         ["Show"] = "显示",
-        ["Hide"] = "遮罩",
+        ["Hide"] = "隐藏",
         ["AskKey only imports ordinary files. Symbolic links are not allowed."] = "请旨只能导入普通文件，不允许符号链接。",
         ["AskKey only imports ordinary files. Directories are not allowed."] = "请旨只能导入普通文件，不允许目录。",
         ["AskKey only imports ordinary files. Special files are not allowed."] = "请旨只能导入普通文件，不允许特殊文件。",
