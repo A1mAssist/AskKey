@@ -13,6 +13,9 @@
          MSI Icon table plus ARPPRODUCTICON, and both must be authored explicitly. -->
     <Icon Id="AskKeyIcon" SourceFile="$(var.IconFile)" />
     <Property Id="ARPPRODUCTICON" Value="AskKeyIcon" />
+    <!-- Set by the Burn bundle. A standalone Guard MSI keeps Velopack's ARP entry
+         visible; the bundle already supplies the single visible Ask Key entry. -->
+    <Property Id="ASKKEY_BUNDLE" Value="0" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="AskKeyProgramFilesDir" Name="AskKey">
@@ -64,6 +67,15 @@
         <CreateFolder>
           <PermissionEx Sddl="O:BAG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;LS)" />
         </CreateFolder>
+      </Component>
+
+      <!-- Velopack's app MSI writes its own MSI:AskKey ARP alias. The bundle already
+           registers the visible Ask Key entry, so hide the alias only for bundle installs. -->
+      <Component Id="HideVelopackArp" Directory="GuardInstallDir" Guid="{E64D1C0A-005D-41B3-877B-E8E50414F23F}"
+                 Condition="ASKKEY_BUNDLE=1">
+        <RegistryKey Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\MSI:AskKey">
+          <RegistryValue Name="SystemComponent" Type="integer" Value="1" KeyPath="yes" />
+        </RegistryKey>
       </Component>
     </Feature>
   </Package>

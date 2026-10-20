@@ -32,6 +32,8 @@
                   Vital="yes"
                   Compressed="yes">
         <MsiProperty Name="ARPSYSTEMCOMPONENT" Value="1" />
+        <!-- The bundle owns the only visible ARP entry; hide Velopack's MSI:AskKey alias. -->
+        <MsiProperty Name="ASKKEY_BUNDLE" Value="1" />
       </MsiPackage>
     </Chain>
   </Bundle>
