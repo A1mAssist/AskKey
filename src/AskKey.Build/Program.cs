@@ -60,6 +60,10 @@ internal static partial class BuildTool
             if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
                 throw new InvalidOperationException($"Helper payload contains a reparse point: {file}");
 
+            // Installers ship runtime files only and drop symbols; a manifest that
+            // lists PDBs can never match the installed helper payload.
+            if (string.Equals(Path.GetExtension(file), ".pdb", StringComparison.OrdinalIgnoreCase)) continue;
+
             var full = Path.GetFullPath(file);
             if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Helper file escaped the root: {full}");
