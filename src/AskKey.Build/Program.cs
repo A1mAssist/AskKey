@@ -11,7 +11,7 @@ return await BuildTool.RunAsync(args);
 internal static partial class BuildTool
 {
     private const string Runtime = "win-x64";
-    private const string InstallerTextDirectory = "installer\\text";
+    private const string InstallerTextDirectory = "src\\installer\\text";
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -332,7 +332,7 @@ internal static partial class BuildTool
         var releaseDir = GetOption(args, "--release") ?? Path.Combine(root, "artifacts", "publish", "release");
         var appMsi = GetOption(args, "--app-msi") ?? Path.Combine(releaseDir, "AskKey-win.msi");
         var guardMsi = GetOption(args, "--guard-msi")
-            ?? Path.Combine(root, "installer", "Guard", "bin", "Release", $"AskKeyGuard-{version}.msi");
+            ?? Path.Combine(root, "src", "installer", "Guard", "bin", "Release", $"AskKeyGuard-{version}.msi");
         var bundle = BuildBundle(root, version, appMsi, guardMsi, releaseDir);
         Console.WriteLine($"Bundle: {bundle}");
         return 0;
@@ -350,13 +350,13 @@ internal static partial class BuildTool
 
     private static string BuildGuardMsi(string root, string version, string publishDir, string outputDir)
     {
-        var project = Path.Combine(root, "installer", "Guard", "AskKey.Guard.Installer.wixproj");
+        var project = Path.Combine(root, "src", "installer", "Guard", "AskKey.Guard.Installer.wixproj");
         if (!File.Exists(project))
             throw new FileNotFoundException("AskKey.Guard.Installer.wixproj was not found.", project);
         // Rebuild, not build: the payload arrives as a command-line property MSBuild never tracks.
         Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal", "-t:Rebuild",
             $"-p:ProductVersion={version}", $"-p:GuardPublishDir={Path.GetFullPath(publishDir)}"], root);
-        var built = Path.Combine(root, "installer", "Guard", "bin", "Release", $"AskKeyGuard-{version}.msi");
+        var built = Path.Combine(root, "src", "installer", "Guard", "bin", "Release", $"AskKeyGuard-{version}.msi");
         if (!File.Exists(built)) throw new FileNotFoundException("The Guard MSI was not produced.", built);
         Directory.CreateDirectory(outputDir);
         var target = Path.Combine(outputDir, Path.GetFileName(built));
@@ -403,7 +403,7 @@ internal static partial class BuildTool
 
     private static string BuildBundle(string root, string version, string appMsi, string guardMsi, string outputDir)
     {
-        var project = Path.Combine(root, "installer", "Bundle", "AskKey.Bundle.wixproj");
+        var project = Path.Combine(root, "src", "installer", "Bundle", "AskKey.Bundle.wixproj");
         if (!File.Exists(project))
             throw new FileNotFoundException("AskKey.Bundle.wixproj was not found.", project);
         if (!File.Exists(appMsi)) throw new FileNotFoundException("The app MSI was not found.", appMsi);
@@ -428,7 +428,7 @@ internal static partial class BuildTool
             $"-p:ProductVersion={version}", $"-p:AppMsi={Path.GetFullPath(appMsi)}",
             $"-p:GuardMsi={Path.GetFullPath(guardMsi)}", $"-p:LicenseFile={licenseRtf}",
             $"-p:BaLogo={bundleLogo}"], root);
-        var built = Path.Combine(root, "installer", "Bundle", "bin", "Release", $"AskKeySetup-{version}.exe");
+        var built = Path.Combine(root, "src", "installer", "Bundle", "bin", "Release", $"AskKeySetup-{version}.exe");
         if (!File.Exists(built)) throw new FileNotFoundException("The setup bundle was not produced.", built);
         Directory.CreateDirectory(outputDir);
         var target = Path.Combine(outputDir, Path.GetFileName(built));

@@ -50,6 +50,7 @@ The helper runs the target command with only the credentials selected for that r
 | `src\AskKey.System` | Restricted process and Windows runtime integration |
 | `src\*.Tests` | Unit and integration tests |
 | `src\AskKey.Build` | .NET release tool: helper manifest, build, signing and Velopack packaging |
+| `src\installer` | WiX bundle, Guard MSI and installer text |
 
 ## Requirements
 
@@ -107,7 +108,7 @@ For development, publish the service separately:
 dotnet run --project .\src\AskKey.Build -- guard
 ```
 
-`src\AskKey.Guard.Service\Install-GuardService.ps1` is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the unsigned Guard MSI. After both MSIs exist, `dotnet run --project .\src\AskKey.Build -- bundle` regenerates `AskKeySetup`. See `docs/guard-msi.md`. A production release still needs code signing.
+`src\AskKey.Guard.Service\Install-GuardService.ps1` is the repair/development path; `src\installer\Guard\build-guard-msi.ps1 -Unsigned` builds the unsigned Guard MSI. After both MSIs exist, `dotnet run --project .\src\AskKey.Build -- bundle` regenerates `AskKeySetup`. See `docs/guard-msi.md`. A production release still needs code signing.
 
 Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it before Agent connections. Windows SmartScreen still warns for unsigned downloads. Signed builds require the host and helper to carry signatures from the same publisher.
 

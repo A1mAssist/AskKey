@@ -2,9 +2,9 @@
 
 ## Result
 
-`installer/Guard` builds a WiX Toolset 6 MSI for the AskKey Guard service. The package installs the self-contained `win-x64` service payload to `%ProgramFiles%\AskKey\Guard`, registers `AskKeyGuard` under `NT AUTHORITY\LocalService`, sets it to automatic startup, and starts it after installation.
+`src/installer/Guard` builds a WiX Toolset 6 MSI for the AskKey Guard service. The package installs the self-contained `win-x64` service payload to `%ProgramFiles%\AskKey\Guard`, registers `AskKeyGuard` under `NT AUTHORITY\LocalService`, sets it to automatic startup, and starts it after installation.
 
-Normal users install `AskKeySetup-<version>.exe`, the Burn bundle in `installer/Bundle` that chains this MSI with the app MSI. This MSI remains the repair and advanced-deployment path.
+Normal users install `AskKeySetup-<version>.exe`, the Burn bundle in `src/installer/Bundle` that chains this MSI with the app MSI. This MSI remains the repair and advanced-deployment path.
 
 The MSI does not install, modify, or remove the per-user `%APPDATA%\AskKey` data. The Guard state directory is created with a protected DACL that grants full control to SYSTEM and Administrators, and full control to LocalService. That component is permanent so uninstall does not discard the service's `%ProgramData%\AskKey\Guard` state.
 
@@ -13,13 +13,13 @@ The MSI does not install, modify, or remove the per-user `%APPDATA%\AskKey` data
 From the repository root:
 
 ```powershell
-pwsh .\installer\Guard\build-guard-msi.ps1
+pwsh .\src\installer\Guard\build-guard-msi.ps1
 ```
 
 The default version is `1.0.0`. To build another MSI version:
 
 ```powershell
-pwsh .\installer\Guard\build-guard-msi.ps1 -Version 1.0.1
+pwsh .\src\installer\Guard\build-guard-msi.ps1 -Version 1.0.1
 ```
 
 Add `-Unsigned` when the release uses an unsigned `AskKey.exe`; this passes `AskKeyUnsigned=true` to the service publish. The MSI itself is still unsigned.
@@ -33,7 +33,7 @@ src\AskKey.Guard.Service\bin\Release\net10.0-windows
 It then builds:
 
 ```text
-installer\Guard\bin\Release\AskKeyGuard-<version>.msi
+src\installer\Guard\bin\Release\AskKeyGuard-<version>.msi
 ```
 
 The WiX 6.0.2 SDK and its build tasks are restored by NuGet/MSBuild. No global `wix.exe` is required. The SDK includes its own `wix.exe` under the restored package.
@@ -78,4 +78,4 @@ icacls "$env:ProgramData\AskKey\Guard"
 - When using the split MSIs instead of the bundle, install the app MSI first and this Guard MSI second; uninstall Guard first so the app uninstall cannot remove a running service's binary.
 - This document and the build script do not install the MSI or change the service, ProgramData, or user data.
 - A rebuilt package with the same `ProductVersion` is not a major upgrade. Increment the version before installing over an existing 1.0.0 install.
-- The MSI does not include an MSI UI. It can be installed from an elevated prompt with `msiexec /i .\installer\Guard\bin\Release\AskKeyGuard-1.0.0.msi`.
+- The MSI does not include an MSI UI. It can be installed from an elevated prompt with `msiexec /i .\src\installer\Guard\bin\Release\AskKeyGuard-1.0.0.msi`.

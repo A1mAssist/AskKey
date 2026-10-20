@@ -50,6 +50,7 @@ Helper 只把本次请求选中的凭证交给目标命令。Broker 负责权限
 | `src\AskKey.System` | 受限进程和 Windows 运行时集成 |
 | `src\*.Tests` | 单元测试和集成测试 |
 | `src\AskKey.Build` | .NET 发布工具：Helper 清单、构建、签名和 Velopack 打包 |
+| `src\installer` | WiX bundle、Guard MSI 和安装文案 |
 
 ## 环境要求
 
@@ -107,7 +108,7 @@ dotnet run --project .\src\AskKey.Build -- publish --certificate-thumbprint <thu
 dotnet run --project .\src\AskKey.Build -- guard
 ```
 
-`src\AskKey.Guard.Service\Install-GuardService.ps1` 是修复/开发安装路径；`installer\Guard\build-guard-msi.ps1 -Unsigned` 构建未签名 Guard MSI。已生成两个 MSI 后，可用 `dotnet run --project .\src\AskKey.Build -- bundle` 重新生成 `AskKeySetup`。详见 `docs/guard-msi.md`。正式发布仍需要代码签名。
+`src\AskKey.Guard.Service\Install-GuardService.ps1` 是修复/开发安装路径；`src\installer\Guard\build-guard-msi.ps1 -Unsigned` 构建未签名 Guard MSI。已生成两个 MSI 后，可用 `dotnet run --project .\src\AskKey.Build -- bundle` 重新生成 `AskKeySetup`。详见 `docs/guard-msi.md`。正式发布仍需要代码签名。
 
 未签名构建会把 `Helpers\` 的 SHA-256 清单嵌入 Host，并在 Agent 连接前校验。Windows SmartScreen 仍会提示未签名下载。签名构建要求 Host 和 Helper 使用同一发布者证书。
 
