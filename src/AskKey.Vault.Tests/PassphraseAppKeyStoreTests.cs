@@ -328,6 +328,9 @@ public sealed class PassphraseAppKeyStoreTests
         {
             vault.EnableHighSecurity("old-pass-123");
             vault.EnableGuardUnlock(TestCredentials.Key(123));
+            vault.VerifyPassphrase("old-pass-123");
+            Assert.Equal(AppKeyStoreError.SecurityFailure,
+                Assert.Throws<AppKeyStoreException>(() => vault.VerifyPassphrase("wrong-pass")).Error);
             vault.ChangePassphrase("old-pass-123", "new-pass-456");
             Assert.True(File.Exists(Path.Combine(config.KeyMaterialDirectory, GuardAppKeyStore.AppFileName)));
         }

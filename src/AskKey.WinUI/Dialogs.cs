@@ -68,35 +68,33 @@ internal static class Dialogs
         return result == ContentDialogResult.Primary ? input.Password : null;
     }
 
-    public static async Task<PassphraseChange?> ChangePassphraseAsync(Window? owner)
+    public static async Task<PassphraseChange?> NewPassphraseAsync(Window? owner)
     {
         var root = Root(owner);
         if (root is null) return null;
-        var current = new PasswordBox { PlaceholderText = Loc.T("Current passphrase") };
         var replacement = new PasswordBox { PlaceholderText = Loc.T("New passphrase") };
         var confirmation = new PasswordBox { PlaceholderText = Loc.T("Confirm new passphrase") };
         var fields = new StackPanel { Spacing = 8 };
-        fields.Children.Add(current);
         fields.Children.Add(replacement);
         fields.Children.Add(confirmation);
         var dialog = new ContentDialog
         {
             XamlRoot = root,
-            Title = Loc.T("Change passphrase"),
+            Title = Loc.T("Set a new passphrase"),
             Content = fields,
             PrimaryButtonText = Loc.T("Save"),
             CloseButtonText = Loc.T("Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             RequestedTheme = ThemeFor(owner),
         };
-        dialog.Opened += (_, _) => current.Focus(FocusState.Programmatic);
+        dialog.Opened += (_, _) => replacement.Focus(FocusState.Programmatic);
         var result = await dialog.ShowAsync();
         return result == ContentDialogResult.Primary
-            ? new PassphraseChange(current.Password, replacement.Password, confirmation.Password)
+            ? new PassphraseChange(replacement.Password, confirmation.Password)
             : null;
     }
 
-    public sealed record PassphraseChange(string Current, string New, string Confirmation);
+    public sealed record PassphraseChange(string New, string Confirmation);
 
     private static readonly object NotificationGate = new();
     private static readonly List<(string Text, bool Error)> Notifications = new();

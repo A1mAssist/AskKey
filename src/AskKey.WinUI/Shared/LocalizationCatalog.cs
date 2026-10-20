@@ -140,6 +140,7 @@ internal static class LocalizationCatalog
         ["Confirm the passphrase"] = "确认口令",
         ["Confirm your passphrase"] = "确认口令",
         ["Change passphrase"] = "修改口令",
+        ["Set a new passphrase"] = "设置新口令",
         ["Current passphrase"] = "当前口令",
         ["New passphrase"] = "新口令",
         ["Confirm new passphrase"] = "确认新口令",

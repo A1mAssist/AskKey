@@ -198,6 +198,23 @@ public sealed partial class Vault : IDisposable
         }
     }
 
+    /// <summary>Confirms the current passphrase before a change flow asks for a new one.</summary>
+    public void VerifyPassphrase(string passphrase)
+    {
+        if (string.IsNullOrEmpty(passphrase))
+        {
+            throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
+        }
+        lock (_lifecycleLock)
+        {
+            if (!IsPassphraseProtected)
+            {
+                throw new InvalidOperationException("High security passphrase is not enabled.");
+            }
+            PassphraseAppKeyStore.Verify(_configuration.KeyMaterialDirectory, RequireKey(), passphrase);
+        }
+    }
+
     /// <summary>
     /// Rewraps the same vault key with a new passphrase. The current passphrase must
     /// verify first; a failed rewrite leaves the existing wrapped file untouched.

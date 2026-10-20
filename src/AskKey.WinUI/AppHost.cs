@@ -432,7 +432,23 @@ public sealed class AppHost : IDisposable
             ShowError("Turn on high security mode first.");
             return;
         }
-        var change = await Dialogs.ChangePassphraseAsync(_mainWindow);
+        var current = await Dialogs.PasswordAsync(_mainWindow, "Change passphrase", "Current passphrase", "Continue");
+        if (current is null) return;
+        try
+        {
+            await Task.Run(() => Vault.VerifyPassphrase(current));
+        }
+        catch (AppKeyStoreException error) when (error.Error == AppKeyStoreError.SecurityFailure)
+        {
+            ShowError("The current passphrase is wrong.");
+            return;
+        }
+        catch (Exception error)
+        {
+            ShowError(error.Message);
+            return;
+        }
+        var change = await Dialogs.NewPassphraseAsync(_mainWindow);
         if (change is null) return;
         if (change.New.Length < 8)
         {
@@ -446,7 +462,7 @@ public sealed class AppHost : IDisposable
         }
         try
         {
-            await Task.Run(() => Vault.ChangePassphrase(change.Current, change.New));
+            await Task.Run(() => Vault.ChangePassphrase(current, change.New));
             Dialogs.ShowInfo("Passphrase changed.");
             SettingsChanged?.Invoke();
         }
