@@ -8,8 +8,13 @@
           DisableModify="yes"
           IconSourceFile="$(var.IconFile)">
     <BootstrapperApplication>
-      <bal:WixStandardBootstrapperApplication Theme="hyperlinkLicense"
-                                              LicenseUrl="https://github.com/A1mAssist/AskKey/blob/main/LICENSE" />
+      <!-- rtfLicense, not hyperlinkLicense: the hyperlink themes bind LicenseUrl
+           unconditionally and render only a link, so no license text would show. -->
+      <!-- LogoFile is the supported way to swap the theme image; the WixStdbaLogo bind
+           variable is internal and a Bundle-level WixVariable does not reach it. -->
+      <bal:WixStandardBootstrapperApplication Theme="rtfLicense"
+                                              LicenseFile="$(var.LicenseFile)"
+                                              LogoFile="$(var.BaLogo)" />
     </BootstrapperApplication>
     <Chain>
       <MsiPackage Id="AskKeyApp"

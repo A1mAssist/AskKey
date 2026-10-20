@@ -29,6 +29,9 @@ public sealed partial class Vault
             using var guardStore = new GuardAppKeyStore(directory, kek);
             var (store, key) = VaultBootstrap.OpenCurrent(BootstrapPaths, guardStore);
             Adopt(store, key);
+            // A Hello unlock is proof of possession just like the passphrase, so the same
+            // leftover DPAPI slot is removed instead of becoming a silent downgrade.
+            RemoveLeftoverDpapiCopies(_configuration, DpapiAppKeyStore.ForConfiguration(_configuration));
         }
     }
 

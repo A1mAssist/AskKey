@@ -9,6 +9,10 @@
            UpgradeCode="D755B70F-0F91-4E1B-9C92-F5C407252BC9">
     <MajorUpgrade DowngradeErrorMessage="A newer version of AskKey Guard is already installed. Uninstall it before installing this version." />
     <MediaTemplate EmbedCab="yes" />
+    <!-- WiX v6 Package has no icon attribute; the Add/Remove Programs icon comes from the
+         MSI Icon table plus ARPPRODUCTICON, and both must be authored explicitly. -->
+    <Icon Id="AskKeyIcon" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="AskKeyIcon" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="AskKeyProgramFilesDir" Name="AskKey">

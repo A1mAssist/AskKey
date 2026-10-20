@@ -1,0 +1,13 @@
+欢迎安装 Ask Key。
+
+Ask Key 把 AI 编程助手的凭证安全地交给它们使用：助手可以读取你授权的凭证，但看不到你的主密码，也不能访问你未授权的内容。
+
+安装内容
+- Ask Key 应用，安装到 %ProgramFiles%\AskKey\current\
+- Ask Key Guard 服务，负责在 Windows Hello 验证通过后才释放密钥
+
+安装要求
+- Windows 11 或更高版本
+- 首次解锁需要 Windows Hello（PIN、指纹或人脸）
+
+安装位置是受系统保护的目录，普通程序无法篡改其中的文件。

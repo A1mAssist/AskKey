@@ -6,5 +6,10 @@
     <Nullable>enable</Nullable>
     <AssemblyName>AskKey.Build</AssemblyName>
     <RootNamespace>AskKey.Build</RootNamespace>
+    <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- WriteBundleLogo scales the app icon down to the bootstrapper's 64x64 slot. -->
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
+  </ItemGroup>
 </Project>

@@ -7,7 +7,9 @@
     <AppMsi Condition="'$(AppMsi)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\publish\release\AskKey-win.msi</AppMsi>
     <GuardMsi Condition="'$(GuardMsi)' == ''">$(MSBuildThisFileDirectory)..\Guard\bin\Release\AskKeyGuard-$(ProductVersion).msi</GuardMsi>
     <IconFile Condition="'$(IconFile)' == ''">$(MSBuildThisFileDirectory)..\..\AskKey.WinUI\Assets\AskKey.ico</IconFile>
-    <DefineConstants>ProductVersion=$(ProductVersion);AppMsi=$(AppMsi);GuardMsi=$(GuardMsi);IconFile=$(IconFile)</DefineConstants>
+    <LicenseFile Condition="'$(LicenseFile)' == ''">$(MSBuildThisFileDirectory)..\text\LICENSE.rtf</LicenseFile>
+    <BaLogo Condition="'$(BaLogo)' == ''">$(MSBuildThisFileDirectory)..\text\logo.png</BaLogo>
+    <DefineConstants>ProductVersion=$(ProductVersion);AppMsi=$(AppMsi);GuardMsi=$(GuardMsi);IconFile=$(IconFile);LicenseFile=$(LicenseFile);BaLogo=$(BaLogo)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="WixToolset.BootstrapperApplications.wixext" Version="6.0.2" />

@@ -388,34 +388,36 @@ public sealed partial class Vault : IDisposable
         {
             var (vaultStore, key) = VaultBootstrap.OpenCurrent(paths, store);
             Adopt(vaultStore, key);
-            if (highSecurity)
-            {
-                // Repair a crash between writing the wrapped copy and deleting the
-                // DPAPI slot. The passphrase has just proved ownership, so the old
-                // DPAPI copy must not remain usable.
-                try
-                {
-                    dpapiStore.DeletePendingKey();
-                    dpapiStore.DeleteAppKey();
-                }
-                catch
-                {
-                    Lock();
-                    throw;
-                }
-                if (File.Exists(Path.Combine(configuration.KeyMaterialDirectory,
-                        DpapiAppKeyStore.PendingFileName))
-                    || File.Exists(Path.Combine(configuration.KeyMaterialDirectory,
-                        DpapiAppKeyStore.AppFileName)))
-                {
-                    Lock();
-                    throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
-                }
-            }
+            if (highSecurity) RemoveLeftoverDpapiCopies(configuration, dpapiStore);
         }
         finally
         {
             (store as PassphraseAppKeyStore)?.ClearSecret();
+        }
+    }
+
+    /// <summary>
+    /// A leftover DPAPI slot defeats high security: it is the old unwrapped key that any
+    /// process running as this user can still decrypt. A proof-of-possession unlock (the
+    /// passphrase or the guard) removes it; a leftover is a hard failure, never a downgrade.
+    /// </summary>
+    private void RemoveLeftoverDpapiCopies(VaultConfiguration configuration, IAppKeyStore dpapiStore)
+    {
+        try
+        {
+            dpapiStore.DeletePendingKey();
+            dpapiStore.DeleteAppKey();
+        }
+        catch
+        {
+            Lock();
+            throw;
+        }
+        if (File.Exists(Path.Combine(configuration.KeyMaterialDirectory, DpapiAppKeyStore.PendingFileName))
+            || File.Exists(Path.Combine(configuration.KeyMaterialDirectory, DpapiAppKeyStore.AppFileName)))
+        {
+            Lock();
+            throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
         }
     }
 

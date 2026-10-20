@@ -133,6 +133,38 @@ public sealed class GuardAppKeyStoreTests
     }
 
     [Fact]
+    public void HelloUnlockRemovesLeftoverDpapiCopies()
+    {
+        using var root = new TestDirectory();
+        var config = new VaultConfiguration(root.Combine("appdata"), root.Combine("local"));
+        PrivateFileSystem.CreatePrivateDirectory(config.ApplicationSupportDirectory);
+        var key = TestCredentials.Key(78);
+        var kek = TestCredentials.Key(128);
+
+        using (var first = new Vault(TestCredentials.NewStore(config.VaultFile, key), key, null, null,
+                   root.Combine("deliveries"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory)))
+        {
+            first.EnableHighSecurity("correct horse battery");
+            first.EnableGuardUnlock(kek, HelloKeyName);
+        }
+
+        // A DPAPI slot left behind by an older build would let any process running as this
+        // user decrypt the key without ever proving possession.
+        var dpapi = new DpapiAppKeyStore(config.KeyMaterialDirectory);
+        dpapi.SavePendingKey(key);
+        dpapi.PromotePendingKey();
+
+        using var restarted = new Vault(TestCredentials.NewStore(root.Combine("dummy.db"), key), null, null, null,
+            root.Combine("deliveries2"), config, dpapi);
+        restarted.UnlockWithGuard(kek);
+
+        Assert.False(File.Exists(Path.Combine(config.KeyMaterialDirectory, DpapiAppKeyStore.PendingFileName)));
+        Assert.False(File.Exists(Path.Combine(config.KeyMaterialDirectory, DpapiAppKeyStore.AppFileName)));
+        Assert.True(File.Exists(Path.Combine(config.KeyMaterialDirectory, PassphraseAppKeyStore.AppFileName)));
+        Assert.False(restarted.IsLocked);
+    }
+
+    [Fact]
     public void FlagsFollowTheCopiesAndDisableKeepsThePassphraseCopy()
     {
         using var root = new TestDirectory();

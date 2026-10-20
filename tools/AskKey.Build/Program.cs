@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -10,6 +11,7 @@ return await BuildTool.RunAsync(args);
 internal static partial class BuildTool
 {
     private const string Runtime = "win-x64";
+    private const string InstallerTextDirectory = "installer\\text";
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -176,9 +178,16 @@ internal static partial class BuildTool
 
         // A second host binary anywhere under the payload means an intermediate tree was
         // copied in; fail the build rather than shipping a stale copy in Program Files.
+        // The filename match is case-insensitive on Windows, so the helper's own
+        // Helpers\askkey.exe matches too: allow the two fixed slots and nothing else.
+        var expectedHosts = new[]
+        {
+            Path.Combine(publishDir, "AskKey.exe"),
+            Path.Combine(publishDir, "Helpers", "askkey.exe"),
+        };
         var duplicateHosts = Directory.EnumerateFiles(publishDir, "AskKey.exe", SearchOption.AllDirectories)
-            .Where(path => !string.Equals(path, Path.Combine(publishDir, "AskKey.exe"),
-                StringComparison.OrdinalIgnoreCase))
+            .Where(path => !expectedHosts.Any(host => string.Equals(path, host,
+                StringComparison.OrdinalIgnoreCase)))
             .ToList();
         if (duplicateHosts.Count > 0)
         {
@@ -219,7 +228,12 @@ internal static partial class BuildTool
             "pack", "--packId", "AskKey", "--packVersion", version, "--packDir", publishDir,
             "--packTitle", "Ask Key", "--packAuthors", "A1mAssist",
             "--mainExe", "AskKey.exe", "--outputDir", releaseDir,
-            "--msi", "--instLocation", "PerMachine"
+            "--icon", Path.Combine(root, "AskKey.WinUI", "Assets", "AskKey.ico"),
+            "--msi", "--instLocation", "PerMachine",
+            // Show the product icon and plain-text guidance in the installer itself instead
+            // of making the user follow LicenseUrl out to the web mid-install.
+            "--instWelcome", Path.Combine(root, InstallerTextDirectory, "welcome-zh-CN.txt"),
+            "--instReadme", Path.Combine(root, InstallerTextDirectory, "readme-zh-CN.txt")
         };
         if (!unsigned)
         {
@@ -351,6 +365,42 @@ internal static partial class BuildTool
         return target;
     }
 
+    /// <summary>WiX wants an RTF license, the repo ships plain text. Derive one so the
+    /// installer can never show a license that has drifted from LICENSE.</summary>
+    private static string WriteLicenseRtf(string root)
+    {
+        var source = Path.Combine(root, "LICENSE");
+        if (!File.Exists(source)) throw new FileNotFoundException("LICENSE was not found.", source);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var text = File.ReadAllText(source).Replace("\\", "\\\\").Replace("{", "\\{").Replace("}", "\\}");
+        var body = text.Replace("\r\n", "\\par ").Replace("\n", "\\par ");
+        var rtf = "{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl{\\f0\\fnil\\fcharset0 Calibri;}}"
+            + "\\viewkind4\\uc1\\pard\\f0\\fs18 " + body + "\\par }";
+        var path = Path.Combine(root, InstallerTextDirectory, "LICENSE.rtf");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, rtf, Encoding.GetEncoding(1252));
+        return path;
+    }
+
+    /// <summary>The stock BA theme draws its image at 64x64, so ship the app icon at that size.</summary>
+    private static string WriteBundleLogo(string root)
+    {
+        var source = Path.Combine(root, "AskKey.WinUI", "Assets", "AppIcon.png");
+        if (!File.Exists(source)) throw new FileNotFoundException("AppIcon.png was not found.", source);
+        var path = Path.Combine(root, InstallerTextDirectory, "logo.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        using var input = System.Drawing.Image.FromFile(source);
+        using var output = new Bitmap(64, 64);
+        using (var graphics = Graphics.FromImage(output))
+        {
+            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            graphics.Clear(Color.Transparent);
+            graphics.DrawImage(input, new Rectangle(0, 0, 64, 64));
+        }
+        output.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+        return path;
+    }
+
     private static string BuildBundle(string root, string version, string appMsi, string guardMsi, string outputDir)
     {
         var project = Path.Combine(root, "installer", "Bundle", "AskKey.Bundle.wixproj");
@@ -358,6 +408,8 @@ internal static partial class BuildTool
             throw new FileNotFoundException("AskKey.Bundle.wixproj was not found.", project);
         if (!File.Exists(appMsi)) throw new FileNotFoundException("The app MSI was not found.", appMsi);
         if (!File.Exists(guardMsi)) throw new FileNotFoundException("The Guard MSI was not found.", guardMsi);
+        var licenseRtf = WriteLicenseRtf(root);
+        var bundleLogo = WriteBundleLogo(root);
         // A bundle whose own version disagrees with its payload installs as the newer
         // number and then refuses the downgrade, so catch the mismatch here instead.
         foreach (var payload in new[] { ("app MSI", appMsi), ("Guard MSI", guardMsi) })
@@ -374,7 +426,8 @@ internal static partial class BuildTool
         // properties, so an incremental build can ship a bundle with the previous MSI inside.
         Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal", "-t:Rebuild",
             $"-p:ProductVersion={version}", $"-p:AppMsi={Path.GetFullPath(appMsi)}",
-            $"-p:GuardMsi={Path.GetFullPath(guardMsi)}"], root);
+            $"-p:GuardMsi={Path.GetFullPath(guardMsi)}", $"-p:LicenseFile={licenseRtf}",
+            $"-p:BaLogo={bundleLogo}"], root);
         var built = Path.Combine(root, "installer", "Bundle", "bin", "Release", $"AskKeySetup-{version}.exe");
         if (!File.Exists(built)) throw new FileNotFoundException("The setup bundle was not produced.", built);
         Directory.CreateDirectory(outputDir);

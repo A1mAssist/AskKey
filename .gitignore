@@ -15,3 +15,7 @@
 **/node_modules/
 **/__pycache__/
 **/.DS_Store
+
+# Derived by AskKey.Build from LICENSE and AppIcon.png; never hand-edit or commit.
+/installer/text/LICENSE.rtf
+/installer/text/logo.png
