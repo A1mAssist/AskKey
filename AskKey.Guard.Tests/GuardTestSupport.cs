@@ -19,9 +19,6 @@ internal static class GuardTestSupport
     public static byte[] NewProof() => HMACSHA256.HashData(
         RandomNumberGenerator.GetBytes(32),
         "AskKey Guard enroll v1"u8.ToArray());
-
-    public static byte[] Sign(RSA key, byte[] data, RSASignaturePadding padding)
-        => key.SignData(data, HashAlgorithmName.SHA256, padding);
 }
 
 internal sealed class FixedCallerVerifier : IGuardCallerVerifier
@@ -32,6 +29,21 @@ internal sealed class FixedCallerVerifier : IGuardCallerVerifier
 
     public GuardCaller? Verify(uint processId)
         => _caller is null ? null : _caller with { ProcessId = processId };
+}
+
+/// <summary>Records whether the caller check ran on an impersonating thread.</summary>
+internal sealed class ImpersonationRecordingVerifier : IGuardCallerVerifier
+{
+    private readonly GuardCaller _caller = GuardTestSupport.CurrentCaller();
+
+    public bool SawImpersonatedThread { get; private set; }
+
+    public GuardCaller? Verify(uint processId)
+    {
+        // GetCurrent(true) yields an identity only while the thread is impersonating.
+        SawImpersonatedThread = WindowsIdentity.GetCurrent(ifImpersonating: true) is not null;
+        return _caller with { ProcessId = processId };
+    }
 }
 
 internal sealed class ManualTimeProvider : TimeProvider

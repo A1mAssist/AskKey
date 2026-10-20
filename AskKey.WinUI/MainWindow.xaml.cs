@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private bool _refreshingGroups;
     private bool _initialShow = true;
+    private bool _showPassphrase;
 
     public MainWindow(AppHost host)
     {
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
         _host.AgentAccessChanged += RefreshChrome;
         _host.CredentialsChanged += RefreshChrome;
         _host.BrokerStateChanged += RefreshChrome;
+        _host.LockStateChanged += RefreshLock;
 
         _credentialsView = new CredentialsView(_host);
         _activityView = new ActivityView(_host);
@@ -60,6 +62,7 @@ public partial class MainWindow : Window
         AppWindow.Closing += AppWindow_Closing;
         NavList.SelectedIndex = 0;
         RefreshChrome();
+        RefreshLock();
         if (!_host.Preferences.HasCompletedOnboarding)
         {
             ContentHost.Content = _onboardingView;
@@ -84,6 +87,7 @@ public partial class MainWindow : Window
         AppWindow.Show();
         WindowHelpers.EnableRoundedCorners(this);
         Activate();
+        RefreshLock();
         if (_initialShow)
         {
             _initialShow = false;
@@ -131,10 +135,128 @@ public partial class MainWindow : Window
     public void RefreshAll()
     {
         RefreshChrome();
+        if (_host.Vault.IsLocked)
+        {
+            RefreshLock();
+            return;
+        }
         _credentialsView.Refresh();
         _activityView.Refresh();
         _agentAccessView.Refresh();
         _settingsView.Refresh();
+    }
+
+    /// <summary>Shows the blocking lock screen whenever the vault key is unavailable.</summary>
+    public void RefreshLock()
+    {
+        var locked = _host.Vault.IsLocked;
+        LockOverlay.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
+        // The overlay hides the workspace, but Tab and automation still reach what is
+        // underneath. Collapse it so a locked window has exactly one interactive surface.
+        ContentHost.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
+        var showSidebar = !locked && _host.Preferences.HasCompletedOnboarding;
+        Sidebar.Visibility = showSidebar ? Visibility.Visible : Visibility.Collapsed;
+        RootGrid.ColumnDefinitions[0].Width = new GridLength(showSidebar ? 222 : 0);
+        if (!locked)
+        {
+            _showPassphrase = false;
+            LockError.Visibility = Visibility.Collapsed;
+            LockPassphrase.Password = "";
+            return;
+        }
+
+        var hello = _host.Vault.IsGuardUnlockEnabled;
+        var passphrase = _host.Vault.IsPassphraseProtected;
+        if (!hello) _showPassphrase = true;
+        var showPassphrase = passphrase && (!hello || _showPassphrase);
+        HelloButton.Visibility = hello ? Visibility.Visible : Visibility.Collapsed;
+        UsePassphraseButton.Visibility = hello && !_showPassphrase
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        LockPassphrase.Visibility = showPassphrase ? Visibility.Visible : Visibility.Collapsed;
+        UnlockButton.Visibility = showPassphrase ? Visibility.Visible : Visibility.Collapsed;
+        LockMessage.Text = Loc.T(showPassphrase
+            ? "Enter your passphrase to unlock Ask Key."
+            : hello
+                ? "Use Windows Hello to unlock Ask Key."
+                : "Click Unlock to open Ask Key.");
+        if (showPassphrase)
+            DispatcherQueue.TryEnqueue(() => LockPassphrase.Focus(FocusState.Programmatic));
+    }
+
+    public void FocusLock()
+        => DispatcherQueue.TryEnqueue(() => LockPassphrase.Focus(FocusState.Programmatic));
+
+    private void UsePassphrase_Click(object sender, RoutedEventArgs e)
+    {
+        _showPassphrase = true;
+        RefreshLock();
+    }
+
+    private async void Unlock_Click(object sender, RoutedEventArgs e) => await TryUnlockAsync();
+
+    private async void Hello_Click(object sender, RoutedEventArgs e)
+    {
+        if (LockProgress.Visibility == Visibility.Visible) return;
+        SetLockBusy(true);
+        try
+        {
+            if (!await _host.UnlockWithHelloAsync())
+            {
+                ShowLockError("Windows Hello could not unlock Ask Key.");
+                FocusLock();
+            }
+        }
+        finally
+        {
+            SetLockBusy(false);
+        }
+    }
+
+    private async void LockPassphrase_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Enter) return;
+        e.Handled = true;
+        await TryUnlockAsync();
+    }
+
+    private async Task TryUnlockAsync()
+    {
+        if (LockProgress.Visibility == Visibility.Visible) return;
+        SetLockBusy(true);
+        try
+        {
+            var passphrase = _host.Vault.IsPassphraseProtected ? LockPassphrase.Password : null;
+            var result = await _host.UnlockWithPassphraseAsync(passphrase);
+            if (result.Ok) return;
+            ShowLockError(result.Error);
+            if (_host.Vault.IsPassphraseProtected)
+            {
+                LockPassphrase.SelectAll();
+                LockPassphrase.Focus(FocusState.Programmatic);
+            }
+        }
+        finally
+        {
+            SetLockBusy(false);
+        }
+    }
+
+    private void ShowLockError(string? message)
+    {
+        LockError.Text = Loc.T(string.IsNullOrWhiteSpace(message)
+            ? "Ask Key could not unlock."
+            : message);
+        LockError.Visibility = Visibility.Visible;
+    }
+
+    private void SetLockBusy(bool busy)
+    {
+        LockProgress.IsActive = busy;
+        LockProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        UnlockButton.IsEnabled = !busy;
+        HelloButton.IsEnabled = !busy;
+        LockPassphrase.IsEnabled = !busy;
     }
 
     public void HotkeyUnavailable()

@@ -7,10 +7,6 @@ public sealed partial class Vault
     /// <summary>True when a Windows Hello guard copy of the vault key exists.</summary>
     public bool IsGuardUnlockEnabled => GuardAppKeyStore.IsEnabled(_configuration.KeyMaterialDirectory);
 
-    /// <summary>The Hello key name in the guard copy, or null when guard unlock is disabled.</summary>
-    public string? GuardHelloKeyName
-        => IsGuardUnlockEnabled ? GuardAppKeyStore.ReadHelloKeyName(_configuration.KeyMaterialDirectory) : null;
-
     /// <summary>True when a passphrase-wrapped copy of the vault key exists.</summary>
     public bool IsPassphraseProtected => PassphraseAppKeyStore.IsEnabled(_configuration.KeyMaterialDirectory);
 
@@ -40,16 +36,16 @@ public sealed partial class Vault
         => HMACSHA256.HashData(RequireKey(), "AskKey Guard enroll v1"u8);
 
     /// <summary>Writes the guard copy while leaving the passphrase copy untouched.</summary>
-    public void EnableGuardUnlock(byte[] kek, string helloKeyName)
+    public void EnableGuardUnlock(byte[] kek)
     {
         lock (_lifecycleLock)
         {
             var key = RequireKey();
-            GuardAppKeyStore.Write(_configuration.KeyMaterialDirectory, key, kek, helloKeyName);
+            GuardAppKeyStore.Write(_configuration.KeyMaterialDirectory, key, kek);
         }
     }
 
-    /// <summary>Removes the guard copy. The app deletes the Windows Hello key separately.</summary>
+    /// <summary>Removes the guard copy.</summary>
     public void DisableGuardUnlock()
     {
         lock (_lifecycleLock)

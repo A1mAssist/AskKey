@@ -1,14 +1,9 @@
-using System.Buffers.Binary;
 using System.Reflection;
-using System.Text;
-using AskKey.Vault;
 
 namespace AskKey.Vault.Tests;
 
 public sealed class GuardAppKeyStoreTests
 {
-    private const string HelloKeyName = "AskKey Guard";
-
     [Fact]
     public void RoundTripsTheVaultKeyAndWritesTheContractFormat()
     {
@@ -17,23 +12,19 @@ public sealed class GuardAppKeyStoreTests
         var key = TestCredentials.Key(70);
         var kek = TestCredentials.Key(120);
 
-        GuardAppKeyStore.Write(directory, key, kek, HelloKeyName);
+        GuardAppKeyStore.Write(directory, key, kek);
 
         var path = Path.Combine(directory, GuardAppKeyStore.AppFileName);
         var payload = File.ReadAllBytes(path);
-        var name = Encoding.UTF8.GetBytes(HelloKeyName);
         Assert.True(payload.AsSpan(0, 4).SequenceEqual("AKGD"u8));
         Assert.Equal(1, payload[4]);
-        Assert.Equal((ushort)name.Length, BinaryPrimitives.ReadUInt16LittleEndian(payload.AsSpan(5, 2)));
-        Assert.Equal(HelloKeyName, Encoding.UTF8.GetString(payload, 7, name.Length));
-        Assert.Equal(7 + name.Length + 12 + 16 + 32, payload.Length);
+        Assert.Equal(5 + 12 + 16 + 32, payload.Length);
         Assert.False(TestCredentials.ContainsBytes(payload, key));
         Assert.False(TestCredentials.ContainsBytes(payload, kek));
         Assert.True(PrivateFileSystem.IsPrivateFile(path));
 
         using var store = new GuardAppKeyStore(directory, kek);
         Assert.Equal(key, store.LoadAppKey());
-        Assert.Equal(HelloKeyName, GuardAppKeyStore.ReadHelloKeyName(directory));
     }
 
     [Fact]
@@ -41,7 +32,7 @@ public sealed class GuardAppKeyStoreTests
     {
         using var root = new TestDirectory();
         var directory = root.Combine("key-material");
-        GuardAppKeyStore.Write(directory, TestCredentials.Key(71), TestCredentials.Key(121), HelloKeyName);
+        GuardAppKeyStore.Write(directory, TestCredentials.Key(71), TestCredentials.Key(121));
 
         using var store = new GuardAppKeyStore(directory, TestCredentials.Key(122));
         Assert.Equal(AppKeyStoreError.SecurityFailure,
@@ -57,8 +48,6 @@ public sealed class GuardAppKeyStoreTests
 
         Assert.Equal(AppKeyStoreError.MissingAppKey,
             Assert.Throws<AppKeyStoreException>(() => store.LoadAppKey()).Error);
-        Assert.Equal(AppKeyStoreError.MissingAppKey,
-            Assert.Throws<AppKeyStoreException>(() => GuardAppKeyStore.ReadHelloKeyName(directory)).Error);
     }
 
     [Fact]
@@ -79,21 +68,6 @@ public sealed class GuardAppKeyStoreTests
     }
 
     [Fact]
-    public void HelloKeyNameIsUtf8AndReadableWithoutTheKek()
-    {
-        using var root = new TestDirectory();
-        var directory = root.Combine("key-material");
-        const string name = "AskKey Guard · 你好";
-        var key = TestCredentials.Key(72);
-        var kek = TestCredentials.Key(123);
-        GuardAppKeyStore.Write(directory, key, kek, name);
-
-        Assert.Equal(name, GuardAppKeyStore.ReadHelloKeyName(directory));
-        using var store = new GuardAppKeyStore(directory, kek);
-        Assert.Equal(key, store.LoadAppKey());
-    }
-
-    [Fact]
     public void VaultUnlocksWithTheGuardCopyAndFallsBackToThePassphrase()
     {
         using var root = new TestDirectory();
@@ -107,11 +81,10 @@ public sealed class GuardAppKeyStoreTests
                    root.Combine("deliveries"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory)))
         {
             first.EnableHighSecurity(passphrase);
-            first.EnableGuardUnlock(kek, HelloKeyName);
+            first.EnableGuardUnlock(kek);
             Assert.True(first.IsGuardUnlockEnabled);
             Assert.True(first.IsPassphraseProtected);
             Assert.True(first.IsHighSecurityEnabled);
-            Assert.Equal(HelloKeyName, first.GuardHelloKeyName);
             Assert.True(File.Exists(Path.Combine(config.KeyMaterialDirectory, PassphraseAppKeyStore.AppFileName)));
         }
 
@@ -145,7 +118,7 @@ public sealed class GuardAppKeyStoreTests
                    root.Combine("deliveries"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory)))
         {
             first.EnableHighSecurity("correct horse battery");
-            first.EnableGuardUnlock(kek, HelloKeyName);
+            first.EnableGuardUnlock(kek);
         }
 
         // A DPAPI slot left behind by an older build would let any process running as this
@@ -172,28 +145,25 @@ public sealed class GuardAppKeyStoreTests
         PrivateFileSystem.CreatePrivateDirectory(config.ApplicationSupportDirectory);
         var key = TestCredentials.Key(74);
         var kek = TestCredentials.Key(126);
-        using var vault = new Vault(TestCredentials.NewStore(config.VaultFile, key), key, null, null,
+        using var vault = new Vault(TestCredentials.NewStore(root.Combine("dummy.db"), key), key, null, null,
             root.Combine("deliveries"), config, new MemoryAppKeyStore { AppKey = key });
 
         Assert.False(vault.IsGuardUnlockEnabled);
         Assert.False(vault.IsPassphraseProtected);
         Assert.False(vault.IsHighSecurityEnabled);
-        Assert.Null(vault.GuardHelloKeyName);
 
         vault.EnableHighSecurity("correct horse battery");
         Assert.True(vault.IsPassphraseProtected);
         Assert.True(vault.IsHighSecurityEnabled);
         Assert.False(vault.IsGuardUnlockEnabled);
 
-        vault.EnableGuardUnlock(kek, HelloKeyName);
+        vault.EnableGuardUnlock(kek);
         Assert.True(vault.IsGuardUnlockEnabled);
         Assert.True(vault.IsPassphraseProtected);
         Assert.True(vault.IsHighSecurityEnabled);
-        Assert.Equal(HelloKeyName, vault.GuardHelloKeyName);
 
         vault.DisableGuardUnlock();
         Assert.False(vault.IsGuardUnlockEnabled);
-        Assert.Null(vault.GuardHelloKeyName);
         Assert.True(vault.IsPassphraseProtected);
         Assert.True(vault.IsHighSecurityEnabled);
         Assert.True(File.Exists(Path.Combine(config.KeyMaterialDirectory, PassphraseAppKeyStore.AppFileName)));
@@ -207,11 +177,11 @@ public sealed class GuardAppKeyStoreTests
         var config = new VaultConfiguration(root.Combine("appdata"), root.Combine("local"));
         PrivateFileSystem.CreatePrivateDirectory(config.ApplicationSupportDirectory);
         var key = TestCredentials.Key(75);
-        using var vault = new Vault(TestCredentials.NewStore(config.VaultFile, key), null, null, null,
+        using var vault = new Vault(TestCredentials.NewStore(root.Combine("dummy.db"), key), null, null, null,
             root.Combine("deliveries"), config, new MemoryAppKeyStore { AppKey = key });
 
         var exception = Assert.Throws<VaultException>(() =>
-            vault.EnableGuardUnlock(TestCredentials.Key(127), HelloKeyName));
+            vault.EnableGuardUnlock(TestCredentials.Key(127)));
         Assert.Equal(VaultErrorCode.VaultLocked, exception.Code);
         Assert.False(GuardAppKeyStore.IsEnabled(config.KeyMaterialDirectory));
     }
@@ -245,7 +215,7 @@ public sealed class GuardAppKeyStoreTests
         var directory = root.Combine("key-material");
         var key = TestCredentials.Key(76);
         var kek = TestCredentials.Key(128);
-        GuardAppKeyStore.Write(directory, key, kek, HelloKeyName);
+        GuardAppKeyStore.Write(directory, key, kek);
         var store = new GuardAppKeyStore(directory, kek);
         Assert.Equal(key, store.LoadAppKey());
         var cached = Assert.IsType<byte[]>(typeof(GuardAppKeyStore)

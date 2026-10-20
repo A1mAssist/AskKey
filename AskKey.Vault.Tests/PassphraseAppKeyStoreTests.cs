@@ -162,7 +162,7 @@ public sealed class PassphraseAppKeyStoreTests
             root.Combine("deliveries"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory));
 
         vault.EnableHighSecurity("correct horse battery");
-        vault.EnableGuardUnlock(new byte[32], "AskKey.Hello.test");
+        vault.EnableGuardUnlock(new byte[32]);
         var guardPath = Path.Combine(config.KeyMaterialDirectory, GuardAppKeyStore.AppFileName);
         Assert.True(File.Exists(guardPath));
 

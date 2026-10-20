@@ -124,7 +124,8 @@ internal static class LocalizationCatalog
         ["Passphrase (at least 8 characters)"] = "口令（至少 8 个字符）",
         ["If you forget it, the library cannot be opened. There is no recovery."] = "忘记口令后库将无法打开，无法找回。",
         ["High security mode is already on."] = "高安全模式已开启。",
-        ["The vault key is wrapped with a passphrase. Enter it once each launch; sensitive actions use Windows Hello."] = "vault key 由口令包裹。每次启动输入一次，敏感操作由 Windows Hello 确认。",
+        ["The passphrase is your recovery. After Windows Hello is on, startup uses Hello instead of the passphrase."] =
+            "口令是恢复方式。开启 Windows Hello 后，启动时改用 Hello 解锁，不再输入口令。",
         ["Windows DPAPI wraps the key. Any program running as you can decrypt it."] = "Windows DPAPI 包裹密钥。任何以你的身份运行的程序都能解密。",
         ["Ask Key stores data under your Windows user profile."] = "请旨将数据存储在你的 Windows 用户目录下。",
         ["A passphrase wraps the vault key. Enter it once each launch; sensitive actions use Windows Hello."] =
@@ -142,6 +143,14 @@ internal static class LocalizationCatalog
         ["Enter your passphrase"] = "输入口令",
         ["Ask Key is locked"] = "请旨已锁定",
         ["Open Ask Key and enter your passphrase to unlock."] = "打开请旨并输入口令解锁。",
+        ["Enter your passphrase to unlock Ask Key."] = "输入口令以解锁请旨。",
+        ["Click Unlock to open Ask Key."] = "点击“解锁”打开请旨。",
+        ["The passphrase is wrong. Try again."] = "口令不正确，请重试。",
+        ["Ask Key could not unlock."] = "请旨无法解锁。",
+        ["Use Windows Hello"] = "使用 Windows Hello",
+        ["Use Windows Hello to unlock Ask Key."] = "使用 Windows Hello 解锁请旨。",
+        ["Use passphrase instead"] = "改用口令",
+        ["Windows Hello could not unlock Ask Key."] = "Windows Hello 无法解锁请旨。",
         ["The passphrases do not match."] = "两次输入的口令不一致。",
         ["Continue"] = "继续",
         ["Turn off"] = "关闭",
@@ -155,8 +164,6 @@ internal static class LocalizationCatalog
         ["Windows Hello unlock is on."] = "Windows Hello 解锁已开启。",
         ["Windows Hello unlock could not be enabled. You can retry in Settings."] =
             "Windows Hello 解锁未能开启，可在设置中重试。",
-        ["Windows Hello could not unlock Ask Key, and no passphrase copy is available."] =
-            "Windows Hello 无法解锁请旨，且没有可用的口令副本。",
         ["Ask Key Guard is not available. Install the per-machine package to use Windows Hello unlock."] =
             "Ask Key Guard 服务不可用。请安装全机器版本后再使用 Windows Hello 解锁。",
         ["Windows Hello unlocks Ask Key at startup."] = "启动时由 Windows Hello 解锁请旨。",
@@ -170,14 +177,14 @@ internal static class LocalizationCatalog
             "高安全模式已开启。启动时由 Windows Hello 解锁请旨，口令仍作为恢复方式。",
         ["High security mode is on. Enter the passphrase at startup. Windows Hello unlock was not enabled."] =
             "高安全模式已开启。启动时请输入口令；Windows Hello 解锁未启用。",
-        ["Windows Hello is not available for this account."] = "此账户无法使用 Windows Hello。",
+        ["Windows Hello is not set up for this account. Add a PIN in Windows Settings > Accounts > Sign-in options, then try again."] =
+            "此账户尚未设置 Windows Hello。请在“设置 > 账户 > 登录选项”中添加 PIN 后重试。",
         ["Unlock Ask Key first."] = "请先解锁请旨。",
         ["Ask Key Guard did not issue a challenge."] = "Ask Key Guard 未返回挑战。",
         ["Ask Key Guard rejected the enrollment."] = "Ask Key Guard 拒绝了注册请求。",
+        ["Ask Key Guard rejected the enrollment for this vault key."] = "Ask Key Guard 拒绝了此 vault key 的注册请求。",
         ["Ask Key Guard is not running."] = "Ask Key Guard 未运行。",
         ["Windows Hello was canceled."] = "Windows Hello 已取消。",
-        ["The Windows Hello key for Ask Key was not found. Re-enable Windows Hello unlock."] =
-            "找不到请旨的 Windows Hello 密钥，请重新开启 Windows Hello 解锁。",
         ["High security mode is off. Ask Key unlocks with Windows DPAPI again."] =
             "高安全模式已关闭。Ask Key 恢复使用 Windows DPAPI 解锁。",
         ["High security mode is on. Enter your passphrase to unlock Ask Key."] =
@@ -306,6 +313,12 @@ internal static class LocalizationCatalog
         ["Ask Key could not start Windows Hello. Try again."] = "请旨无法启动 Windows Hello，请重试。",
         ["Ask Key could not open the Windows identity prompt. Bring the Ask Key window to the foreground and try again."] =
             "请旨无法打开 Windows 身份验证窗口。请将请旨窗口置于前台后重试。",
+        ["Something went wrong."] = "出了点问题。",
+        ["Bring the Ask Key window to the foreground and try again."] = "请将请旨窗口置于前台后重试。",
+        ["Windows Hello failed (0x{0:X8}). Try again."] = "Windows Hello 失败（0x{0:X8}），请重试。",
+        ["Unlock Ask Key with Windows Hello"] = "使用 Windows Hello 解锁请旨",
+        ["Turn on Windows Hello unlock for Ask Key"] = "为请旨开启 Windows Hello 解锁",
+        ["Windows Hello unlock could not be enabled."] = "Windows Hello 解锁未启用。",
         ["Quit Ask Key"] = "退出请旨",
         ["Recovery"] = "恢复",
         ["Recycle Bin"] = "回收站",

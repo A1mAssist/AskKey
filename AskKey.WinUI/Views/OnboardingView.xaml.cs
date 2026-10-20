@@ -145,7 +145,7 @@ public partial class OnboardingView : UserControl
         HelloUnlockHint.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         if (!on) HelloUnlockStatus.Visibility = Visibility.Collapsed;
         PassphraseHint.Text = Loc.T(on
-            ? "The vault key is wrapped with a passphrase. Enter it once each launch; sensitive actions use Windows Hello."
+            ? "The passphrase is your recovery. After Windows Hello is on, startup uses Hello instead of the passphrase."
             : "Windows DPAPI wraps the key. Any program running as you can decrypt it.");
     }
 

@@ -68,8 +68,13 @@ internal static class Dialogs
         return result == ContentDialogResult.Primary ? input.Password : null;
     }
 
+    // WinRT and COM failures often carry no Message, which would show an empty box.
     public static void ShowError(string message)
-        => MessageBoxW(OwnerHandle(), Loc.T(message), Loc.T("Ask Key"), 0x00000000 | 0x00000030 | 0x00040000);
+        => MessageBoxW(
+            OwnerHandle(),
+            Loc.T(string.IsNullOrWhiteSpace(message) ? "Something went wrong." : message),
+            Loc.T("Ask Key"),
+            0x00000000 | 0x00000030 | 0x00040000);
 
     public static void ShowInfo(string message)
         => MessageBoxW(OwnerHandle(), Loc.T(message), Loc.T("Ask Key"), 0x00000000 | 0x00000040 | 0x00040000);

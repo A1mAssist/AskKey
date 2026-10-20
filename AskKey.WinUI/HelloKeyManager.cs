@@ -1,76 +1,69 @@
-using Windows.Security.Credentials;
-using Windows.Security.Cryptography;
+using Windows.Security.Credentials.UI;
 
 namespace AskKeyApp;
 
 /// <summary>
-/// Thin wrapper over the Windows Hello key credential used by the guard service.
-/// The private key stays in the Hello container; the app only receives the public
-/// key and per-challenge signatures.
+/// Windows Hello gate for the guard service. KeyCredentialManager cannot be used from a
+/// packaged desktop app: its Request* methods need a UWP CoreWindow, so the prompt is
+/// owned by a separate process, never reaches the foreground, and fails after the PIN.
+/// UserConsentVerifier accepts an owner window, so the prompt is modal to Ask Key.
 /// </summary>
 internal static class HelloKeyManager
 {
     public static async Task<bool> IsSupportedAsync()
     {
-        try { return await KeyCredentialManager.IsSupportedAsync(); }
-        catch { return false; }
-    }
-
-    public static async Task<(bool Ok, string? Error, byte[]? PublicKey)> CreateAsync(string name)
-    {
         try
         {
-            var result = await KeyCredentialManager.RequestCreateAsync(
-                name, KeyCredentialCreationOption.ReplaceExisting);
-            if (result.Status != KeyCredentialStatus.Success)
-                return (false, MessageFor(result.Status), null);
-            var publicKey = result.Credential.RetrievePublicKey();
-            CryptographicBuffer.CopyToByteArray(publicKey, out var bytes);
-            return bytes is { Length: > 0 }
-                ? (true, null, bytes)
-                : (false, "Windows Hello returned an empty public key.", null);
+            return await UserConsentVerifier.CheckAvailabilityAsync()
+                == UserConsentVerifierAvailability.Available;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Shows the Hello prompt owned by the Ask Key window.</summary>
+    public static async Task<(bool Ok, bool Canceled, string? Error)> VerifyAsync(string reason)
+    {
+        var owner = OwnerHandle();
+        if (owner == IntPtr.Zero)
+        {
+            return (false, false, "Bring the Ask Key window to the foreground and try again.");
+        }
+
+        var message = Loc.T(reason);
+        try
+        {
+            // The interop call runs off the UI thread, the same way ManagementPrompt
+            // does it: the WinUI thread is an STA that must keep pumping while the
+            // system prompt is up.
+            var result = await Task.Run(() => RequestAsync(owner, message));
+            return result switch
+            {
+                UserConsentVerificationResult.Verified => (true, false, (string?)null),
+                UserConsentVerificationResult.Canceled => (false, true, (string?)null),
+                _ => (false, false, ManagementPrompt.MessageFor(result)),
+            };
         }
         catch (Exception error)
         {
-            return (false, error.Message, null);
+            return (false, false, Describe(error));
         }
     }
 
-    public static async Task<(bool Ok, string? Error, byte[]? Signature)> SignAsync(
-        string name, byte[] challenge)
+    private static async Task<UserConsentVerificationResult> RequestAsync(IntPtr owner, string message)
+        => await UserConsentVerifierInterop.RequestVerificationForWindowAsync(owner, message);
+
+    private static IntPtr OwnerHandle()
     {
-        try
-        {
-            var opened = await KeyCredentialManager.OpenAsync(name);
-            if (opened.Status != KeyCredentialStatus.Success)
-                return (false, MessageFor(opened.Status), null);
-            var input = CryptographicBuffer.CreateFromByteArray(challenge);
-            var result = await opened.Credential.RequestSignAsync(input);
-            if (result.Status != KeyCredentialStatus.Success)
-                return (false, MessageFor(result.Status), null);
-            CryptographicBuffer.CopyToByteArray(result.Result, out var signature);
-            return signature is { Length: > 0 }
-                ? (true, null, signature)
-                : (false, "Windows Hello returned an empty signature.", null);
-        }
-        catch (Exception error)
-        {
-            return (false, error.Message, null);
-        }
+        var window = App.CurrentWindow;
+        return window is null ? IntPtr.Zero : WindowHelpers.Handle(window);
     }
 
-    public static async Task DeleteAsync(string name)
-    {
-        try { await KeyCredentialManager.DeleteAsync(name); }
-        catch { }
-    }
-
-    private static string MessageFor(KeyCredentialStatus status) => status switch
-    {
-        KeyCredentialStatus.UserCanceled => "Windows Hello was canceled.",
-        KeyCredentialStatus.NotFound => "The Windows Hello key for Ask Key was not found. Re-enable Windows Hello unlock.",
-        KeyCredentialStatus.UserPrefersPassword => "Windows Hello is not available for this account.",
-        KeyCredentialStatus.CredentialAlreadyExists => "The Windows Hello key already exists.",
-        _ => $"Windows Hello failed: {status}.",
-    };
+    // WinRT failures carry no Message, which would surface as an empty dialog.
+    private static string Describe(Exception error)
+        => string.IsNullOrWhiteSpace(error.Message)
+            ? Loc.F("Windows Hello failed (0x{0:X8}). Try again.", error.HResult)
+            : error.Message;
 }

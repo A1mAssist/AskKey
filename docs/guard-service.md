@@ -2,7 +2,18 @@
 
 ## Goal
 
-Cold start with Windows Hello. A per-machine guard service holds a per-user KEK. The app gets a fresh nonce, signs it with a Hello key, the service verifies the signature and caller, and returns the KEK. The app unwraps the vault key. The passphrase-wrapped copy remains as recovery.
+Cold start with Windows Hello. A per-machine guard service holds a per-user KEK. The app asks the
+user for Windows Hello, gets a fresh nonce from the service, and asks the service to release the
+KEK. The app unwraps the vault key. The passphrase-wrapped copy remains as recovery.
+
+## Why the app does not sign
+
+`KeyCredentialManager.RequestCreateAsync` / `RequestSignAsync` need a UWP `CoreWindow`. A packaged
+desktop WinUI app cannot provide one: the credential UI opens in a separate process, never reaches
+the app's foreground window, and the call fails with `0x80098044` after the user passes the PIN.
+`UserConsentVerifierInterop.RequestVerificationForWindowAsync` takes an `HWND`, so the prompt is
+owned by the Ask Key window and stays modal to it. The app therefore verifies the user with
+`UserConsentVerifier` and the service trusts the caller identity plus a fresh one-time nonce.
 
 ## Service
 
@@ -13,7 +24,7 @@ Cold start with Windows Hello. A per-machine guard service holds a per-user KEK.
 - Modes: `--service` (SCM), `--console` (development), `--dev` (allow development paths and local data root)
 - Master KEK: `%ProgramData%\AskKey\Guard\master.bin`, 32 bytes, DPAPI `CurrentUser` under the service account; ACL service account + Administrators
 - Per-user KEK: HKDF-SHA256(master, salt = SHA256(UTF8(SID)), info = `AskKey Guard v1`, 32 bytes)
-- Public key: `%ProgramData%\AskKey\Guard\users\<SID>\hello.pub` (DER SubjectPublicKeyInfo); ACL service account
+- Enrollment proof: `%ProgramData%\AskKey\Guard\users\<SID>\hello.proof` (32 bytes); ACL service account
 - Caller SID: derived from the pipe client process token, never from the request body
 - Caller path: `AskKey.exe` under an official install root; verify Authenticode when signed; `--dev` allows the repo build path
 - Server identity: the client matches the pipe server PID to the running `AskKeyGuard` service, and checks the image path/account when Windows exposes them; a user-started process cannot impersonate the service
@@ -55,43 +66,50 @@ Remove-Item 'C:\ProgramData\AskKey\Guard' -Recurse -Force
 ## Protocol
 
 - 4-byte little-endian length + UTF-8 JSON, max 64 KiB
-- Request: `{ "v":1, "op":"status"|"challenge"|"enroll"|"unlock"|"unenroll", "nonce":base64?, "publicKey":base64?, "signature":base64?, "proof":base64? }`
-- Response: `{ "v":1, "ok":true|false, "error":string?, "nonce":base64?, "kek":base64?, "enrolled":bool? }`
-- `status`: returns whether the caller SID has a public key
+- Request: `{ "v":2, "op":"status"|"challenge"|"consume"|"consume-enroll"|"unenroll", "nonce":base64?, "proof":base64? }`
+- Response: `{ "v":2, "ok":true|false, "error":string?, "nonce":base64?, "kek":base64?, "enrolled":bool? }`
+- `status`: returns whether the caller SID has an enrollment
 - `challenge`: creates a nonce for the caller SID
-- `enroll(publicKey, nonce, signature, proof)`: verifies the signature over the nonce; if a prior public key exists, requires `proof` to match the stored enrollment proof; stores the public key/proof for the SID; returns the per-user KEK
-- `unlock(nonce, signature)`: verifies, consumes the nonce, returns the per-user KEK
+- `consume(nonce)`: requires an existing enrollment, consumes the nonce once, returns the per-user KEK
+- `consume-enroll(nonce, proof)`: first enrollment. Checks the proof (32 bytes) against the stored one before consuming the nonce, stores the proof for the SID, returns the per-user KEK
 - `unenroll(proof)`: verifies the stored vault-key proof, then removes only that SID's enrollment files
-- Errors: `caller_rejected`, `not_enrolled`, `bad_nonce`, `bad_signature`, `protocol`
+- Errors: `caller_rejected`, `not_enrolled`, `bad_nonce`, `bad_proof`, `protocol`
 
-The public key is DER SPKI. The signature is verified with RSA PKCS#1 v1.5/SHA-256 first, then PSS/SHA-256 for compatibility.
+The proof is an HMAC of the vault key, so it binds the enrollment to one vault. A first enrollment
+needs no proof to match; every later one must present the same proof, so a different vault can never
+take over an existing SID's enrollment.
 
 ## Vault
 
 - File: `%APPDATA%\AskKey\key-material\vault-key.app.guard`
-- Format: `AKGD` | version 1 | keyNameLen u16 | keyName UTF-8 | nonce 12 | tag 16 | ciphertext 32
+- Format: `AKGD` | version 1 | nonce 12 | tag 16 | ciphertext 32
 - AES-GCM with a 32-byte KEK
 - `Vault` additions:
   - `IsGuardUnlockEnabled`
-  - `GuardHelloKeyName`
   - `IsPassphraseProtected`
   - `IsHighSecurityEnabled` = passphrase || guard
   - `UnlockWithGuard(byte[] kek)`
-  - `EnableGuardUnlock(byte[] kek, string helloKeyName)`
+  - `EnableGuardUnlock(byte[] kek)`
   - `CreateGuardEnrollmentProof()` (HMAC-SHA256 of `AskKey Guard enroll v1` under the vault key)
   - `DisableGuardUnlock()`
 - Existing `PassphraseAppKeyStore` behavior and files are unchanged. The guard file never replaces the passphrase copy.
 
 ## App flow
 
-- Startup: if guard enabled, status -> open Hello key -> challenge -> sign -> unlock -> KEK -> `Vault.UnlockWithGuard`; on any failure/cancel, fall back to the passphrase dialog.
-- Enrollment: after passphrase high security is enabled, status -> create Hello key -> public key -> challenge -> sign -> enroll (returns KEK) -> `Vault.EnableGuardUnlock(kek, helloKeyName)`.
-- Disable: remove the guard copy, unenroll with the current vault proof, then delete the Hello key; keep the passphrase copy.
-- Erase local data: unenroll with the current vault proof before the vault key disappears, then delete the guard file and Hello key.
+- Startup: if guard enabled, challenge -> Windows Hello (`UserConsentVerifier` on the Ask Key window) -> consume -> KEK -> `Vault.UnlockWithGuard`; on any failure/cancel, fall back to the passphrase dialog.
+- Enrollment: after passphrase high security is enabled, challenge -> Windows Hello -> consume-enroll (returns KEK) -> `Vault.EnableGuardUnlock(kek)`.
+- Disable: remove the guard copy, unenroll with the current vault proof; keep the passphrase copy.
+- Erase local data: unenroll with the current vault proof before the vault key disappears, then delete the guard file.
 - OOBE/settings: add a Hello unlock toggle. If the guard service is unavailable, keep passphrase-only and explain the per-machine requirement.
+
+The nonce is taken before the Hello prompt, so a slow prompt cannot outlive its challenge.
 
 ## Security boundary
 
 If app data was erased while the service was unavailable, an administrator can remove `%ProgramData%\AskKey\Guard\users\<SID>`; this only clears that user's Guard enrollment, not the vault. The app cannot clear it itself: the stored enrollment proof is an HMAC of the vault key that erase is about to destroy, so after a new vault key exists the old proof can never be presented again. When erase cannot reach the service, the app now says so and names the directory to delete instead of leaving the user to discover the dead enrollment later.
 
-The service prevents same-user processes from getting the KEK without a fresh Hello signature and a valid caller path. After the KEK is released, the app process holds the vault key; code injected into the signed app is out of scope. A local administrator or SYSTEM compromise can extract the service master key.
+The service prevents same-user processes from getting the KEK without a fresh Hello confirmation from
+the app and a valid caller path. Same-user malware can still trigger the Hello prompt itself and
+read the KEK out of the app's memory, so this is a strong-user-presence gate, not a sandbox. After
+the KEK is released, the app process holds the vault key; code injected into the signed app is out
+of scope. A local administrator or SYSTEM compromise can extract the service master key.

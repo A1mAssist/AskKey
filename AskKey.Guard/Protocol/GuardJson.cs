@@ -31,8 +31,6 @@ public static class GuardJson
                 Version = GuardProtocol.Version,
                 Operation = name,
                 Nonce = ReadBytes(root, "nonce"),
-                PublicKey = ReadBytes(root, "publicKey"),
-                Signature = ReadBytes(root, "signature"),
                 Proof = ReadBytes(root, "proof"),
             };
         }

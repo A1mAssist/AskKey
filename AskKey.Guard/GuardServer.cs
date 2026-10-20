@@ -10,6 +10,7 @@ namespace AskKey.Guard;
 public sealed class GuardServer : IDisposable
 {
     private const int MaximumInstances = 8;
+    private const int ProofBytes = 32;
     private static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(10);
 
     private readonly string _pipeName;
@@ -120,23 +121,37 @@ public sealed class GuardServer : IDisposable
     {
         try
         {
-            var caller = GuardProcess.TryGetClientProcessId(pipe, out var processId)
-                ? _callerVerifier.Verify(processId)
-                : null;
-            if (caller is null)
-            {
-                // Reject before reading so an unverified local process cannot hold
-                // one of the fixed pipe instances for the full frame timeout.
-                await WriteAsync(pipe, GuardResponse.Failure(GuardErrors.CallerRejected))
-                    .ConfigureAwait(false);
-                return;
-            }
-
+            // Windows only hands the server the client token after a read, so the frame
+            // must arrive before the caller can be resolved. It is capped at 64 KiB with a
+            // 10 s deadline and stays an unparsed buffer until the caller passes the check.
             var frame = await GuardFraming.ReadAsync(pipe, ReadTimeout, _stop.Token)
                 .ConfigureAwait(false);
             if (frame.Kind != GuardFrameReadKind.Success || frame.Data is null)
             {
                 await WriteAsync(pipe, GuardResponse.Failure(GuardErrors.Protocol))
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            // Resolve the caller with the client token. Without impersonation the service
+            // account cannot read a process owned by another account, so the image path
+            // and SID come back null and every real client is rejected.
+            GuardCaller? caller = null;
+            if (GuardProcess.TryGetClientProcessId(pipe, out var processId))
+            {
+                try
+                {
+                    pipe.RunAsClient(() => caller = _callerVerifier.Verify(processId));
+                }
+                catch (IOException)
+                {
+                    // The client token could not be borrowed, so the caller stays unknown.
+                }
+            }
+            if (caller is null)
+            {
+                Array.Clear(frame.Data);
+                await WriteAsync(pipe, GuardResponse.Failure(GuardErrors.CallerRejected))
                     .ConfigureAwait(false);
                 return;
             }
@@ -195,54 +210,44 @@ public sealed class GuardServer : IDisposable
             case GuardOperations.Challenge:
                 return GuardResponse.Success(nonce: _nonces.Issue(caller.Sid));
 
-            case GuardOperations.Enroll:
-                if (request.PublicKey is null || request.Nonce is null
-                    || request.Signature is null || request.Proof is null)
+            case GuardOperations.ConsumeEnroll:
+                // First enrollment: the app already proved the user with Windows Hello,
+                // so the fresh nonce plus the vault-key proof are the request.
+                if (request.Nonce is null || request.Proof is null)
                 {
                     return GuardResponse.Failure(GuardErrors.Protocol);
                 }
-                if (request.Proof.Length != 32)
+                if (request.Proof.Length != ProofBytes)
                 {
-                    return GuardResponse.Failure(GuardErrors.BadSignature);
+                    return GuardResponse.Failure(GuardErrors.BadProof);
                 }
-                if (!GuardSignature.Verify(request.PublicKey, request.Nonce, request.Signature))
-                {
-                    return GuardResponse.Failure(GuardErrors.BadSignature);
-                }
-                // Check the replacement proof before consuming the nonce so a bad
-                // proof does not burn the caller's challenge.
+                // Check the proof before consuming the nonce so a bad proof does not
+                // burn the caller's challenge.
                 if (!_store.CanEnroll(caller.Sid, request.Proof))
                 {
-                    return GuardResponse.Failure(GuardErrors.BadSignature);
+                    return GuardResponse.Failure(GuardErrors.BadProof);
                 }
                 if (!_nonces.Consume(caller.Sid, request.Nonce))
                 {
                     return GuardResponse.Failure(GuardErrors.BadNonce);
                 }
-                if (!_store.TryEnroll(caller.Sid, request.PublicKey, request.Proof))
+                if (!_store.TryEnroll(caller.Sid, request.Proof))
                 {
-                    return GuardResponse.Failure(GuardErrors.BadSignature);
+                    return GuardResponse.Failure(GuardErrors.BadProof);
                 }
                 return GuardResponse.Success(
                     kek: _store.DeriveUserKek(caller.Sid), enrolled: true);
 
-            case GuardOperations.Unlock:
-                if (request.Nonce is null || request.Signature is null)
+            case GuardOperations.Consume:
+                // The app cannot sign from a packaged desktop app, so the fresh nonce is
+                // the replay guard: it was issued to this caller and is consumed once.
+                if (request.Nonce is null)
                 {
                     return GuardResponse.Failure(GuardErrors.Protocol);
                 }
                 if (!_store.IsEnrolled(caller.Sid))
                 {
                     return GuardResponse.Failure(GuardErrors.NotEnrolled);
-                }
-                var publicKey = _store.LoadPublicKey(caller.Sid);
-                if (publicKey is null)
-                {
-                    return GuardResponse.Failure(GuardErrors.NotEnrolled);
-                }
-                if (!GuardSignature.Verify(publicKey, request.Nonce, request.Signature))
-                {
-                    return GuardResponse.Failure(GuardErrors.BadSignature);
                 }
                 if (!_nonces.Consume(caller.Sid, request.Nonce))
                 {
@@ -261,11 +266,11 @@ public sealed class GuardServer : IDisposable
                 }
                 if (!_store.MatchesProof(caller.Sid, request.Proof))
                 {
-                    return GuardResponse.Failure(GuardErrors.BadSignature);
+                    return GuardResponse.Failure(GuardErrors.BadProof);
                 }
                 if (!_store.TryUnenroll(caller.Sid, request.Proof))
                 {
-                    return GuardResponse.Failure(GuardErrors.BadSignature);
+                    return GuardResponse.Failure(GuardErrors.BadProof);
                 }
                 return GuardResponse.Success(enrolled: false);
 
@@ -278,8 +283,6 @@ public sealed class GuardServer : IDisposable
     {
         if (request is null) return;
         if (request.Nonce is { } nonce) Array.Clear(nonce);
-        if (request.PublicKey is { } publicKey) Array.Clear(publicKey);
-        if (request.Signature is { } signature) Array.Clear(signature);
         if (request.Proof is { } proof) Array.Clear(proof);
     }
 

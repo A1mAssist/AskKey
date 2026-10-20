@@ -39,6 +39,7 @@ public sealed class AppHost : IDisposable
     private ApprovalWindow? _activeApproval;
     private bool _sessionLocked;
     private bool _lockedApprovalReminderPosted;
+    private bool _helloAutoAttempted;
     private bool _disposed;
     private bool _started;
     private int _pendingCount;
@@ -62,6 +63,7 @@ public sealed class AppHost : IDisposable
     public event Action? CredentialsChanged;
     public event Action? AgentAccessChanged;
     public event Action? BrokerStateChanged;
+    public event Action? LockStateChanged;
     public event Action? SettingsChanged;
 
     public string? BrokerFailure { get; private set; }
@@ -110,19 +112,12 @@ public sealed class AppHost : IDisposable
         var showWindow = !_preferences.HasCompletedOnboarding || !background;
         if (showWindow) ShowMainWindow();
         if (!IsLockedAtStartup) return;
-        if (showWindow)
-        {
-            // High security mode: the vault is locked until the passphrase arrives, so ask
-            // before the user starts browsing. Cancel leaves it locked and the page offers
-            // the same Unlock button.
-            _ = _dispatcher.TryEnqueue(async () => await UnlockAsync());
-        }
-        else
+        if (!showWindow)
         {
             // A background start must not pop a dialog, but the user should know why
             // Agent requests fail until they open the app.
             _tray?.ShowNotification("Ask Key is locked",
-                "Open Ask Key and enter your passphrase to unlock.", ShowMainWindow);
+                "Open Ask Key to unlock it with Windows Hello or your passphrase.", ShowMainWindow);
         }
     }
 
@@ -130,30 +125,51 @@ public sealed class AppHost : IDisposable
     {
         _mainWindow ??= new MainWindow(this);
         _mainWindow.ShowFromTray();
+        PromptHelloIfAvailable();
+    }
+
+    /// <summary>Once enrolled, Hello is the default way in; the lock screen calls this when shown.</summary>
+    public void PromptHelloIfAvailable()
+    {
+        if (!Vault.IsLocked || _helloAutoAttempted || !Vault.IsGuardUnlockEnabled) return;
+        _ = UnlockWithHelloAsync();
     }
 
     public void ShowPendingRequests()
     {
+        if (!RequireUnlocked()) return;
         ShowMainWindow();
         _mainWindow?.ShowActivity(ActivitySection.Pending);
     }
 
     public void ShowSettings()
     {
+        if (!RequireUnlocked()) return;
         ShowMainWindow();
         _mainWindow?.ShowSettings();
     }
 
     public void ShowCredentials()
     {
+        if (!RequireUnlocked()) return;
         ShowMainWindow();
         _mainWindow?.ShowCredentials();
     }
 
     public void ShowAgentAccess()
     {
+        if (!RequireUnlocked()) return;
         ShowMainWindow();
         _mainWindow?.ShowAgentAccess();
+    }
+
+    /// <summary>Every content entry point goes through the lock screen while the vault is locked.</summary>
+    private bool RequireUnlocked()
+    {
+        if (!Vault.IsLocked) return true;
+        ShowMainWindow();
+        _mainWindow?.FocusLock();
+        return false;
     }
 
     public void CompleteOnboarding(bool launchAtLogin)
@@ -189,9 +205,7 @@ public sealed class AppHost : IDisposable
         {
             Vault.BeginManagementSession(new ManagementAuthenticator(_ => true));
         }
-        var helloKeyName = TryGetGuardHelloKeyName();
         var unenrolled = await TryUnenrollGuardAsync();
-        if (!string.IsNullOrEmpty(helloKeyName)) await HelloKeyManager.DeleteAsync(helloKeyName);
         Vault.DisableGuardUnlock();
         Vault.EraseLocalLibrary(confirmation, language, new ManagementAuthenticator(_ => true));
         _expiryReminders?.ClearLedger();
@@ -199,7 +213,7 @@ public sealed class AppHost : IDisposable
         _preferences.Save();
         // Erase replaces the vault key, so an enrollment the service still holds can never
         // match a new one. Say so instead of leaving the user to find it out later.
-        Dialogs.ShowInfo(unenrolled || helloKeyName is null or ""
+        Dialogs.ShowInfo(unenrolled
             ? "Local Ask Key data was erased. Ask Key will close."
             : Loc.F("Local Ask Key data was erased, but the Ask Key Guard service still holds "
                 + "this account's Windows Hello enrollment. Windows Hello unlock cannot be "
@@ -242,63 +256,77 @@ public sealed class AppHost : IDisposable
     }
 
     /// <summary>
-    /// Opens the vault with the guard service when enrolled, then falls back to the
-    /// passphrase. A failed Hello attempt leaves the vault locked unless the user
-    /// completes the passphrase fallback.
+    /// Opens the vault with Windows Hello when enrolled. The passphrase is entered on the
+    /// lock screen, which owns the UI while the vault stays locked.
     /// </summary>
     public async Task<bool> UnlockAsync()
     {
         if (!Vault.IsLocked) return true;
-        if (await TryGuardUnlockAsync()) return true;
+        if (await UnlockWithHelloAsync()) return true;
+        // Keep the workspace covered; the lock screen is the only way in.
+        LockStateChanged?.Invoke();
+        return false;
+    }
 
-        string? passphrase = null;
-        if (Vault.IsHighSecurityEnabled)
-        {
-            if (!Vault.IsPassphraseProtected)
-            {
-                ShowError("Windows Hello could not unlock Ask Key, and no passphrase copy is available.");
-                return false;
-            }
-            passphrase = await Dialogs.PasswordAsync(_mainWindow, "Unlock Ask Key", "Enter your passphrase");
-            if (passphrase is null) return false;
-        }
+    public async Task<bool> UnlockWithHelloAsync()
+    {
+        if (!Vault.IsLocked) return true;
+        if (!Vault.IsGuardUnlockEnabled) return false;
+        _helloAutoAttempted = true;
+        var (unlocked, _) = await TryGuardUnlockAsync();
+        return unlocked;
+    }
+
+    public async Task<(bool Ok, string? Error)> UnlockWithPassphraseAsync(string? passphrase)
+    {
+        if (!Vault.IsLocked) return (true, null);
         try
         {
             await Task.Run(() => Vault.Unlock(passphrase));
-            // The passphrase is this launch's strong factor; open the management
-            // window without immediately asking Hello a second time.
-            if (Vault.IsHighSecurityEnabled)
-                Vault.BeginManagementSession(new global::AskKey.Vault.ManagementAuthenticator(_ => true));
-            IsLockedAtStartup = false;
-            IsAgentAccessPaused = SafeIsAgentAccessPaused();
-            _tray?.UpdatePaused(IsAgentAccessPaused);
-            NotifyCredentialsChanged();
-            RefreshPendingCount();
-            AgentAccessChanged?.Invoke();
-            return true;
+            CompleteUnlock();
+            return (true, null);
+        }
+        catch (AppKeyStoreException error) when (error.Error == AppKeyStoreError.SecurityFailure)
+        {
+            // A wrong passphrase fails the AES-GCM tag, which surfaces as SecurityFailure.
+            return (false, "The passphrase is wrong. Try again.");
         }
         catch (Exception error)
         {
-            ShowError(error.Message);
-            return false;
+            return (false, string.IsNullOrWhiteSpace(error.Message) ? "Ask Key could not unlock." : error.Message);
         }
     }
 
-    /// <summary>Hello-unlocked path. Any failure or cancel falls through to the passphrase.</summary>
-    private async Task<bool> TryGuardUnlockAsync()
+    /// <summary>Shared post-unlock state: the passphrase and Hello are both proof of possession.</summary>
+    private void CompleteUnlock()
     {
-        if (!Vault.IsGuardUnlockEnabled) return false;
-        var keyName = TryGetGuardHelloKeyName();
-        if (string.IsNullOrEmpty(keyName)) return false;
+        Vault.BeginManagementSession(new global::AskKey.Vault.ManagementAuthenticator(_ => true));
+        IsLockedAtStartup = false;
+        IsAgentAccessPaused = SafeIsAgentAccessPaused();
+        _tray?.UpdatePaused(IsAgentAccessPaused);
+        NotifyCredentialsChanged();
+        RefreshPendingCount();
+        AgentAccessChanged?.Invoke();
+        LockStateChanged?.Invoke();
+    }
+
+    /// <summary>Hello-unlocked path. A cancel stops; any failure falls through to the passphrase.</summary>
+    private async Task<(bool Unlocked, bool Canceled)> TryGuardUnlockAsync()
+    {
+        if (!Vault.IsGuardUnlockEnabled) return (false, false);
         try
         {
             var guard = new GuardClient();
+            // The nonce is taken before the prompt so a slow Hello prompt cannot
+            // outlive the challenge it has to answer.
             var challenge = await Task.Run(guard.Challenge);
-            if (!challenge.Ok || challenge.Nonce is null) return false;
-            var signed = await HelloKeyManager.SignAsync(keyName, challenge.Nonce);
-            if (!signed.Ok || signed.Signature is null) return false;
-            var unlocked = await Task.Run(() => guard.Unlock(challenge.Nonce, signed.Signature));
-            if (!unlocked.Ok || unlocked.Kek is null) return false;
+            if (!challenge.Ok || challenge.Nonce is null) return (false, false);
+            var verified = await HelloKeyManager.VerifyAsync(
+                "Unlock Ask Key with Windows Hello");
+            if (verified.Canceled) return (false, true);
+            if (!verified.Ok) return (false, false);
+            var unlocked = await Task.Run(() => guard.Consume(challenge.Nonce));
+            if (!unlocked.Ok || unlocked.Kek is null) return (false, false);
             try
             {
                 Vault.UnlockWithGuard(unlocked.Kek);
@@ -307,19 +335,13 @@ public sealed class AppHost : IDisposable
             {
                 CryptographicOperations.ZeroMemory(unlocked.Kek);
             }
-            Vault.BeginManagementSession(new global::AskKey.Vault.ManagementAuthenticator(_ => true));
-            IsLockedAtStartup = false;
-            IsAgentAccessPaused = SafeIsAgentAccessPaused();
-            _tray?.UpdatePaused(IsAgentAccessPaused);
-            NotifyCredentialsChanged();
-            RefreshPendingCount();
-            AgentAccessChanged?.Invoke();
-            return true;
+            CompleteUnlock();
+            return (true, false);
         }
         catch (Exception error)
         {
             System.Diagnostics.Debug.WriteLine(error);
-            return false;
+            return (false, false);
         }
     }
 
@@ -363,13 +385,11 @@ public sealed class AppHost : IDisposable
         var passphrase = await Dialogs.PasswordAsync(_mainWindow, "Confirm your passphrase",
             "Enter your passphrase", "Turn off");
         if (passphrase is null) return;
-        var helloKeyName = TryGetGuardHelloKeyName();
         try
         {
             await Task.Run(() => Vault.DisableHighSecurity(passphrase));
-            if (!string.IsNullOrEmpty(helloKeyName)) await TryUnenrollGuardAsync();
+            await TryUnenrollGuardAsync();
             Vault.DisableGuardUnlock();
-            if (!string.IsNullOrEmpty(helloKeyName)) await HelloKeyManager.DeleteAsync(helloKeyName);
             Dialogs.ShowInfo("High security mode is off. Ask Key unlocks with Windows DPAPI again.");
             SettingsChanged?.Invoke();
         }
@@ -391,12 +411,6 @@ public sealed class AppHost : IDisposable
         {
             return null;
         }
-    }
-
-    private string? TryGetGuardHelloKeyName()
-    {
-        try { return Vault.GuardHelloKeyName; }
-        catch (Exception) { return null; }
     }
 
     /// <summary>
@@ -431,7 +445,7 @@ public sealed class AppHost : IDisposable
     }
 
     /// <summary>
-    /// Enrolls a Hello key with the guard service and writes the guard copy of the
+    /// Enrolls this account with the guard service and writes the guard copy of the
     /// vault key. High security stays enabled with the passphrase if this fails.
     /// </summary>
     public async Task<(bool Ok, string? Error)> EnableGuardUnlockAsync()
@@ -439,7 +453,7 @@ public sealed class AppHost : IDisposable
         if (!Vault.IsHighSecurityEnabled) return (false, "Turn on high security mode first.");
         if (Vault.IsLocked) return (false, "Unlock Ask Key first.");
         if (!await HelloKeyManager.IsSupportedAsync())
-            return (false, "Windows Hello is not available for this account.");
+            return (false, "Windows Hello is not set up for this account. Add a PIN in Windows Settings > Accounts > Sign-in options, then try again.");
 
         var guard = new GuardClient();
         try
@@ -453,72 +467,58 @@ public sealed class AppHost : IDisposable
             return (false, error.Message);
         }
 
-        var oldKeyName = TryGetGuardHelloKeyName();
-        var keyName = "AskKey.Hello." + Guid.NewGuid().ToString("N");
-        var keepKey = false;
         try
         {
-            var created = await HelloKeyManager.CreateAsync(keyName);
-            if (!created.Ok || created.PublicKey is null)
-                return (false, created.Error ?? "Windows Hello is not available for this account.");
             var challenge = await Task.Run(guard.Challenge);
             if (!challenge.Ok || challenge.Nonce is null)
                 return (false, "Ask Key Guard did not issue a challenge.");
-            var signed = await HelloKeyManager.SignAsync(keyName, challenge.Nonce);
-            if (!signed.Ok || signed.Signature is null)
-                return (false, signed.Error ?? "Windows Hello signing failed.");
+            var verified = await HelloKeyManager.VerifyAsync(
+                "Turn on Windows Hello unlock for Ask Key");
+            if (!verified.Ok) return (false, verified.Error);
             var proof = Vault.CreateGuardEnrollmentProof();
             GuardResponse enrolled;
             try
             {
-                enrolled = await Task.Run(() => guard.Enroll(
-                    created.PublicKey, challenge.Nonce, signed.Signature, proof));
+                enrolled = await Task.Run(() => guard.ConsumeEnroll(challenge.Nonce, proof));
             }
             finally
             {
                 CryptographicOperations.ZeroMemory(proof);
             }
             if (!enrolled.Ok || enrolled.Kek is null)
-                return (false, "Ask Key Guard rejected the enrollment.");
+                return (false, enrolled.Error == GuardErrors.BadProof
+                    ? "Ask Key Guard rejected the enrollment for this vault key."
+                    : "Ask Key Guard rejected the enrollment.");
             try
             {
-                Vault.EnableGuardUnlock(enrolled.Kek, keyName);
+                Vault.EnableGuardUnlock(enrolled.Kek);
             }
             finally
             {
                 CryptographicOperations.ZeroMemory(enrolled.Kek);
-            }
-            keepKey = true;
-            if (!string.IsNullOrEmpty(oldKeyName)
-                && !string.Equals(oldKeyName, keyName, StringComparison.Ordinal))
-            {
-                await HelloKeyManager.DeleteAsync(oldKeyName);
             }
             SettingsChanged?.Invoke();
             return (true, null);
         }
         catch (Exception error)
         {
-            return (false, error.Message);
-        }
-        finally
-        {
-            if (!keepKey) await HelloKeyManager.DeleteAsync(keyName);
+            return (false, string.IsNullOrWhiteSpace(error.Message)
+                ? "Windows Hello unlock could not be enabled."
+                : error.Message);
         }
     }
 
-    /// <summary>Removes the guard copy and its Hello key; the passphrase copy stays.</summary>
+    /// <summary>Removes the guard copy; the passphrase copy stays.</summary>
     public async Task DisableGuardUnlockAsync()
     {
-        var keyName = TryGetGuardHelloKeyName();
         await TryUnenrollGuardAsync();
         Vault.DisableGuardUnlock();
-        if (!string.IsNullOrEmpty(keyName)) await HelloKeyManager.DeleteAsync(keyName);
         SettingsChanged?.Invoke();
     }
 
     public void ToggleAgentAccess()
     {
+        if (!RequireUnlocked()) return;
         try
         {
             if (SafeIsAgentAccessPaused())

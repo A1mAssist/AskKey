@@ -204,8 +204,8 @@ public partial class SettingsView : UserControl
             if (HelloUnlockToggle.IsChecked == true)
             {
                 var result = await _host.EnableGuardUnlockAsync();
-                if (!result.Ok)
-                    _host.ShowError(result.Error ?? "Windows Hello unlock could not be enabled.");
+                // A canceled Hello prompt is not an error; the toggle simply returns.
+                if (result.Error is { } error) _host.ShowError(error);
             }
             else
             {

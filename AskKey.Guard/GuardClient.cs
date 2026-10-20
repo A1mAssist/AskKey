@@ -42,22 +42,21 @@ public sealed class GuardClient
 
     public GuardResponse Challenge() => Send(new GuardRequest { Operation = GuardOperations.Challenge });
 
-    public GuardResponse Enroll(byte[] publicKey, byte[] nonce, byte[] signature, byte[] proof)
+    /// <summary>Releases the KEK once the app has confirmed the user with Windows Hello.</summary>
+    public GuardResponse Consume(byte[] nonce)
         => Send(new GuardRequest
         {
-            Operation = GuardOperations.Enroll,
-            PublicKey = publicKey,
+            Operation = GuardOperations.Consume,
             Nonce = nonce,
-            Signature = signature,
-            Proof = proof,
         });
 
-    public GuardResponse Unlock(byte[] nonce, byte[] signature)
+    /// <summary>First enrollment: releases the KEK and stores the vault-key proof.</summary>
+    public GuardResponse ConsumeEnroll(byte[] nonce, byte[] proof)
         => Send(new GuardRequest
         {
-            Operation = GuardOperations.Unlock,
+            Operation = GuardOperations.ConsumeEnroll,
             Nonce = nonce,
-            Signature = signature,
+            Proof = proof,
         });
 
     public GuardResponse Unenroll(byte[] proof)

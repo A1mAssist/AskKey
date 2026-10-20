@@ -4,7 +4,7 @@ using System.Text;
 namespace AskKey.Guard;
 
 /// <summary>
-/// DPAPI-protected master key plus one DER SubjectPublicKeyInfo per caller SID.
+/// DPAPI-protected master key plus one consent enrollment per caller SID.
 /// The master is protected under the service account; per-user KEKs are derived,
 /// never stored.
 /// </summary>
@@ -13,6 +13,7 @@ public sealed class GuardStateStore
     private const string KekInfo = "AskKey Guard v1";
     private const int KekBytes = 32;
     private const int MasterBytes = 32;
+    private const int ProofBytes = 32;
 
     private readonly object _gate = new();
     private readonly bool _includeAdministrators;
@@ -32,8 +33,8 @@ public sealed class GuardStateStore
 
     public bool IsEnrolled(string sid)
     {
-        var path = PublicKeyPath(sid);
-        return File.Exists(path) && new FileInfo(path).Length > 0;
+        var path = ProofPath(sid);
+        return File.Exists(path) && new FileInfo(path).Length == ProofBytes;
     }
 
     public byte[] DeriveUserKek(string sid)
@@ -46,13 +47,13 @@ public sealed class GuardStateStore
     }
 
     /// <summary>
-    /// The first enrollment stores its proof. Replacing an existing public key
-    /// requires the same proof in constant time; a missing proof file fail-closes.
+    /// The first enrollment stores its proof. A later enrollment must present the
+    /// same proof in constant time; a missing proof file fail-closes.
     /// </summary>
     public bool CanEnroll(string sid, ReadOnlySpan<byte> proof)
     {
-        if (proof.Length != 32) return false;
-        if (!File.Exists(PublicKeyPath(sid))) return true;
+        if (proof.Length != ProofBytes) return false;
+        if (!File.Exists(ProofPath(sid))) return true;
         var stored = LoadProof(sid);
         if (stored is null) return false;
         try { return CryptographicOperations.FixedTimeEquals(stored, proof); }
@@ -61,7 +62,7 @@ public sealed class GuardStateStore
 
     public bool MatchesProof(string sid, ReadOnlySpan<byte> proof)
     {
-        if (proof.Length != 32) return false;
+        if (proof.Length != ProofBytes) return false;
         var stored = LoadProof(sid);
         if (stored is null) return false;
         try { return CryptographicOperations.FixedTimeEquals(stored, proof); }
@@ -73,20 +74,21 @@ public sealed class GuardStateStore
     {
         lock (_gate)
         {
-            if (!File.Exists(PublicKeyPath(sid))) return true;
+            if (!File.Exists(ProofPath(sid))) return true;
             if (!MatchesProof(sid, proof)) return false;
             Directory.Delete(UserDirectory(sid), recursive: true);
             return true;
         }
     }
 
-    public bool TryEnroll(string sid, ReadOnlySpan<byte> publicKey, ReadOnlySpan<byte> proof)
+    /// <summary>Stores the consent enrollment for this SID.</summary>
+    public bool TryEnroll(string sid, ReadOnlySpan<byte> proof)
     {
-        if (publicKey.IsEmpty || proof.Length != 32) return false;
+        if (proof.Length != ProofBytes) return false;
         lock (_gate)
         {
-            var keyPath = PublicKeyPath(sid);
-            if (File.Exists(keyPath))
+            var proofPath = ProofPath(sid);
+            if (File.Exists(proofPath))
             {
                 var stored = LoadProof(sid);
                 if (stored is null) return false;
@@ -102,21 +104,10 @@ public sealed class GuardStateStore
 
             var sidPath = UserDirectory(sid);
             EnsureDirectory(sidPath, includeAdministrators: false);
-            // Proof first: if the public key write fails, a retry with the same
-            // proof is still accepted against the old key.
-            var proofPath = Path.Combine(sidPath, "hello.proof");
             WriteAtomic(proofPath, proof);
             GuardAcl.SecureFile(proofPath, includeAdministrators: false);
-            WriteAtomic(keyPath, publicKey);
-            GuardAcl.SecureFile(keyPath, includeAdministrators: false);
             return true;
         }
-    }
-
-    public byte[]? LoadPublicKey(string sid)
-    {
-        var path = PublicKeyPath(sid);
-        return File.Exists(path) ? File.ReadAllBytes(path) : null;
     }
 
     private byte[] MasterKey()
@@ -151,15 +142,15 @@ public sealed class GuardStateStore
         }
     }
 
-    private string PublicKeyPath(string sid)
-        => Path.Combine(UserDirectory(sid), "hello.pub");
+    private string ProofPath(string sid)
+        => Path.Combine(UserDirectory(sid), "hello.proof");
 
     private byte[]? LoadProof(string sid)
     {
-        var path = Path.Combine(UserDirectory(sid), "hello.proof");
+        var path = ProofPath(sid);
         if (!File.Exists(path)) return null;
         var proof = File.ReadAllBytes(path);
-        return proof.Length == 32 ? proof : null;
+        return proof.Length == ProofBytes ? proof : null;
     }
 
     private string UserDirectory(string sid)

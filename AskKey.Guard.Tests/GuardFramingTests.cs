@@ -68,24 +68,20 @@ public sealed class GuardFramingTests
         proof[0] = 7;
         var request = new GuardRequest
         {
-            Operation = GuardOperations.Enroll,
+            Operation = GuardOperations.ConsumeEnroll,
             Nonce = new byte[32],
-            PublicKey = new byte[] { 1, 2, 3 },
-            Signature = new byte[] { 4, 5 },
             Proof = proof,
         };
 
         var encoded = GuardJson.EncodeRequest(request);
         using var document = JsonDocument.Parse(encoded);
-        Assert.Equal(1, document.RootElement.GetProperty("v").GetInt32());
-        Assert.Equal("enroll", document.RootElement.GetProperty("op").GetString());
+        Assert.Equal(GuardProtocol.Version, document.RootElement.GetProperty("v").GetInt32());
+        Assert.Equal("consume-enroll", document.RootElement.GetProperty("op").GetString());
         Assert.Equal(Convert.ToBase64String(proof), document.RootElement.GetProperty("proof").GetString());
 
         var decoded = GuardJson.DecodeRequest(encoded);
         Assert.NotNull(decoded);
         Assert.Equal(request.Nonce, decoded.Nonce);
-        Assert.Equal(request.PublicKey, decoded.PublicKey);
-        Assert.Equal(request.Signature, decoded.Signature);
         Assert.Equal(request.Proof, decoded.Proof);
     }
 
@@ -93,6 +89,6 @@ public sealed class GuardFramingTests
     public void MissingVersionIsRejected()
     {
         Assert.Null(GuardJson.DecodeRequest("""{"op":"status"}"""u8.ToArray()));
-        Assert.Null(GuardJson.DecodeRequest("""{"v":2,"op":"status"}"""u8.ToArray()));
+        Assert.Null(GuardJson.DecodeRequest("""{"v":99,"op":"status"}"""u8.ToArray()));
     }
 }

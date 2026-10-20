@@ -8,7 +8,7 @@ public static class GuardProtocol
     public const string ServiceName = "AskKeyGuard";
     public const string PipeName = "askkey-guard";
     public const string DevelopmentPipeName = "askkey-guard-dev";
-    public const int Version = 1;
+    public const int Version = 2;
     public const int MaximumFrameBytes = 64 * 1024;
 
     /// <summary>--dev and ASKKEY_DEVELOPMENT=1 keep local testing off the production pipe.</summary>
@@ -25,9 +25,16 @@ public static class GuardOperations
 {
     public const string Status = "status";
     public const string Challenge = "challenge";
-    public const string Enroll = "enroll";
-    public const string Unlock = "unlock";
     public const string Unenroll = "unenroll";
+
+    /// <summary>Releases the KEK after the app verified the user with Windows Hello.
+    /// The desktop Hello APIs cannot sign from a packaged app, so the caller identity
+    /// and the fresh nonce carry the request instead of a key signature.</summary>
+    public const string Consume = "consume";
+
+    /// <summary>First enrollment: the app proves the vault key it wraps, and the
+    /// service stores that proof so a later replacement cannot point at another vault.</summary>
+    public const string ConsumeEnroll = "consume-enroll";
 }
 
 public static class GuardErrors
@@ -35,7 +42,9 @@ public static class GuardErrors
     public const string CallerRejected = "caller_rejected";
     public const string NotEnrolled = "not_enrolled";
     public const string BadNonce = "bad_nonce";
-    public const string BadSignature = "bad_signature";
+
+    /// <summary>The enrollment proof did not match the one this SID already holds.</summary>
+    public const string BadProof = "bad_proof";
     public const string Protocol = "protocol";
 }
 
@@ -51,14 +60,6 @@ public sealed class GuardRequest
     [JsonPropertyName("nonce")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public byte[]? Nonce { get; set; }
-
-    [JsonPropertyName("publicKey")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public byte[]? PublicKey { get; set; }
-
-    [JsonPropertyName("signature")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public byte[]? Signature { get; set; }
 
     [JsonPropertyName("proof")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
