@@ -491,7 +491,7 @@ internal static class LocalizationCatalog
         ["Confirm credential management"] = "请确认以管理凭证",
         ["Reveal credential value"] = "确认查看凭证值",
         ["Protected by your passphrase"] = "由你的口令保护",
-        ["Grant this Agent permanent access"] = "确认授予此 Agent 长期访问",
+        ["Grant this credential permanent access"] = "确认授予此凭据长期访问",
         ["Manage credential groups"] = "管理凭证分组",
         ["Create a credential"] = "新建凭证",
         ["Edit a credential"] = "编辑凭证",

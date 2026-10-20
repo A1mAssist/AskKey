@@ -79,7 +79,7 @@ public static class CredentialManagementCopy
     /// <summary>Reasons that must ask Windows Hello even inside a valid management session.</summary>
     public const string FrozenWriteRevealReason = "View the frozen file submitted for approval";
     public const string AgentWriteApprovalReason = "Approve this Agent write request";
-    public const string AllowPermissionReason = "Grant this Agent permanent access";
+    public const string AllowPermissionReason = "Grant this credential permanent access";
     public const string PauseReason = "Pause Agent access";
     public const string ResumeReason = "Resume Agent access";
     public const string UsageInstructions = "Usage instructions";
