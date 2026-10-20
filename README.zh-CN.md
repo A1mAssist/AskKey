@@ -130,6 +130,13 @@ dotnet run --project .\tools\AskKey.Build -- guard
 
 凭证和密钥材料存放在 `%APPDATA%\AskKey`；设置和 Broker 管道存放在 `%LOCALAPPDATA%\AskKey`。删除安装目录不会删除凭证库。
 
+卸载后有两处内容是**有意保留**的：
+
+- `%ProgramData%\AskKey\Guard` 保存 Guard 服务的 DPAPI 主密钥和各账户的 Windows Hello 注册。删掉它会让所有已注册账户的 Hello 解锁永久失效，所以该组件被标记为 Permanent。详见 [docs/guard-service.md](docs/guard-service.md)。
+- `%LOCALAPPDATA%\Microsoft\WindowsAppSDK\velopack.AskKey.png` 是非打包应用在任务栏使用的图标位图。
+
+旧的用户级安装不会自动迁移到全机器安装（目前没有对外发布过用户级版本）。请先卸载用户级版本再安装 `AskKeySetup-<version>.exe`，否则两个安装会同时出现在“应用和功能”里。
+
 ## Agent 接入
 
 应用内置 Claude Code、Codex、Cursor 和 Grok CLI 的接入设置。打开 **Agent 接入**，勾选客户端并确认即可。应用会添加 Ask Key MCP 服务，保留原有客户端配置，并在报告连接成功前校验 Helper 和 Broker。

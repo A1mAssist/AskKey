@@ -22,6 +22,11 @@ if (-not (Test-Path -LiteralPath $serviceProject -PathType Leaf)) {
 }
 
 Write-Host "Publishing AskKey Guard Service to $publishDir"
+# The MSI harvest takes every file under this directory, so a stale file from an
+# earlier publish would ship inside the package.
+if (Test-Path -LiteralPath $publishDir) {
+    Remove-Item -LiteralPath $publishDir -Recurse -Force
+}
 & dotnet publish $serviceProject -c Release -r win-x64 --self-contained true `
     -p:DebugType=None -p:DebugSymbols=false -p:AskKeyUnsigned=$($Unsigned.IsPresent) -o $publishDir
 if ($LASTEXITCODE -ne 0) {
@@ -34,7 +39,9 @@ if (-not (Test-Path -LiteralPath $serviceExe -PathType Leaf)) {
 }
 
 Write-Host "Building MSI with WiX SDK; version $Version"
-& dotnet build $wixProject -c Release -p:ProductVersion=$Version -p:GuardPublishDir=$publishDir
+# MSBuild does not track GuardPublishDir passed as a command-line property, so an
+# unchanged .wxs would keep the previous MSI instead of re-harvesting the payload.
+& dotnet build $wixProject -c Release -t:Rebuild -p:ProductVersion=$Version -p:GuardPublishDir=$publishDir
 if ($LASTEXITCODE -ne 0) {
     throw "WiX build failed with exit code $LASTEXITCODE."
 }

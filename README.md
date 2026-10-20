@@ -130,6 +130,13 @@ The installer extracts the payload behind a `current\` folder:
 
 Credentials and key material live under `%APPDATA%\AskKey`. Settings and the Broker pipe live under `%LOCALAPPDATA%\AskKey`. Removing the install folder does not delete the credential library.
 
+Uninstalling leaves two things behind on purpose:
+
+- `%ProgramData%\AskKey\Guard` holds the Guard service's DPAPI master key and per-account Windows Hello enrollments. Deleting it would permanently break Windows Hello unlock for every enrolled account, so the component is Permanent. See [docs/guard-service.md](docs/guard-service.md#uninstall-residue).
+- `%LOCALAPPDATA%\Microsoft\WindowsAppSDK\velopack.AskKey.png` is the taskbar icon bitmap for the unpackaged app.
+
+There is no automatic migration from the old per-user install to the per-machine one; no released build has shipped that layout. Uninstall the per-user build before installing `AskKeySetup-<version>.exe`, or the two installs will both appear in Apps & Features.
+
 ## Agent access
 
 The app includes setup for Claude Code, Codex, Cursor and Grok CLI. Open **Agent access** in the app, check the client and confirm. Setup adds Ask Key as an MCP server, keeps the existing client settings, and verifies the helper and Broker before reporting the client as connected.

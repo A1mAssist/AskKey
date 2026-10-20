@@ -423,6 +423,8 @@ internal static class LocalizationCatalog
         ["Kept inside Ask Key; no values are passed to the Agent."] = "仅保存在请旨中，不向 Agent 传递任何值。",
         ["Local Agent"] = "本机 Agent",
         ["Local Ask Key data was erased. Ask Key will close."] = "请旨的本地数据已抹除。请旨即将关闭。",
+        ["Local Ask Key data was erased, but the Ask Key Guard service still holds this account's Windows Hello enrollment. Windows Hello unlock cannot be enabled again on this PC until an administrator removes {0}."] =
+            "请旨的本地数据已抹除，但 Ask Key Guard 服务仍保留着此账户的 Windows Hello 注册。在管理员删除 {0} 之前，这台电脑上都无法再次开启 Windows Hello 解锁。",
         ["Erasing Ask Key requires system authentication."] = "抹除请旨需要系统验证。",
         ["The erase confirmation text did not match."] = "抹除确认文本不匹配。",
         ["Ask Key found an invalid local erase journal and stopped safely."] = "请旨发现本机抹除日志无效，已安全停止。",

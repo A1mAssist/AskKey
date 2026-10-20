@@ -34,6 +34,22 @@ The release `AskKeySetup-<version>.exe` installs the app and this service togeth
 
 The script copies the publish folder to `%ProgramFiles%\AskKey\Guard`, secures the binary and ProgramData directories, registers `AskKeyGuard` as `LocalService`, and starts it. `-Uninstall` stops and deletes the service but keeps user vault material and Guard state.
 
+## Uninstall residue
+
+Uninstalling Ask Key removes the service and `%ProgramFiles%\AskKey`, but intentionally leaves `%ProgramData%\AskKey\Guard` in place. This is not a leak:
+
+- `master.bin` is DPAPI-protected under the `LocalService` account. Deleting it invalidates every per-user KEK, so every Windows Hello enrollment in `users\` becomes permanently unusable.
+- Deleting `users\<SID>` on uninstall would also destroy an account that only has Guard unlock (no passphrase copy) with no warning.
+
+So the data-directory component is Permanent in the Guard MSI, and a normal uninstall leaves an empty or populated `ProgramData\AskKey\Guard` owned by `LocalService`, `SYSTEM` and `Administrators`. A standard user cannot read it after the service is stopped; that is expected, not a permissions bug.
+
+To fully reset Guard state on a test machine, run the following elevated **after** uninstalling, and only when no account still relies on Windows Hello unlock:
+
+```powershell
+sc.exe delete AskKeyGuard   # already removed by the uninstall; ignore "not found"
+Remove-Item 'C:\ProgramData\AskKey\Guard' -Recurse -Force
+```
+
 `vpk pack --msi` cannot install this service: its per-machine lifecycle hook runs impersonated/unelevated. A production release needs a dedicated per-machine Guard MSI with WiX `ServiceInstall`/`ServiceControl`, or the elevated script above as the repair path. Never point the service at a per-user `%LOCALAPPDATA%` install.
 
 ## Protocol
@@ -76,6 +92,6 @@ The public key is DER SPKI. The signature is verified with RSA PKCS#1 v1.5/SHA-2
 
 ## Security boundary
 
-If app data was erased while the service was unavailable, an administrator can remove `%ProgramData%\AskKey\Guard\users\<SID>`; this only clears that user's Guard enrollment, not the vault.
+If app data was erased while the service was unavailable, an administrator can remove `%ProgramData%\AskKey\Guard\users\<SID>`; this only clears that user's Guard enrollment, not the vault. The app cannot clear it itself: the stored enrollment proof is an HMAC of the vault key that erase is about to destroy, so after a new vault key exists the old proof can never be presented again. When erase cannot reach the service, the app now says so and names the directory to delete instead of leaving the user to discover the dead enrollment later.
 
 The service prevents same-user processes from getting the KEK without a fresh Hello signature and a valid caller path. After the KEK is released, the app process holds the vault key; code injected into the signed app is out of scope. A local administrator or SYSTEM compromise can extract the service master key.

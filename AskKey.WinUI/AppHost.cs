@@ -181,14 +181,22 @@ public sealed class AppHost : IDisposable
             Vault.BeginManagementSession(new ManagementAuthenticator(_ => true));
         }
         var helloKeyName = TryGetGuardHelloKeyName();
-        await TryUnenrollGuardAsync();
+        var unenrolled = await TryUnenrollGuardAsync();
         if (!string.IsNullOrEmpty(helloKeyName)) await HelloKeyManager.DeleteAsync(helloKeyName);
         Vault.DisableGuardUnlock();
         Vault.EraseLocalLibrary(confirmation, language, new ManagementAuthenticator(_ => true));
         _expiryReminders?.ClearLedger();
         _preferences.HasCompletedOnboarding = false;
         _preferences.Save();
-        Dialogs.ShowInfo("Local Ask Key data was erased. Ask Key will close.");
+        // Erase replaces the vault key, so an enrollment the service still holds can never
+        // match a new one. Say so instead of leaving the user to find it out later.
+        Dialogs.ShowInfo(unenrolled || helloKeyName is null or ""
+            ? "Local Ask Key data was erased. Ask Key will close."
+            : Loc.F("Local Ask Key data was erased, but the Ask Key Guard service still holds "
+                + "this account's Windows Hello enrollment. Windows Hello unlock cannot be "
+                + "enabled again on this PC until an administrator removes {0}.",
+                GuardPaths.DataRoot(GuardProtocol.IsDevelopmentEnvironment)
+                    + "\\users\\" + (CurrentUserSid() ?? "<your account>")));
         Quit();
     }
 
@@ -362,13 +370,32 @@ public sealed class AppHost : IDisposable
         }
     }
 
+    /// <summary>The SID the guard service files this account's enrollment under.</summary>
+    private static string? CurrentUserSid()
+    {
+        try
+        {
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            return identity.User?.Value;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     private string? TryGetGuardHelloKeyName()
     {
         try { return Vault.GuardHelloKeyName; }
         catch (Exception) { return null; }
     }
 
-    /// <summary>Best-effort service cleanup before the vault key disappears.</summary>
+    /// <summary>
+    /// Removes this account's guard enrollment before the vault key disappears.
+    /// A failure here is not cosmetic: the service keeps the old vault-key proof,
+    /// and erase replaces the vault key, so the stored proof could never match a
+    /// new enrollment again. Callers that erase the vault must surface the failure.
+    /// </summary>
     private async Task<bool> TryUnenrollGuardAsync()
     {
         if (Vault.IsLocked) return false;
