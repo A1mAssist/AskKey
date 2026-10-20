@@ -533,7 +533,7 @@ internal static class LocalizationCatalog
         ["given to programs as environment variable {0}"] = "作为环境变量 {0} 交给程序",
         ["given to programs as a temporary file (path in {0})"] = "作为临时文件交给程序（路径变量为 {0}）",
         ["kept in Ask Key only, never given to agents"] = "仅保存在请旨中，从不交给 Agent",
-        ["The items of {0} that are set to be given to programs (names are shown after you approve)"] = "该凭证中设置为交给程序的项目（批准后才会显示名称）",
+        ["The items of {0} that are set to be given to programs (names are shown after you approve)"] = "“{0}”中设置为交给程序的项目（批准后才会显示名称）",
         ["Nothing from this credential is given to the command"] = "不会向该命令交付此凭证的任何内容",
         ["{0} → environment variable {1}"] = "{0} → 环境变量 {1}",
         ["{0} → temporary file {1}"] = "{0} → 临时文件 {1}",

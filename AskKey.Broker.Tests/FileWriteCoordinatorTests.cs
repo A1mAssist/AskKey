@@ -361,7 +361,7 @@ public sealed class FileWriteCoordinatorBrokerTests
         var pipe = ProtocolTestSupport.NewPipeName();
         using var server = new BrokerSocketServer(pipe, handler);
         server.Start();
-        var client = new BrokerSocketClient(pipe);
+        var client = ProtocolTestSupport.Client(pipe);
 
         var beginResponse = client.Send(new BrokerRequest
         {

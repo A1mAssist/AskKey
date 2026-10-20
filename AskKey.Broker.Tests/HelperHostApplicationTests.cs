@@ -247,7 +247,7 @@ public sealed class BrokerHandlerCompositionTests
         {
             using var server = new BrokerSocketServer(pipe, handler);
             server.Start();
-            var client = new BrokerSocketClient(pipe);
+            var client = ProtocolTestSupport.Client(pipe);
 
             var upload = Assert.IsType<BrokerFileUploadTicket>(client.Send(new BrokerRequest
             {

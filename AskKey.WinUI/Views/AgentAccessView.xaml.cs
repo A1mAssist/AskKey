@@ -59,7 +59,7 @@ public partial class AgentAccessView : UserControl
             await Task.WhenAll(ClientKinds.Select(async client =>
             {
                 var status = await Task.Run(() => connector.Check(client));
-                if (generation == _statusGeneration) ApplyStatus(status);
+                if (OwnsRow(generation, _statusGeneration)) ApplyStatus(status);
             }));
         }
         catch (Exception error)
@@ -68,19 +68,33 @@ public partial class AgentAccessView : UserControl
         }
     }
 
+    /// <summary>
+    /// A refresh started after a single-client operation began owns the row, so a
+    /// slow check or connect that answers late must not overwrite it. Every path
+    /// that writes a row result goes through here.
+    /// </summary>
+    internal static bool OwnsRow(int capturedGeneration, int currentGeneration)
+        => capturedGeneration == currentGeneration;
+
     private async Task CheckOneAsync(AgentClientKind client)
     {
+        // A refresh started later owns the row, so a slow check that answers after
+        // it must not overwrite the newer result.
+        var generation = _statusGeneration;
         var row = Row(client);
         row.Button.IsEnabled = false;
         row.Status.Text = Loc.T("Checking…");
         try
         {
             var status = await Task.Run(() => Connector().Check(client));
-            ApplyStatus(status);
+            if (OwnsRow(generation, _statusGeneration)) ApplyStatus(status);
         }
         catch (Exception error)
         {
-            ShowRow(client, Loc.T("Not connected"), Loc.T(error.Message));
+            if (OwnsRow(generation, _statusGeneration))
+            {
+                ShowRow(client, Loc.T("Not connected"), Loc.T(error.Message));
+            }
         }
         finally
         {
@@ -107,6 +121,7 @@ public partial class AgentAccessView : UserControl
         }
         if (!_host.ConfirmManagement(SetupReason(client, preview))) return;
 
+        var generation = _statusGeneration;
         var row = Row(client);
         row.Button.IsEnabled = false;
         row.Status.Text = Loc.T("Connecting…");
@@ -114,11 +129,14 @@ public partial class AgentAccessView : UserControl
         try
         {
             var status = await Task.Run(() => Connector().Connect(client));
-            ApplyStatus(status);
+            if (OwnsRow(generation, _statusGeneration)) ApplyStatus(status);
         }
         catch (Exception error)
         {
-            ShowRow(client, Loc.T("Not connected"), Loc.T(error.Message));
+            if (OwnsRow(generation, _statusGeneration))
+            {
+                ShowRow(client, Loc.T("Not connected"), Loc.T(error.Message));
+            }
         }
         finally
         {

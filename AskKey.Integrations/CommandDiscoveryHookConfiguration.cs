@@ -160,8 +160,7 @@ public sealed class CommandDiscoveryHookConfiguration
         var replacement = plan.After;
 
         PrepareBackupDirectory();
-        var backup = Path.Combine(BackupDirectory, $"command-discovery-{Guid.NewGuid()}.bak");
-        WriteBackup(plan.Before ?? [], backup);
+        WriteBackup(plan.Before ?? []);
 
         try
         {
@@ -201,7 +200,10 @@ public sealed class CommandDiscoveryHookConfiguration
         WindowsFileSecurity.ApplyMode(BackupDirectory, WindowsFileSecurity.PrivateMode);
     }
 
-    private void WriteBackup(byte[] data, string path)
+    /// <summary>Keeps one owner backup per directory, replaced atomically. The
+    /// backup directory is Ask Key managed, so the previous per-install GUID files
+    /// are pruned here instead of accumulating forever.</summary>
+    private void WriteBackup(byte[] data)
     {
         // Recheck immediately before resolving the destination so a directory
         // replacement after preview cannot redirect the backup.
@@ -210,11 +212,29 @@ public sealed class CommandDiscoveryHookConfiguration
         try
         {
             ClientConfigFileIO.PublishAtomically(
-                data, path, WindowsFileSecurity.PrivateMode, exclusive: true, ".askkey-command-backup-");
+                data, Path.Combine(BackupDirectory, "command-discovery.bak"),
+                WindowsFileSecurity.PrivateMode, exclusive: false, ".askkey-command-backup-");
         }
         catch (ClientConfigFileException)
         {
             throw Error(CommandDiscoveryHookConfigurationError.BackupFailed);
+        }
+        PruneSupersededBackups();
+    }
+
+    private void PruneSupersededBackups()
+    {
+        try
+        {
+            foreach (var path in Directory.GetFiles(BackupDirectory, "command-discovery-*.bak"))
+            {
+                if (string.Equals(Path.GetFileName(path), "command-discovery.bak", StringComparison.Ordinal)) continue;
+                File.Delete(path);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Pruning is housekeeping; the owner backup is already in place.
         }
     }
 

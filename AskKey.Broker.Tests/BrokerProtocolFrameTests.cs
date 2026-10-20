@@ -141,7 +141,7 @@ public sealed class BrokerProtocolFrameTests
         server.Start();
         Assert.Equal(
             BrokerResponse.Failure(BrokerErrorCode.ResponseTooLarge),
-            new BrokerSocketClient(pipe).Send(new BrokerRequest { Version = 1, Method = "catalog" }));
+            ProtocolTestSupport.Client(pipe).Send(new BrokerRequest { Version = 1, Method = "catalog" }));
     }
 }
 

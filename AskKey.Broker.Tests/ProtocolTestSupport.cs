@@ -18,5 +18,11 @@ internal static class ProtocolTestSupport
     public static BrokerRequest Health(int version = BrokerProtocolVersion.Current)
         => new() { Version = version, Method = "health" };
 
-    public static BrokerSocketClient Client(BrokerSocketServer server) => new(server.PipeName);
+    /// <summary>The testhost is not AskKey.exe, so the production server-identity gate is bypassed.</summary>
+    public static BrokerSocketClient Client(BrokerSocketServer server)
+        => Client(server.PipeName);
+
+    /// <summary>The testhost is not AskKey.exe, so the production server-identity gate is bypassed.</summary>
+    public static BrokerSocketClient Client(string pipeName)
+        => new(pipeName, BrokerServerIdentity.AlwaysTrusted);
 }

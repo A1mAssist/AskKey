@@ -211,7 +211,7 @@ public sealed class RuntimeReceiptBoundsTests
             requestStatus: (_, _) => null,
             textRun: runtime.Run));
         server.Start();
-        var client = new BrokerSocketClient(pipe);
+        var client = ProtocolTestSupport.Client(pipe);
 
         Assert.Equal(
             BrokerErrorCode.InvalidRequest,

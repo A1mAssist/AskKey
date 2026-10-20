@@ -177,6 +177,9 @@ public sealed class BrokerSocketServer : IDisposable
             finally
             {
                 global::System.Array.Clear(frame.Data!);
+                // Released here so no decode failure can strand the slot; every later
+                // request from a legitimate client would be refused as resource_exhausted.
+                lease.Release();
             }
             if (request is null)
             {

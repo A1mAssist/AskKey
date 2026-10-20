@@ -4,7 +4,9 @@
     <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0</ProductVersion>
     <OutputName>AskKeyGuard-$(ProductVersion)</OutputName>
     <InstallerPlatform>x64</InstallerPlatform>
-    <GuardPublishDir Condition="'$(GuardPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\AskKey.Guard.Service\bin\Release\net10.0-windows</GuardPublishDir>
+    <!-- The publish directory is a required input: the default build tree also contains the
+         RID-specific intermediate copy of the service, and the harvest below is recursive. -->
+    <GuardPublishDir Condition="'$(GuardPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\publish\AskKey.Guard-$(ProductVersion)-win-x64</GuardPublishDir>
     <DefineConstants>ProductVersion=$(ProductVersion);GuardPublishDir=$(GuardPublishDir)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>

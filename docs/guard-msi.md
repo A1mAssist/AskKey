@@ -38,7 +38,9 @@ installer\Guard\bin\Release\AskKeyGuard-<version>.msi
 
 The WiX 6.0.2 SDK and its build tasks are restored by NuGet/MSBuild. No global `wix.exe` is required. The SDK includes its own `wix.exe` under the restored package.
 
-The packaging project excludes PDBs and the `win-x64` intermediate build folder from the installation payload. All remaining published files are harvested, including runtime files under `runtimes\`.
+The packaging project excludes PDBs from the installation payload. All remaining published files are harvested, including runtime files under `runtimes\`.
+
+`GuardPublishDir` must point at a publish directory, not at the service's `bin` tree: the `bin` tree also contains the RID-specific intermediate copy of the whole payload, and the harvest is recursive. `tools\AskKey.Build` passes a clean publish directory explicitly, and `build-guard-msi.ps1` clears and republishes its directory before building.
 
 ## Installation behavior
 

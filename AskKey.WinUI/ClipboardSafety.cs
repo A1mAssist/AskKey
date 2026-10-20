@@ -4,6 +4,8 @@ namespace AskKeyApp;
 
 public static class ClipboardSafety
 {
+    private static int _generation;
+
     public static async void Copy(string value)
     {
         var package = new DataPackage();
@@ -23,11 +25,13 @@ public static class ClipboardSafety
             Dialogs.ShowError("Ask Key could not copy without clipboard history. Copy was cancelled.");
             return;
         }
+        var generation = BeginCopy();
         await Task.Delay(TimeSpan.FromSeconds(60));
         var dispatcher = App.CurrentWindow?.DispatcherQueue;
         if (dispatcher is null) return;
         dispatcher.TryEnqueue(async () =>
         {
+            if (IsStale(generation)) return;
             try
             {
                 var data = Clipboard.GetContent();
@@ -39,4 +43,12 @@ public static class ClipboardSafety
             }
         });
     }
+
+    internal static int BeginCopy() => Interlocked.Increment(ref _generation);
+
+    /// <summary>True once a newer copy has been scheduled, so an earlier timer must
+    /// not clear the clipboard the user just copied again. Copying the same value
+    /// twice is still two copies, and value comparison alone cannot tell them
+    /// apart: both timers would see an identical clipboard.</summary>
+    internal static bool IsStale(int generation) => generation != Volatile.Read(ref _generation);
 }

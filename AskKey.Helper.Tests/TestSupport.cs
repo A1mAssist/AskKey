@@ -50,7 +50,8 @@ internal sealed class BrokerHarness : IDisposable
     public string PipeName { get; }
     public BrokerSocketServer Server { get; }
     public string PipeFile => global::System.IO.Path.Combine(_directory, BrokerRuntimeDirectory.PipeNameFileName);
-    public BrokerSocketClient Client => new(PipeName);
+    // The testhost is not AskKey.exe, so the production server-identity gate is bypassed.
+    public BrokerSocketClient Client => new(PipeName, BrokerServerIdentity.AlwaysTrusted);
 
     public void Dispose()
     {

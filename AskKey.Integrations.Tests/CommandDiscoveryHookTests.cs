@@ -86,9 +86,33 @@ public class CommandDiscoveryHookTests
         Assert.False(plan.Changed);
         configuration.Apply(plan);
         Assert.Equal(afterFirst, File.ReadAllBytes(path));
-        var backup = Assert.Single(Directory.GetFiles(temp.Combine("backups"), "command-discovery-*.bak"));
+        var backup = Assert.Single(Directory.GetFiles(temp.Combine("backups"), "command-discovery*.bak"));
         Assert.Equal("{\"version\":1,\"hooks\":{}}\n", File.ReadAllText(backup));
         Assert.True(configuration.HasExpectedHook());
+    }
+
+    [Fact]
+    public void RepeatedInstallsKeepOneOwnerBackupAndPruneSupersededOnes()
+    {
+        using var temp = new TempDirectory();
+        var helper = HelperPath(temp);
+        var path = temp.Write("home/.cursor/hooks.json", "{\"version\":1,\"hooks\":{}}\n");
+        var configuration = Configuration(temp, CommandDiscoveryClient.Cursor, helper);
+        // A backup written by an older build with the per-install GUID name.
+        var legacy = temp.Combine("backups", "command-discovery-stale.bak");
+        Directory.CreateDirectory(Path.GetDirectoryName(legacy)!);
+        File.WriteAllText(legacy, "{\"old\":true}");
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            File.WriteAllText(path, "{\"version\":1,\"hooks\":{\"preToolUse\":[]}}\n");
+            configuration.Apply(configuration.Preview());
+        }
+
+        var owner = Assert.Single(Directory.GetFiles(temp.Combine("backups"), "command-discovery*.bak"));
+        Assert.Equal("command-discovery.bak", Path.GetFileName(owner));
+        Assert.False(File.Exists(legacy));
+        Assert.Equal("{\"version\":1,\"hooks\":{\"preToolUse\":[]}}\n", File.ReadAllText(owner));
     }
 
     [Fact]

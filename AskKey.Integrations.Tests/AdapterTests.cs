@@ -349,8 +349,33 @@ public class CodexDiscoveryHookConfigurationTests
         Assert.False(second.Changed);
         configuration.Apply(second);
         Assert.Equal(afterFirst, File.ReadAllBytes(configuration.HooksPath));
-        var backup = Assert.Single(Directory.GetFiles(configuration.BackupDirectory, "codex-discovery-*.bak"));
+        var backup = Assert.Single(Directory.GetFiles(configuration.BackupDirectory, "codex-discovery*.bak"));
         Assert.Equal("{\"hooks\":{}}\n", File.ReadAllText(backup));
+    }
+
+    [Fact]
+    public void RepeatedInstallsKeepOneOwnerBackupAndPruneSupersededOnes()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.Write("home/.codex/hooks.json", "{\"hooks\":{}}\n");
+        var configuration = Configuration(temp);
+        // A backup written by an older build with the per-install GUID name.
+        var legacy = temp.Combine("backups", "codex-hooks", "codex-discovery-stale.bak");
+        Directory.CreateDirectory(Path.GetDirectoryName(legacy)!);
+        File.WriteAllText(legacy, "{\"old\":true}");
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            File.WriteAllText(path, "{\"hooks\":{\"PreToolUse\":[]}}\n");
+            configuration.Apply(configuration.Preview());
+        }
+
+        var backups = Directory.GetFiles(configuration.BackupDirectory, "codex-discovery*.bak");
+        var owner = Assert.Single(backups);
+        Assert.Equal("codex-discovery.bak", Path.GetFileName(owner));
+        Assert.False(File.Exists(legacy));
+        // Each install backs up what it replaced, so the newest install wins.
+        Assert.Equal("{\"hooks\":{\"PreToolUse\":[]}}\n", File.ReadAllText(owner));
     }
 
     [Fact]

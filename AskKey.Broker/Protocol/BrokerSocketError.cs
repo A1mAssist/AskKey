@@ -10,6 +10,7 @@ public enum BrokerSocketError
     MalformedResponse,
     BrokerFailure,
     SystemError,
+    UntrustedServer,
 }
 
 public sealed class BrokerSocketException : Exception
@@ -38,6 +39,8 @@ public sealed class BrokerSocketException : Exception
         BrokerSocketError.ResponseTooLarge => "The Broker response exceeds its fixed size limit.",
         BrokerSocketError.MalformedResponse => "The Ask Key Broker returned a malformed response.",
         BrokerSocketError.BrokerFailure => $"The Ask Key Broker rejected the request ({BrokerWire.ToWire(brokerFailure)}).",
+        BrokerSocketError.UntrustedServer =>
+            "The process answering this pipe is not the installed Ask Key application.",
         _ => $"Broker transport failed ({detail ?? "unspecified"}).",
     };
 }

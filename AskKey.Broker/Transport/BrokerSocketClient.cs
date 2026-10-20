@@ -8,18 +8,27 @@ namespace AskKey.Broker.Transport;
 public sealed class BrokerSocketClient
 {
     private readonly string _pipeName;
+    private readonly BrokerServerIdentity _serverIdentity;
 
     public BrokerSocketClient(string pipeName)
+        : this(pipeName, BrokerServerIdentity.Production)
+    {
+    }
+
+    /// <summary>Test seam: a testhost-owned pipe is not AskKey.exe, so tests inject a looser gate.</summary>
+    public BrokerSocketClient(string pipeName, BrokerServerIdentity serverIdentity)
     {
         if (!BrokerPipeName.IsValid(pipeName))
         {
             throw new BrokerSocketException(BrokerSocketError.PathTooLong, detail: "pipe name");
         }
         _pipeName = pipeName;
+        _serverIdentity = serverIdentity;
     }
 
     /// <summary>Resolves the server-written pipe name from the runtime directory.</summary>
-    public static BrokerSocketClient FromConfiguration() => new(BrokerConfiguration.ResolvePipeName());
+    public static BrokerSocketClient FromConfiguration()
+        => new(BrokerConfiguration.ResolvePipeName(), BrokerServerIdentity.Production);
 
     public BrokerResponse Send(BrokerRequest request, TimeSpan? connectTimeout = null)
     {
@@ -111,7 +120,6 @@ public sealed class BrokerSocketClient
         try
         {
             pipe.Connect((int)Math.Max(1, timeout.TotalMilliseconds));
-            return pipe;
         }
         catch (TimeoutException)
         {
@@ -123,6 +131,15 @@ public sealed class BrokerSocketClient
             pipe.Dispose();
             throw new BrokerSocketException(BrokerSocketError.NotRunning);
         }
+
+        // A same-user process can squat the pipe name, so confirm the peer really is
+        // the installed Ask Key host before any request, let alone a credential, is sent.
+        if (!_serverIdentity.IsTrusted(pipe))
+        {
+            pipe.Dispose();
+            throw new BrokerSocketException(BrokerSocketError.UntrustedServer);
+        }
+        return pipe;
     }
 }
 

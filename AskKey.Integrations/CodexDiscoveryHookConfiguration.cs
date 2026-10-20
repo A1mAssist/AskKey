@@ -198,10 +198,9 @@ public sealed class CodexDiscoveryHookConfiguration
             }
             if (!plan.Changed) return;
             PrepareBackupDirectory();
-            var backup = Path.Combine(BackupDirectory, $"codex-discovery-{Guid.NewGuid()}.bak");
             try
             {
-                WriteBackup(plan.Before ?? global::System.Array.Empty<byte>(), backup);
+                WriteBackup(plan.Before ?? global::System.Array.Empty<byte>());
             }
             catch (CodexDiscoveryHookConfigurationException)
             {
@@ -467,26 +466,38 @@ public sealed class CodexDiscoveryHookConfiguration
         WindowsFileSecurity.ApplyMode(BackupDirectory, WindowsFileSecurity.PrivateMode);
     }
 
-    private static void WriteBackup(byte[] bytes, string path)
+    /// <summary>Keeps one owner backup per directory, replaced atomically. The
+    /// backup directory is Ask Key managed, so the previous per-install GUID files
+    /// are pruned here instead of accumulating forever.</summary>
+    private void WriteBackup(byte[] bytes)
     {
-        if (File.Exists(path))
-        {
-            if (!File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes))
-            {
-                throw new CodexDiscoveryHookConfigurationException(
-                    CodexDiscoveryHookConfigurationError.BackupFailed);
-            }
-            return;
-        }
         try
         {
             ClientConfigFileIO.PublishAtomically(
-                bytes, path, WindowsFileSecurity.PrivateMode, exclusive: true, ".askkey-discovery-backup-");
+                bytes, Path.Combine(BackupDirectory, "codex-discovery.bak"),
+                WindowsFileSecurity.PrivateMode, exclusive: false, ".askkey-discovery-backup-");
         }
         catch (ClientConfigFileException)
         {
             throw new CodexDiscoveryHookConfigurationException(
                 CodexDiscoveryHookConfigurationError.BackupFailed);
+        }
+        PruneSupersededBackups();
+    }
+
+    private void PruneSupersededBackups()
+    {
+        try
+        {
+            foreach (var path in Directory.GetFiles(BackupDirectory, "codex-discovery-*.bak"))
+            {
+                if (string.Equals(Path.GetFileName(path), "codex-discovery.bak", StringComparison.Ordinal)) continue;
+                File.Delete(path);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Pruning is housekeeping; the owner backup is already in place.
         }
     }
 

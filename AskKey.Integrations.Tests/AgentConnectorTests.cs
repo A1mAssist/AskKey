@@ -108,6 +108,34 @@ public sealed class AgentConnectorTests
     }
 
     [Fact]
+    public void UnverifiedConnectRestoresTheDiscoveryHook()
+    {
+        using var temp = new TempDirectory();
+        var home = temp.Combine("home");
+        Directory.CreateDirectory(home);
+        var helper = TestFiles.InstallFixture(temp.Combine("home", ".askkey", "askkey.exe"));
+        var claude = TestFiles.InstallFixture(temp.Combine("home", ".local", "bin", "claude.exe"));
+        // The entry already matches, so the adapter's own Connect returns normally,
+        // but the client cannot reach the server. Check then reports a failed
+        // verification, which must roll the discovery hook back like a write error.
+        File.WriteAllText(temp.Combine("home", "claude-state"), "matching");
+        File.WriteAllText(temp.Combine("home", "claude-command"), helper);
+        File.WriteAllText(temp.Combine("home", "claude-disconnected"), "1");
+        var connector = new AgentConnector(
+            home, temp.Combine("support"), helper, "unused-pipe", "ok-test", claude,
+            signing: CodexHelperSigning.Development);
+
+        var status = connector.Connect(AgentClientKind.ClaudeCode);
+
+        Assert.False(status.Connected);
+        Assert.Equal("The client configuration was found, but the connection is not verified.",
+            status.Message);
+        var hook = CommandDiscoveryClient.Claude.Configuration(
+            home, helper, temp.Combine("support", "claude-discovery"));
+        Assert.False(hook.HasExpectedHook());
+    }
+
+    [Fact]
     public void CheckingAnAbsentClaudeEntryDoesNotSpawnTheSlowCli()
     {
         using var temp = new TempDirectory();

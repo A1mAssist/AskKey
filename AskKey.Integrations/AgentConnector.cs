@@ -21,6 +21,11 @@ public sealed record AgentConnectionStatus(
 
 public sealed record AgentSetupTarget(string Path, bool Exists);
 
+/// <summary>MCP configuration was written but the final verification did not
+/// pass. Thrown so the connect transaction treats it as a failure and rolls
+/// the discovery hook back like any other write error.</summary>
+public sealed class AgentConnectionNotVerifiedException(string message) : Exception(message);
+
 public sealed record AgentSetupPreview(
     AgentSetupTarget? McpConfiguration,
     AgentSetupTarget DiscoveryHook,
@@ -99,6 +104,12 @@ public sealed class AgentConnector
                 try
                 {
                     ConnectMcp(client);
+                    // Check reports a failed verification as a status instead of an
+                    // exception, so an unverified connect would otherwise return a
+                    // failure row with the MCP configuration still left on disk.
+                    var status = Check(client);
+                    if (!status.Connected) throw new AgentConnectionNotVerifiedException(status.Message);
+                    return status;
                 }
                 catch (Exception error)
                 {
@@ -114,8 +125,6 @@ public sealed class AgentConnector
                     }
                     return Failed(client, error);
                 }
-
-                return Check(client);
             }
             catch (Exception error)
             {
@@ -368,6 +377,7 @@ public sealed class AgentConnector
             GrokCLIAdapterException grok => grok.Message,
             CommandDiscoveryHookConfigurationException hook => hook.Message,
             CodexDiscoveryHookConfigurationException hook => hook.Message,
+            AgentConnectionNotVerifiedException notVerified => notVerified.Message,
             _ => error.Message.Length > 0
                 ? error.Message
                 : "The client configuration could not be updated or verified.",

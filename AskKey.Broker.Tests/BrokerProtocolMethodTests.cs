@@ -76,7 +76,7 @@ public sealed class BrokerProtocolMethodTests
         using var server = new BrokerSocketServer(pipe, handler);
         server.Start();
 
-        var client = new BrokerSocketClient(pipe);
+        var client = ProtocolTestSupport.Client(pipe);
         Assert.Equal(
             BrokerResponse.Failure(BrokerErrorCode.AgentAccessPaused),
             client.Send(new BrokerRequest { Version = 1, Method = "catalog" }));
@@ -95,7 +95,7 @@ public sealed class BrokerProtocolMethodTests
 
         Assert.Equal(
             BrokerResponse.Success(BrokerPayload.FromHealth(new BrokerHealth(BrokerProtocolVersion.Current, "ok"))),
-            new BrokerSocketClient(pipe).Send(ProtocolTestSupport.Health()));
+            ProtocolTestSupport.Client(pipe).Send(ProtocolTestSupport.Health()));
     }
 
     [Fact]

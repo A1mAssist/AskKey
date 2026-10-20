@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -120,7 +121,7 @@ internal static partial class BuildTool
         var buildDir = Directory.EnumerateDirectories(buildRoot)
             .Where(directory => File.Exists(Path.Combine(directory, "AskKey.exe"))
                 && File.Exists(Path.Combine(directory, "App.xbf")))
-            .OrderByDescending(Directory.GetLastWriteTimeUtc)
+            .OrderByDescending(directory => File.GetLastWriteTimeUtc(Path.Combine(directory, "AskKey.exe")))
             .FirstOrDefault()
             ?? throw new DirectoryNotFoundException($"Build output was not found under {buildRoot}.");
 
@@ -153,6 +154,14 @@ internal static partial class BuildTool
             }
         }
 
+        // The build root also holds the RID-specific intermediate tree, so the copy above
+        // brought a second, older copy of the whole payload in. Ship only the payload root.
+        var intermediate = Path.Combine(publishDir, Runtime);
+        if (Directory.Exists(intermediate))
+        {
+            Directory.Delete(intermediate, recursive: true);
+        }
+
         var strayLocales = Directory.EnumerateDirectories(publishDir, "*", SearchOption.AllDirectories)
             .Where(d => !string.Equals(Path.GetFileName(d), "zh-CN", StringComparison.OrdinalIgnoreCase))
             .Where(d => Directory.EnumerateFiles(d, "*.mui", SearchOption.TopDirectoryOnly).Any())
@@ -163,6 +172,19 @@ internal static partial class BuildTool
         {
             throw new InvalidOperationException(
                 "Only zh-CN may ship, but these locales survived the trim: " + string.Join(", ", strayLocales));
+        }
+
+        // A second host binary anywhere under the payload means an intermediate tree was
+        // copied in; fail the build rather than shipping a stale copy in Program Files.
+        var duplicateHosts = Directory.EnumerateFiles(publishDir, "AskKey.exe", SearchOption.AllDirectories)
+            .Where(path => !string.Equals(path, Path.Combine(publishDir, "AskKey.exe"),
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (duplicateHosts.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "The payload contains more than one host executable: "
+                + string.Join(", ", duplicateHosts.Select(path => Path.GetRelativePath(publishDir, path))));
         }
 
         var hostPath = Path.Combine(publishDir, "AskKey.exe");
@@ -204,7 +226,7 @@ internal static partial class BuildTool
             packArgs.Add("--signParams");
             packArgs.Add($"/sha1 {certificate} /fd SHA256 /tr {timestampUrl} /td SHA256");
         }
-        Run("vpk", packArgs, root);
+        Run(FindOnPath("vpk.exe"), packArgs, root);
 
         var guardArgs = new List<string> { "--output", output, "--skip-tests" };
         if (!unsigned)
@@ -336,6 +358,18 @@ internal static partial class BuildTool
             throw new FileNotFoundException("AskKey.Bundle.wixproj was not found.", project);
         if (!File.Exists(appMsi)) throw new FileNotFoundException("The app MSI was not found.", appMsi);
         if (!File.Exists(guardMsi)) throw new FileNotFoundException("The Guard MSI was not found.", guardMsi);
+        // A bundle whose own version disagrees with its payload installs as the newer
+        // number and then refuses the downgrade, so catch the mismatch here instead.
+        foreach (var payload in new[] { ("app MSI", appMsi), ("Guard MSI", guardMsi) })
+        {
+            var payloadVersion = ReadMsiProductVersion(payload.Item2);
+            if (!string.Equals(payloadVersion, version, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"The {payload.Item1} is version {payloadVersion}, but the bundle would be "
+                    + $"version {version}. Rebuild it, or point the bundle at the matching package.");
+            }
+        }
         // Rebuild, not build: MSBuild does not track files that arrive through command-line
         // properties, so an incremental build can ship a bundle with the previous MSI inside.
         Run("dotnet", ["build", project, "-c", "Release", "--nologo", "-v", "minimal", "-t:Rebuild",
@@ -375,6 +409,82 @@ internal static partial class BuildTool
             File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
         foreach (var directory in Directory.EnumerateDirectories(source))
             CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)));
+    }
+
+    /// <summary>
+    /// Reads ProductVersion from an MSI and returns its first three fields. An app MSI
+    /// written by Velopack carries four (1.0.0.0) while the bundle version has three,
+    /// so a full-string comparison would reject a correct package.
+    /// </summary>
+    private static string ReadMsiProductVersion(string msiPath)
+    {
+        var database = IntPtr.Zero;
+        var view = IntPtr.Zero;
+        try
+        {
+            if (MsiOpenDatabaseW(msiPath, null, ref database) != 0)
+                throw new InvalidOperationException($"The app MSI could not be opened: {msiPath}");
+            if (MsiDatabaseOpenViewW(database,
+                    "SELECT `Value` FROM `Property` WHERE `Property`='ProductVersion'", ref view) != 0)
+            {
+                throw new InvalidOperationException($"The app MSI has no readable ProductVersion: {msiPath}");
+            }
+            if (MsiViewExecute(view, IntPtr.Zero) != 0)
+                throw new InvalidOperationException($"The app MSI version query failed: {msiPath}");
+
+            var record = IntPtr.Zero;
+            if (MsiViewFetch(view, ref record) != 0)
+                throw new InvalidOperationException($"The app MSI does not declare a ProductVersion: {msiPath}");
+            try
+            {
+                var buffer = new StringBuilder(64);
+                var length = (uint)buffer.Capacity;
+                if (MsiRecordGetStringW(record, 1, buffer, ref length) != 0) return string.Empty;
+                var fields = buffer.ToString().Split('.');
+                return string.Join('.', fields.Take(3));
+            }
+            finally
+            {
+                MsiCloseHandle(record);
+            }
+        }
+        finally
+        {
+            if (view != IntPtr.Zero) MsiCloseHandle(view);
+            if (database != IntPtr.Zero) MsiCloseHandle(database);
+        }
+    }
+
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)]
+    private static extern int MsiOpenDatabaseW(string path, string? persist, ref IntPtr database);
+
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)]
+    private static extern int MsiDatabaseOpenViewW(IntPtr database, string query, ref IntPtr view);
+
+    [DllImport("msi.dll")]
+    private static extern int MsiViewExecute(IntPtr view, IntPtr record);
+
+    [DllImport("msi.dll")]
+    private static extern int MsiViewFetch(IntPtr view, ref IntPtr record);
+
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)]
+    private static extern int MsiRecordGetStringW(IntPtr record, uint field, StringBuilder buffer, ref uint length);
+
+    [DllImport("msi.dll")]
+    private static extern int MsiCloseHandle(IntPtr handle);
+
+    /// <summary>Resolves a build tool on PATH, or says how to install it.</summary>
+    private static string FindOnPath(string toolName)
+    {
+        foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+        {
+            if (string.IsNullOrWhiteSpace(directory)) continue;
+            var candidate = Path.Combine(directory, toolName);
+            if (File.Exists(candidate)) return candidate;
+        }
+
+        throw new FileNotFoundException(
+            $"{toolName} was not found on PATH. Install it with: dotnet tool install --global vpk");
     }
 
     private static string FindSigntool()

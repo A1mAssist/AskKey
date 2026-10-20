@@ -65,7 +65,7 @@ public sealed class BrokerProtocolRuntimeTests
         server.Start();
 
         using var channel = BrokerRuntimeChannel.CreateCaller();
-        var runTask = Task.Run(() => new BrokerSocketClient(pipe).Run(
+        var runTask = Task.Run(() => ProtocolTestSupport.Client(pipe).Run(
             new BrokerTextRunRequest("fd-runtime", new[] { "cmd" }, new[] { "TOKEN" }), channel));
         Assert.True(channel.Connected.Wait(TimeSpan.FromSeconds(5)), "broker did not connect the channel");
         var readTask = Task.Run(() =>
@@ -98,7 +98,7 @@ public sealed class BrokerProtocolRuntimeTests
         server.Start();
 
         using var channel = BrokerRuntimeChannel.CreateCaller();
-        var exception = Assert.Throws<BrokerSocketException>(() => new BrokerSocketClient(pipe).Run(
+        var exception = Assert.Throws<BrokerSocketException>(() => ProtocolTestSupport.Client(pipe).Run(
             new BrokerTextRunRequest("spawn-failed", new[] { "nope" }, new[] { "TOKEN" }), channel));
         Assert.Equal(BrokerSocketError.BrokerFailure, exception.Error);
         Assert.Equal(BrokerErrorCode.InternalError, exception.BrokerFailure);

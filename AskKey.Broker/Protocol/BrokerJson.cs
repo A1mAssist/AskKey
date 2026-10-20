@@ -29,6 +29,12 @@ public static partial class BrokerJson
         {
             return null;
         }
+        catch (InvalidOperationException)
+        {
+            // A well-formed document with a wrong JSON type, such as a numeric
+            // requestID, fails inside the element readers. It is still bad input.
+            return null;
+        }
     }
 
     public static byte[] Encode(BrokerResponse response)
@@ -46,6 +52,10 @@ public static partial class BrokerJson
             return null;
         }
         catch (FormatException)
+        {
+            return null;
+        }
+        catch (InvalidOperationException)
         {
             return null;
         }

@@ -74,6 +74,11 @@ internal static partial class CodexAskKeyTOML
         foreach (var part in parts)
         {
             if (part.Name?.IsAskKey == true) continue;
+            if (part.Name is null)
+            {
+                kept.Append(StripRootAskKeyKeys(part.Raw, part.Newline));
+                continue;
+            }
             if (part.Name?.IsMcpServersRoot == true)
             {
                 kept.Append(StripAskKeyKeys(part.Raw, part.Newline));
@@ -81,10 +86,9 @@ internal static partial class CodexAskKeyTOML
             }
             kept.Append(part.Raw);
         }
-        // Windows fix over the Swift source: keep the file's own newline style for
-        // the inserted table. The Swift port always appended LF, which produced a
-        // mixed-ending file that its own CRLF-aware parser could not read back.
-        var newline = original.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        // Sections() already rejected a file with mixed line endings, so the first
+        // section's newline is the only style this document uses.
+        var newline = parts.Length > 0 ? parts[0].Newline : "\n";
         var table = $"[mcp_servers.askkey]{newline}"
             + $"command = {TomlString(command)}{newline}"
             + $"args = [{string.Join(", ", args.Select(TomlString))}]";

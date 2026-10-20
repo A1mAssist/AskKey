@@ -9,7 +9,7 @@ internal static partial class CodexAskKeyTOML
     public static Section[] Sections(string text)
     {
         if (text.Contains('\0')) throw new CodexUserMCPException(CodexUserMCPError.IllegalConfig);
-        var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        var newline = RequireSingleNewlineStyle(text);
         var sourceLines = Lines(text, newline);
         var scan = Scan.Normal;
         var sections = new List<Section>();
@@ -61,6 +61,20 @@ internal static partial class CodexAskKeyTOML
         if (!scan.IsNormal) throw new CodexUserMCPException(CodexUserMCPError.IllegalConfig);
         if (raw.Length > 0 || sections.Count == 0) Push();
         return sections.ToArray();
+    }
+
+    /// <summary>Every line is split with one newline string, so a file that mixes
+    /// CRLF with a bare LF would hide a table header from the writer and get a
+    /// duplicate declaration. Refuse such a file instead of guessing.</summary>
+    private static string RequireSingleNewlineStyle(string text)
+    {
+        var crlf = text.Contains("\r\n", StringComparison.Ordinal);
+        // A lone "\r" that is not part of "\r\n" is not a line break this reader
+        // understands either, so treat it as a style mismatch too.
+        var bare = text.Replace("\r\n", "", StringComparison.Ordinal).Contains('\n')
+            || text.Replace("\r\n", "", StringComparison.Ordinal).Contains('\r');
+        if (crlf && bare) throw new CodexUserMCPException(CodexUserMCPError.IllegalConfig);
+        return crlf ? "\r\n" : "\n";
     }
 
     public static void AssertBalanced(string text)

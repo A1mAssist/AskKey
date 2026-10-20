@@ -198,31 +198,73 @@ public sealed class CodexUserMCPAdapter
             AtomicWrite(replacement, WindowsFileSecurity.PrivateMode, exclusive: true);
             return;
         }
-        var quarantine = Path.Combine(
-            Path.GetDirectoryName(ConfigPath)!, $".askkey-input-{Guid.NewGuid()}");
-        RenameExclusively(ConfigPath, quarantine);
-        var snapshot = ReadRegularFile(quarantine);
-        if (snapshot is null
-            || !snapshot.Value.Bytes.AsSpan().SequenceEqual(global::System.Text.Encoding.UTF8.GetBytes(original.Text))
-            || snapshot.Value.Mode != original.Mode)
-        {
-            RenameExclusively(quarantine, ConfigPath);
-            throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
-        }
+        var originalBytes = global::System.Text.Encoding.UTF8.GetBytes(original.Text);
+        PublishReplacing(
+            replacement, original.Mode,
+            current => SameBytes(current, originalBytes));
+    }
+
+    /// <summary>Windows has no RENAME_SWAP. File.Replace moves a same-directory
+    /// temporary over the destination in one step and keeps the displaced file, so
+    /// ConfigPath is never absent and the bytes it held before the swap are still
+    /// on disk afterwards. Only bytes the caller recognises are displaced, and the
+    /// displaced copy is checked again before it is dropped, so a concurrent writer
+    /// is put back rather than overwritten.</summary>
+    private void PublishReplacing(byte[] replacement, int mode, Func<byte[], bool> accepts)
+    {
+        var directory = Path.GetDirectoryName(ConfigPath)!;
+        EnsureDirectory(directory, WindowsFileSecurity.PrivateMode, excludeFromBackup: false);
+        string temporary;
         try
         {
-            AtomicWrite(replacement, original.Mode, exclusive: true);
-            File.Delete(quarantine);
+            temporary = ClientConfigFileIO.WriteExclusiveTemporary(replacement, directory, ".askkey-config-");
+            WindowsFileSecurity.ApplyMode(temporary, mode);
         }
-        catch
+        catch (Exception exception) when (exception is ClientConfigFileException or IOException
+            or UnauthorizedAccessException)
         {
-            if (File.Exists(quarantine) && !File.Exists(ConfigPath))
-            {
-                RenameExclusively(quarantine, ConfigPath);
-            }
             throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
         }
+
+        var keepTemporary = true;
+        var displaced = Path.Combine(directory, $".askkey-replaced-{Guid.NewGuid()}");
+        try
+        {
+            var current = ReadRegularFile(ConfigPath);
+            if (current is null || !accepts(current.Value.Bytes))
+            {
+                throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
+            }
+            try
+            {
+                File.Replace(temporary, ConfigPath, displaced, ignoreMetadataErrors: true);
+                keepTemporary = false;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
+            }
+            WindowsFileSecurity.ApplyMode(ConfigPath, mode);
+            var moved = ReadRegularFile(displaced);
+            if (moved is null || !accepts(moved.Value.Bytes))
+            {
+                try { File.Replace(displaced, ConfigPath, null, ignoreMetadataErrors: true); }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+                throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
+            }
+            File.Delete(displaced);
+        }
+        finally
+        {
+            if (keepTemporary)
+            {
+                try { File.Delete(temporary); } catch (IOException) { }
+            }
+        }
     }
+
+    private static bool SameBytes(byte[] left, byte[] right)
+        => left.AsSpan().SequenceEqual(right);
 
     private void PrepareBackup(CodexOriginalConfig? original)
     {
@@ -234,13 +276,30 @@ public sealed class CodexUserMCPAdapter
             {
                 if (!BackupMatchesOriginal(existing, original))
                 {
-                    throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
+                    // A journal that describes a state the file is no longer in was
+                    // left by a process that died mid-apply. Nothing is damaged, so
+                    // keep it for inspection and journal the current state instead of
+                    // refusing every later apply with a rollback error.
+                    KeepStaleBackup(existing);
                 }
+                else
+                {
+                    return;
+                }
+            }
+            else if (BackupMatchesCurrent(existing, original))
+            {
                 return;
             }
-            if (BackupMatchesCurrent(existing, original)) return;
         }
         WriteBackup(CodexRollbackBackup.From(original, null));
+    }
+
+    private void KeepStaleBackup(CodexRollbackBackup backup)
+    {
+        var stale = Path.Combine(BackupDirectory, $"config.toml.stale-{Guid.NewGuid()}");
+        File.Move(BackupFilePath, stale, overwrite: true);
+        WindowsFileSecurity.SecureFile(stale);
     }
 
     private static bool BackupMatchesCurrent(CodexRollbackBackup backup, CodexOriginalConfig? current)
@@ -291,48 +350,38 @@ public sealed class CodexUserMCPAdapter
     {
         var pending = PendingBackup();
         var target = pending.Original ?? original;
+        var targetBytes = target is null ? null : global::System.Text.Encoding.UTF8.GetBytes(target.Text);
         if (ReadRegularFile(ConfigPath) is null)
         {
             if (replacementDigest is not null)
             {
                 throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
             }
-            if (target is not null)
+            if (target is not null && targetBytes is not null)
             {
-                AtomicWrite(global::System.Text.Encoding.UTF8.GetBytes(target.Text), target.Mode, exclusive: true);
+                AtomicWrite(targetBytes, target.Mode, exclusive: true);
             }
             return;
         }
-        var quarantine = Path.Combine(
-            Path.GetDirectoryName(ConfigPath)!, $".askkey-rollback-{Guid.NewGuid()}");
-        RenameExclusively(ConfigPath, quarantine);
-        var quarantined = ReadRegularFile(quarantine)
-            ?? throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
-        var targetBytes = target is null ? null : global::System.Text.Encoding.UTF8.GetBytes(target.Text);
-        var digest = global::System.Security.Cryptography.SHA256.HashData(quarantined.Bytes);
-        if ((targetBytes is not null && quarantined.Bytes.AsSpan().SequenceEqual(targetBytes))
-            || (replacementDigest is not null && digest.AsSpan().SequenceEqual(replacementDigest)))
+        // Rollback only touches a config it recognises: the original bytes, or the
+        // replacement this apply published. Anything else belongs to the user or a
+        // concurrent writer and is left exactly as it is.
+        bool Recognised(byte[] current)
+            => (targetBytes is not null && SameBytes(current, targetBytes))
+                || (replacementDigest is not null
+                    && global::System.Security.Cryptography.SHA256.HashData(current)
+                        .AsSpan().SequenceEqual(replacementDigest));
+        if (!Recognised(ReadRegularFile(ConfigPath)!.Value.Bytes))
         {
-            try
-            {
-                if (target is not null && targetBytes is not null)
-                {
-                    AtomicWrite(targetBytes, target.Mode, exclusive: true);
-                }
-                File.Delete(quarantine);
-            }
-            catch
-            {
-                if (File.Exists(quarantine) && !File.Exists(ConfigPath))
-                {
-                    RenameExclusively(quarantine, ConfigPath);
-                }
-                throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
-            }
+            throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
+        }
+        if (target is null || targetBytes is null)
+        {
+            // There was no config before this apply, so undoing means removing ours.
+            File.Delete(ConfigPath);
             return;
         }
-        RenameExclusively(quarantine, ConfigPath);
-        throw new CodexUserMCPException(CodexUserMCPError.RollbackFailed);
+        PublishReplacing(targetBytes, target.Mode, Recognised);
     }
 
     private CodexRollbackBackup PendingBackup()

@@ -11,6 +11,15 @@ using AskKey.Vault;
 
 namespace AskKeyApp;
 
+/// <summary>The single rule for the global shortcut: a preference is worth keeping
+/// only while the shortcut is actually registered. Keeping this decision out of
+/// the Win32 call lets it be tested directly.</summary>
+internal static class HotkeyPreference
+{
+    public static string ToPersist(string requested, bool registered, string current)
+        => registered ? requested : current;
+}
+
 /// <summary>Owns the App process: vault lifecycle, Broker, approval queue, tray and hotkey.</summary>
 public sealed class AppHost : IDisposable
 {
@@ -917,9 +926,24 @@ public sealed class AppHost : IDisposable
 
     public void ApplyHotkey(string id)
     {
-        _preferences.HotkeyShortcut = id;
-        _preferences.Save();
-        _hotkey?.Register(HotkeyOption.FromId(id));
+        var hotkey = _hotkey;
+        var registered = hotkey is not null && hotkey.Register(HotkeyOption.FromId(id));
+        var previous = _preferences.HotkeyShortcut;
+        var persisted = HotkeyPreference.ToPersist(id, registered, previous);
+        if (persisted != previous)
+        {
+            _preferences.HotkeyShortcut = persisted;
+            _preferences.Save();
+        }
+        if (registered) return;
+        if (hotkey is null) return;
+        // The combination is owned by another program. Re-registering the previous
+        // one keeps Ask Key's shortcut alive, and the refresh moves the combo box
+        // back to it, so Settings cannot claim a shortcut that was never taken.
+        hotkey.Register(HotkeyOption.FromId(persisted));
+        _mainWindow?.HotkeyUnavailable();
+        // MainWindow owns the settings view, so go through the refresh it exposes.
+        _mainWindow?.RefreshAll();
     }
 
     private bool SafeIsAgentAccessPaused()
