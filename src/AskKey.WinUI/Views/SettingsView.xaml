@@ -211,7 +211,7 @@
               <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel>
-              <TextBlock local:Loc.Key="Ask Key for Windows 0.1.0" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+              <TextBlock x:Name="AboutVersionText" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
               <TextBlock local:Loc.Key="Credentials are encrypted with Windows DPAPI. The Broker protocol is version 1; MCP supports 2024-11-05 and 2025-11-25."
                          Style="{StaticResource SecondaryTextStyle}" Margin="0,5,0,0" TextWrapping="Wrap"/>
               <TextBlock x:Name="AccessRecordFailureText" Foreground="{ThemeResource WarningBrush}" FontSize="12"

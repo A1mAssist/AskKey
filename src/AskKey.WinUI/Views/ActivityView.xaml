@@ -49,15 +49,16 @@
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                       <StackPanel>
+                        <!-- Run does not inherit TextBlock.FontFamily; keep inline text on the UI font. -->
                         <TextBlock Style="{StaticResource HeadlineStyle}" FontSize="13" TextWrapping="Wrap">
-                          <Run Text="&quot;"/><Run Text="{Binding DisplayCredentialName}"/><Run local:Loc.Key="&quot; · "/>
-                          <Run Text="{Binding Request.Operation}"/>
+                          <Run FontFamily="{StaticResource UiFont}" Text="&quot;"/><Run FontFamily="{StaticResource UiFont}" Text="{Binding DisplayCredentialName}"/><Run FontFamily="{StaticResource UiFont}" local:Loc.Key="&quot; · "/>
+                          <Run FontFamily="{StaticResource UiFont}" Text="{Binding Request.Operation}"/>
                         </TextBlock>
                         <TextBlock Text="{Binding Request.DisplayValue.CommandSummary}" Style="{StaticResource MonoTextStyle}"
                                    Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0">
-                          <Run local:Loc.Key="Requested by "/><Run Text="{Binding Request.CallerName, Converter={StaticResource LocalTextOrFallback}, ConverterParameter='Local Agent'}"/>
-                          <Run local:Loc.Key=" · expires "/><Run Text="{Binding ExpiresAt, Converter={StaticResource Timestamp}}"/>
+                          <Run FontFamily="{StaticResource UiFont}" local:Loc.Key="Requested by "/><Run FontFamily="{StaticResource UiFont}" Text="{Binding Request.CallerName, Converter={StaticResource LocalTextOrFallback}, ConverterParameter='Local Agent'}"/>
+                          <Run FontFamily="{StaticResource UiFont}" local:Loc.Key=" · expires "/><Run FontFamily="{StaticResource UiFont}" Text="{Binding ExpiresAt, Converter={StaticResource Timestamp}}"/>
                         </TextBlock>
                       </StackPanel>
                       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
@@ -98,8 +99,8 @@
                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                         <TextBlock Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"
                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap">
-                          <Run local:Loc.Key="Deleted "/><Run Text="{Binding DeletedAt, Converter={StaticResource Timestamp}}"/>
-                          <Run local:Loc.Key=" · restored credentials become available again immediately."/>
+                          <Run FontFamily="{StaticResource UiFont}" local:Loc.Key="Deleted "/><Run FontFamily="{StaticResource UiFont}" Text="{Binding DeletedAt, Converter={StaticResource Timestamp}}"/>
+                          <Run FontFamily="{StaticResource UiFont}" local:Loc.Key=" · restored credentials become available again immediately."/>
                         </TextBlock>
                       </StackPanel>
                       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">

@@ -112,7 +112,7 @@
               <TextBlock local:Loc.Key="Quit Ask Key" Margin="8,0,0,0"/>
             </StackPanel>
           </Button>
-          <TextBlock local:Loc.Key="v0.1.0 · Windows" Style="{StaticResource CaptionTextStyle}" Margin="8,5,0,0"/>
+          <TextBlock x:Name="VersionText" Style="{StaticResource CaptionTextStyle}" Margin="8,5,0,0"/>
         </StackPanel>
       </Grid>
     </Border>

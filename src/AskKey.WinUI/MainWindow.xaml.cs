@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
 using Microsoft.UI.Windowing;
+using AskKey.Integrations;
 using AskKey.Vault;
 
 namespace AskKeyApp;
@@ -42,6 +43,7 @@ public partial class MainWindow : Window
     {
         _host = host;
         InitializeComponent();
+        VersionText.Text = $"v{AskKeyVersion.Current} · Windows";
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(TitleDragRegion);
         _host.PendingChanged += RefreshChrome;

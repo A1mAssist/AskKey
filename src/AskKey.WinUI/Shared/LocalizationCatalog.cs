@@ -98,7 +98,7 @@ internal static class LocalizationCatalog
         ["Ask for device-owner confirmation when an Agent reads a visible credential."] = "Agent 读取可见凭证时，要求设备所有者确认。",
         ["Ask Key"] = "请旨",
         ["Ask Key approval"] = "请旨审批",
-        ["Ask Key for Windows 0.1.0"] = "请旨 Windows 版 0.1.0",
+        ["Ask Key for Windows {0}"] = "请旨 Windows 版 {0}",
         ["Ask Key is asking you to confirm this action. Agents never see the stored value."] = "请旨正在请求你确认此操作。Agent 永远看不到已保存的值。",
         ["Ask Key stores credentials locally, gives an Agent only the one it needs, and asks you before any read or write."] = "请旨把凭证保存在本机，只把 Agent 需要的那一份交给它，并在任何读取或写入前征求你的同意。",
         ["Ask Key stores data under your Windows user profile. Credentials are encrypted with DPAPI."] = "请旨把数据保存在你的 Windows 用户配置目录中。凭证使用 DPAPI 加密。",
@@ -379,7 +379,6 @@ internal static class LocalizationCatalog
         ["After one Windows Hello confirmation, skip repeated checks for in-app management actions during this window."] =
             "Windows Hello 确认一次后，在此时长内进行应用内管理操作时不再重复验证。",
         ["Use Ask Key as an MCP server"] = "将请旨用作 MCP 服务",
-        ["v0.1.0 · Windows"] = "v0.1.0 · Windows",
         ["VALUE"] = "值",
         ["WHAT AGENTS CAN DO"] = "Agent 可以做什么",
         ["YYYY-MM-DD"] = "YYYY-MM-DD",

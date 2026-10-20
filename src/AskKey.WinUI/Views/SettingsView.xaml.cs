@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using AskKey.Integrations;
 using AskKey.Vault;
 
 namespace AskKeyApp;
@@ -28,6 +29,7 @@ public partial class SettingsView : UserControl
         _loading = true;
         try
         {
+            AboutVersionText.Text = Loc.F("Ask Key for Windows {0}", AskKeyVersion.Current);
             RefreshChoices();
             var preferences = _host.Preferences;
             LaunchToggle.IsChecked = preferences.LaunchAtLogin;
