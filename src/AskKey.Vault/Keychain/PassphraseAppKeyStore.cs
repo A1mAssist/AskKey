@@ -76,25 +76,36 @@ public sealed class PassphraseAppKeyStore : IAppKeyStore
     public static void Write(string directory, string fileName, byte[] key, string passphrase)
     {
         if (key.Length != VaultCrypto.KeyByteCount) throw new AppKeyStoreException(AppKeyStoreError.ConflictingKey);
-        PrivateFileSystem.CreatePrivateDirectory(directory);
-        var payload = Wrap(key, passphrase);
-        var path = Path.Combine(directory, fileName);
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        WritePayload(directory, fileName, Wrap(key, passphrase), overwrite: true);
+    }
+
+    /// <summary>
+    /// Replaces the passphrase wrapping the App key. The current passphrase is checked
+    /// first, and the new payload is verified before the old file is replaced.
+    /// </summary>
+    public static void Rewrite(string directory, byte[] key, string currentPassphrase, string newPassphrase)
+    {
+        if (key.Length != VaultCrypto.KeyByteCount) throw new AppKeyStoreException(AppKeyStoreError.ConflictingKey);
+        if (string.IsNullOrEmpty(currentPassphrase) || string.IsNullOrEmpty(newPassphrase))
+        {
+            throw new ArgumentException("Both passphrases are required.", nameof(currentPassphrase));
+        }
+
+        Verify(directory, key, currentPassphrase);
+        var payload = Wrap(key, newPassphrase);
+        var check = Unwrap(payload, newPassphrase);
         try
         {
-            using (var stream = PrivateFileSystem.CreatePrivateFile(temporary, FileMode.CreateNew,
-                       FileAccess.Write, FileShare.None))
+            if (!CryptographicOperations.FixedTimeEquals(check, key))
             {
-                stream.Write(payload, 0, payload.Length);
-                stream.Flush(flushToDisk: true);
+                throw new AppKeyStoreException(AppKeyStoreError.ConflictingKey);
             }
-            File.Move(temporary, path, overwrite: true);
-            PrivateFileSystem.ApplyFile(path);
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            CryptographicOperations.ZeroMemory(check);
         }
+        WritePayload(directory, AppFileName, payload, overwrite: true);
     }
 
     /// <summary>Confirms the passphrase opens the stored App key and that it matches.</summary>
@@ -140,23 +151,8 @@ public sealed class PassphraseAppKeyStore : IAppKeyStore
             return;
         }
 
-        var payload = Wrap(data, RequirePassphrase(PassphrasePurpose.Create));
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            using (var stream = PrivateFileSystem.CreatePrivateFile(temporary, FileMode.CreateNew,
-                       FileAccess.Write, FileShare.None))
-            {
-                stream.Write(payload, 0, payload.Length);
-                stream.Flush(flushToDisk: true);
-            }
-            File.Move(temporary, path, overwrite: false);
-            PrivateFileSystem.ApplyFile(path);
-        }
-        finally
-        {
-            if (File.Exists(temporary)) File.Delete(temporary);
-        }
+        WritePayload(_directory, fileName, Wrap(data, RequirePassphrase(PassphrasePurpose.Create)),
+            overwrite: false);
     }
 
     private byte[] Load(string fileName, AppKeyStoreError missing)
@@ -168,7 +164,11 @@ public sealed class PassphraseAppKeyStore : IAppKeyStore
             throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
         }
 
-        var payload = File.ReadAllBytes(path);
+        return Unwrap(File.ReadAllBytes(path), RequirePassphrase(PassphrasePurpose.Unlock));
+    }
+
+    private static byte[] Unwrap(byte[] payload, string passphrase)
+    {
         if (payload.Length != HeaderByteCount + VaultCrypto.KeyByteCount
             || !payload.AsSpan(0, Magic.Length).SequenceEqual(Magic)
             || payload[4] != FormatVersion)
@@ -188,7 +188,7 @@ public sealed class PassphraseAppKeyStore : IAppKeyStore
         var tag = payload.AsSpan(37, TagByteCount);
         var wrapped = payload.AsSpan(HeaderByteCount, VaultCrypto.KeyByteCount);
 
-        var derived = DeriveKey(RequirePassphrase(PassphrasePurpose.Unlock), salt, iterations);
+        var derived = DeriveKey(passphrase, salt, iterations);
         var key = new byte[VaultCrypto.KeyByteCount];
         try
         {
@@ -204,6 +204,28 @@ public sealed class PassphraseAppKeyStore : IAppKeyStore
             CryptographicOperations.ZeroMemory(derived);
         }
         return key;
+    }
+
+    private static void WritePayload(string directory, string fileName, byte[] payload, bool overwrite)
+    {
+        PrivateFileSystem.CreatePrivateDirectory(directory);
+        var path = Path.Combine(directory, fileName);
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = PrivateFileSystem.CreatePrivateFile(temporary, FileMode.CreateNew,
+                       FileAccess.Write, FileShare.None))
+            {
+                stream.Write(payload, 0, payload.Length);
+                stream.Flush(flushToDisk: true);
+            }
+            File.Move(temporary, path, overwrite);
+            PrivateFileSystem.ApplyFile(path);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 
     private string RequirePassphrase(PassphrasePurpose purpose)

@@ -131,6 +131,19 @@
               <ToggleButton x:Name="HighSecurityToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
                             Click="HighSecurity_Click"/>
             </Grid>
+            <Border x:Name="ChangePassphraseDivider" Height="1" Background="{ThemeResource LineBrush}"
+                    Visibility="Collapsed"/>
+            <Grid x:Name="ChangePassphraseRow" Margin="16,14" HorizontalAlignment="Stretch"
+                  Visibility="Collapsed">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Change passphrase" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Change the passphrase that wraps the vault key. Windows Hello stays enabled."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+              </StackPanel>
+              <Button local:Loc.Key="Change passphrase" Style="{StaticResource SecondaryButtonStyle}"
+                      Grid.Column="1" VerticalAlignment="Center" Click="ChangePassphrase_Click"/>
+            </Grid>
             <Border Height="1" Background="{ThemeResource LineBrush}"/>
             <Grid Margin="16,14" HorizontalAlignment="Stretch">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

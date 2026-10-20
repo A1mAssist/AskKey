@@ -425,6 +425,41 @@ public sealed class AppHost : IDisposable
         }
     }
 
+    public async Task ChangePassphraseAsync()
+    {
+        if (!Vault.IsPassphraseProtected)
+        {
+            ShowError("Turn on high security mode first.");
+            return;
+        }
+        var change = await Dialogs.ChangePassphraseAsync(_mainWindow);
+        if (change is null) return;
+        if (change.New.Length < 8)
+        {
+            ShowError("Use at least 8 characters.");
+            return;
+        }
+        if (!string.Equals(change.New, change.Confirmation, StringComparison.Ordinal))
+        {
+            ShowError("The passphrases do not match.");
+            return;
+        }
+        try
+        {
+            await Task.Run(() => Vault.ChangePassphrase(change.Current, change.New));
+            Dialogs.ShowInfo("Passphrase changed.");
+            SettingsChanged?.Invoke();
+        }
+        catch (AppKeyStoreException error) when (error.Error == AppKeyStoreError.SecurityFailure)
+        {
+            ShowError("The current passphrase is wrong.");
+        }
+        catch (Exception error)
+        {
+            ShowError(error.Message);
+        }
+    }
+
     public async Task DisableHighSecurityAsync()
     {
         if (!Vault.IsHighSecurityEnabled) return;

@@ -279,6 +279,68 @@ public sealed class PassphraseAppKeyStoreTests
         Assert.Empty(vault.FileDeliveryManager.Get().CleanupFailures);
     }
 
+    [Fact]
+    public void RewriteChangesThePassphraseButKeepsTheSameKey()
+    {
+        using var root = new TestDirectory();
+        var directory = root.Combine("key-material");
+        var key = TestCredentials.Key(66);
+        PassphraseAppKeyStore.Write(directory, PassphraseAppKeyStore.AppFileName, key, "old-pass-123");
+
+        PassphraseAppKeyStore.Rewrite(directory, key, "old-pass-123", "new-pass-456");
+
+        var oldStore = new PassphraseAppKeyStore(directory, new ScriptedProvider("old-pass-123"));
+        Assert.Equal(AppKeyStoreError.SecurityFailure,
+            Assert.Throws<AppKeyStoreException>(() => oldStore.LoadAppKey()).Error);
+        var newStore = new PassphraseAppKeyStore(directory, new ScriptedProvider("new-pass-456"));
+        Assert.Equal(key, newStore.LoadAppKey());
+    }
+
+    [Fact]
+    public void RewriteWithTheWrongCurrentPassphraseLeavesTheFileUntouched()
+    {
+        using var root = new TestDirectory();
+        var directory = root.Combine("key-material");
+        var key = TestCredentials.Key(67);
+        PassphraseAppKeyStore.Write(directory, PassphraseAppKeyStore.AppFileName, key, "old-pass-123");
+        var path = Path.Combine(directory, PassphraseAppKeyStore.AppFileName);
+        var before = File.ReadAllBytes(path);
+
+        Assert.Equal(AppKeyStoreError.SecurityFailure,
+            Assert.Throws<AppKeyStoreException>(() =>
+                PassphraseAppKeyStore.Rewrite(directory, key, "wrong-pass", "new-pass-456")).Error);
+
+        Assert.Equal(before, File.ReadAllBytes(path));
+        var store = new PassphraseAppKeyStore(directory, new ScriptedProvider("old-pass-123"));
+        Assert.Equal(key, store.LoadAppKey());
+    }
+
+    [Fact]
+    public void VaultChangesThePassphraseAndPreservesTheGuardCopy()
+    {
+        using var root = new TestDirectory();
+        var config = new VaultConfiguration(root.Combine("appdata"), root.Combine("local"));
+        PrivateFileSystem.CreatePrivateDirectory(config.ApplicationSupportDirectory);
+        var key = TestCredentials.Key(68);
+
+        using (var vault = new Vault(TestCredentials.NewStore(config.VaultFile, key), key, null, null,
+                   root.Combine("deliveries"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory)))
+        {
+            vault.EnableHighSecurity("old-pass-123");
+            vault.EnableGuardUnlock(TestCredentials.Key(123));
+            vault.ChangePassphrase("old-pass-123", "new-pass-456");
+            Assert.True(File.Exists(Path.Combine(config.KeyMaterialDirectory, GuardAppKeyStore.AppFileName)));
+        }
+
+        var restarted = new Vault(TestCredentials.NewStore(root.Combine("dummy.db"), key), null, null, null,
+            root.Combine("deliveries2"), config, new DpapiAppKeyStore(config.KeyMaterialDirectory));
+        Assert.Equal(AppKeyStoreError.SecurityFailure,
+            Assert.Throws<AppKeyStoreException>(() => restarted.Unlock("old-pass-123")).Error);
+        restarted.Unlock("new-pass-456");
+        Assert.False(restarted.IsLocked);
+        restarted.Dispose();
+    }
+
     private static int IndexOf(byte[] haystack, byte[] needle)
     {
         for (var i = 0; i + needle.Length <= haystack.Length; i++)

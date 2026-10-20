@@ -59,6 +59,8 @@ public partial class SettingsView : UserControl
                     ? "A passphrase wraps the vault key. Windows Hello unlocks it at startup."
                     : "A passphrase wraps the vault key. Enter it once each launch; sensitive actions use Windows Hello.")
                 : "Windows DPAPI wraps the vault key. Any program running as you can unwrap it.");
+            ChangePassphraseRow.Visibility = ChangePassphraseDivider.Visibility =
+                _host.Vault.IsPassphraseProtected ? Visibility.Visible : Visibility.Collapsed;
             var helloUnlock = _host.Vault.IsGuardUnlockEnabled;
             HelloUnlockToggle.IsChecked = helloUnlock;
             HelloUnlockToggle.IsEnabled = highSecurity;
@@ -196,6 +198,13 @@ public partial class SettingsView : UserControl
         {
             Refresh();
         }
+    }
+
+    private async void ChangePassphrase_Click(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        await _host.ChangePassphraseAsync();
+        Refresh();
     }
 
     private async void HelloUnlock_Click(object sender, RoutedEventArgs e)

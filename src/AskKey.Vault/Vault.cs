@@ -199,6 +199,31 @@ public sealed partial class Vault : IDisposable
     }
 
     /// <summary>
+    /// Rewraps the same vault key with a new passphrase. The current passphrase must
+    /// verify first; a failed rewrite leaves the existing wrapped file untouched.
+    /// </summary>
+    public void ChangePassphrase(string currentPassphrase, string newPassphrase)
+    {
+        if (string.IsNullOrEmpty(currentPassphrase))
+        {
+            throw new AppKeyStoreException(AppKeyStoreError.SecurityFailure);
+        }
+        if (string.IsNullOrWhiteSpace(newPassphrase) || newPassphrase.Length < 8)
+        {
+            throw new ArgumentException("Use at least 8 characters.", nameof(newPassphrase));
+        }
+        lock (_lifecycleLock)
+        {
+            if (!IsPassphraseProtected)
+            {
+                throw new InvalidOperationException("High security passphrase is not enabled.");
+            }
+            PassphraseAppKeyStore.Rewrite(_configuration.KeyMaterialDirectory, RequireKey(),
+                currentPassphrase, newPassphrase);
+        }
+    }
+
+    /// <summary>
     /// Unwraps with <paramref name="passphrase"/> and restores the DPAPI-protected key,
     /// then deletes the wrapped copy. A wrong passphrase changes nothing.
     /// </summary>
