@@ -17,11 +17,17 @@
                   Vital="yes"
                   Compressed="yes">
         <MsiProperty Name="VELOPACK_INSTALLDIR" Value="[ProgramFiles64Folder]AskKey" />
+        <!-- Both MSIs are bundle payload. Without this each registers itself in Apps and
+             Features too, so the user sees several Ask Key entries and can uninstall one
+             half and leave the other behind. -->
+        <MsiProperty Name="ARPSYSTEMCOMPONENT" Value="1" />
       </MsiPackage>
       <MsiPackage Id="AskKeyGuard"
                   SourceFile="$(var.GuardMsi)"
                   Vital="yes"
-                  Compressed="yes" />
+                  Compressed="yes">
+        <MsiProperty Name="ARPSYSTEMCOMPONENT" Value="1" />
+      </MsiPackage>
     </Chain>
   </Bundle>
 </Wix>

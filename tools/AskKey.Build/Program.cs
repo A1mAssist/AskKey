@@ -127,13 +127,42 @@ internal static partial class BuildTool
         Directory.CreateDirectory(publishDir);
         CopyDirectory(buildDir, publishDir);
 
-        foreach (var directory in Directory.EnumerateDirectories(publishDir))
+        // XAML satellite assemblies land under <root>\win-x64\<lang>, not directly under
+        // the publish root, so a root-only sweep leaves every language but zh-CN in place.
+        foreach (var directory in Directory.EnumerateDirectories(publishDir, "*",
+                     SearchOption.AllDirectories).OrderByDescending(d => d.Length))
         {
-            if (!string.Equals(Path.GetFileName(directory), "zh-CN", StringComparison.OrdinalIgnoreCase)
-                && File.Exists(Path.Combine(directory, "Microsoft.ui.xaml.dll.mui")))
+            var name = Path.GetFileName(directory);
+            if (string.Equals(name, "zh-CN", StringComparison.OrdinalIgnoreCase)) continue;
+            if (File.Exists(Path.Combine(directory, "Microsoft.ui.xaml.dll.mui"))
+                || Directory.EnumerateFiles(directory, "*.mui", SearchOption.TopDirectoryOnly).Any())
             {
                 Directory.Delete(directory, recursive: true);
             }
+        }
+
+        // Self-contained WinUI already carries the Windows runtime; the other RIDs ship
+        // Linux, macOS and wasm binaries that can never run on this target.
+        var runtimes = Path.Combine(publishDir, "runtimes");
+        if (Directory.Exists(runtimes))
+        {
+            foreach (var rid in Directory.EnumerateDirectories(runtimes)
+                         .Where(d => !string.Equals(Path.GetFileName(d), Runtime, StringComparison.OrdinalIgnoreCase)))
+            {
+                Directory.Delete(rid, recursive: true);
+            }
+        }
+
+        var strayLocales = Directory.EnumerateDirectories(publishDir, "*", SearchOption.AllDirectories)
+            .Where(d => !string.Equals(Path.GetFileName(d), "zh-CN", StringComparison.OrdinalIgnoreCase))
+            .Where(d => Directory.EnumerateFiles(d, "*.mui", SearchOption.TopDirectoryOnly).Any())
+            .Select(Path.GetFileName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (strayLocales.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Only zh-CN may ship, but these locales survived the trim: " + string.Join(", ", strayLocales));
         }
 
         var hostPath = Path.Combine(publishDir, "AskKey.exe");

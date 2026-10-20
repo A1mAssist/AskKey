@@ -7,4 +7,7 @@
     <GuardPublishDir Condition="'$(GuardPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\AskKey.Guard.Service\bin\Release\net10.0-windows</GuardPublishDir>
     <DefineConstants>ProductVersion=$(ProductVersion);GuardPublishDir=$(GuardPublishDir)</DefineConstants>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Util.wixext" Version="6.0.2" />
+  </ItemGroup>
 </Project>

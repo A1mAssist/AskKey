@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <Package Name="AskKey Guard"
            Manufacturer="AskKey"
            Version="$(var.ProductVersion)"
@@ -33,7 +34,15 @@
                         ErrorControl="normal"
                         Account="NT AUTHORITY\LocalService"
                         Arguments="--service"
-                        Vital="yes" />
+                        Vital="yes">
+          <!-- Without this the service stays down after a crash and Hello unlock silently
+               stops working; the PowerShell install path already sets failure actions. -->
+          <util:ServiceConfig FirstFailureActionType="restart"
+                              SecondFailureActionType="restart"
+                              ThirdFailureActionType="restart"
+                              ResetPeriodInDays="1"
+                              RestartServiceDelayInSeconds="5" />
+        </ServiceInstall>
         <ServiceControl Id="AskKeyGuardServiceControl"
                         Name="AskKeyGuard"
                         Start="install"
