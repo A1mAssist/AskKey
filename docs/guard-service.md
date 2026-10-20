@@ -40,7 +40,7 @@ Development mode stores guard state under `%LOCALAPPDATA%\AskKey\Guard` instead 
 The release `AskKeySetup-<version>.exe` installs the app and this service together and uninstalls both. The elevated script below is the repair/development path:
 
 ```powershell
-& .\AskKey.Guard.Service\Install-GuardService.ps1
+& .\src\AskKey.Guard.Service\Install-GuardService.ps1
 ```
 
 The script copies the publish folder to `%ProgramFiles%\AskKey\Guard`, secures the binary and ProgramData directories, registers `AskKeyGuard` as `LocalService`, and starts it. `-Uninstall` stops and deletes the service but keeps user vault material and Guard state.

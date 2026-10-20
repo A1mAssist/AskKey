@@ -27,7 +27,7 @@ Add `-Unsigned` when the release uses an unsigned `AskKey.exe`; this passes `Ask
 The script publishes `AskKey.Guard.Service` as a self-contained `win-x64` application into:
 
 ```text
-AskKey.Guard.Service\bin\Release\net10.0-windows
+src\AskKey.Guard.Service\bin\Release\net10.0-windows
 ```
 
 It then builds:

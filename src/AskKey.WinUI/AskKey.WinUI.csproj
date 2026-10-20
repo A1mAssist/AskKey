@@ -74,7 +74,7 @@
       <HelperOutputRoot Condition="'$(RuntimeIdentifier)' != ''">$(HelperOutputRoot)\$(RuntimeIdentifier)</HelperOutputRoot>
       <HelperIntegrityManifest>$(IntermediateOutputPath)HelperIntegrity.manifest</HelperIntegrityManifest>
     </PropertyGroup>
-    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\tools\AskKey.Build\AskKey.Build.csproj&quot; -c $(Configuration) --no-launch-profile -- manifest --root &quot;$(HelperOutputRoot)&quot; --output &quot;$(HelperIntegrityManifest)&quot;" />
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\..\tools\AskKey.Build\AskKey.Build.csproj&quot; -c $(Configuration) --no-launch-profile -- manifest --root &quot;$(HelperOutputRoot)&quot; --output &quot;$(HelperIntegrityManifest)&quot;" />
     <ItemGroup>
       <EmbeddedResource Remove="$(HelperIntegrityManifest)" />
       <EmbeddedResource Include="$(HelperIntegrityManifest)" LogicalName="AskKey.HelperIntegrity.manifest" />

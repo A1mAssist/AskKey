@@ -12,8 +12,8 @@ if ($Version -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,5}$') {
 }
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-$serviceProject = Join-Path $repoRoot 'AskKey.Guard.Service\AskKey.Guard.Service.csproj'
-$publishDir = Join-Path $repoRoot 'AskKey.Guard.Service\bin\Release\net10.0-windows'
+$serviceProject = Join-Path $repoRoot 'src\AskKey.Guard.Service\AskKey.Guard.Service.csproj'
+$publishDir = Join-Path $repoRoot 'src\AskKey.Guard.Service\bin\Release\net10.0-windows'
 $wixProject = Join-Path $PSScriptRoot 'AskKey.Guard.Installer.wixproj'
 $msiPath = Join-Path $PSScriptRoot "bin\Release\AskKeyGuard-$Version.msi"
 

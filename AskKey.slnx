@@ -1,22 +1,22 @@
 <Solution>
-  <Project Path="AskKey.Broker.Tests/AskKey.Broker.Tests.csproj" />
-  <Project Path="AskKey.Broker/AskKey.Broker.csproj" />
-  <Project Path="AskKey.Integrations.TestFixture/AskKey.Integrations.TestFixture.csproj" />
-  <Project Path="AskKey.Integrations.Tests/AskKey.Integrations.Tests.csproj" />
-  <Project Path="AskKey.Guard.Service/AskKey.Guard.Service.csproj" />
-  <Project Path="AskKey.Guard.Tests/AskKey.Guard.Tests.csproj" />
-  <Project Path="AskKey.Guard/AskKey.Guard.csproj" />
-  <Project Path="AskKey.Helper.Tests/AskKey.Helper.Tests.csproj" />
-  <Project Path="AskKey.Helper/AskKey.Helper.csproj" />
-  <Project Path="AskKey.Integrations/AskKey.Integrations.csproj" />
-  <Project Path="AskKey.System.Tests/AskKey.System.Tests.csproj" />
-  <Project Path="AskKey.System/AskKey.System.csproj" />
-  <Project Path="AskKey.Vault.Tests/AskKey.Vault.Tests.csproj" />
-  <Project Path="AskKey.Vault/AskKey.Vault.csproj" />
-  <Project Path="AskKey.WinUI/AskKey.WinUI.csproj">
+  <Project Path="src/AskKey.Broker.Tests/AskKey.Broker.Tests.csproj" />
+  <Project Path="src/AskKey.Broker/AskKey.Broker.csproj" />
+  <Project Path="src/AskKey.Integrations.TestFixture/AskKey.Integrations.TestFixture.csproj" />
+  <Project Path="src/AskKey.Integrations.Tests/AskKey.Integrations.Tests.csproj" />
+  <Project Path="src/AskKey.Guard.Service/AskKey.Guard.Service.csproj" />
+  <Project Path="src/AskKey.Guard.Tests/AskKey.Guard.Tests.csproj" />
+  <Project Path="src/AskKey.Guard/AskKey.Guard.csproj" />
+  <Project Path="src/AskKey.Helper.Tests/AskKey.Helper.Tests.csproj" />
+  <Project Path="src/AskKey.Helper/AskKey.Helper.csproj" />
+  <Project Path="src/AskKey.Integrations/AskKey.Integrations.csproj" />
+  <Project Path="src/AskKey.System.Tests/AskKey.System.Tests.csproj" />
+  <Project Path="src/AskKey.System/AskKey.System.csproj" />
+  <Project Path="src/AskKey.Vault.Tests/AskKey.Vault.Tests.csproj" />
+  <Project Path="src/AskKey.Vault/AskKey.Vault.csproj" />
+  <Project Path="src/AskKey.WinUI/AskKey.WinUI.csproj">
     <Platform Project="x64" />
   </Project>
-  <Project Path="AskKey.WinUI.Tests/AskKey.WinUI.Tests.csproj">
+  <Project Path="src/AskKey.WinUI.Tests/AskKey.WinUI.Tests.csproj">
     <Platform Project="x64" />
   </Project>
 </Solution>

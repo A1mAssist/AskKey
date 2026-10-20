@@ -92,8 +92,8 @@ internal static partial class BuildTool
         var skipTests = args.Contains("--skip-tests", StringComparer.OrdinalIgnoreCase);
 
         var solution = Path.Combine(root, "AskKey.slnx");
-        var project = Path.Combine(root, "AskKey.WinUI", "AskKey.WinUI.csproj");
-        var versionSource = Path.Combine(root, "AskKey.Integrations", "AskKeyVersion.cs");
+        var project = Path.Combine(root, "src", "AskKey.WinUI", "AskKey.WinUI.csproj");
+        var versionSource = Path.Combine(root, "src", "AskKey.Integrations", "AskKeyVersion.cs");
         if (!File.Exists(solution)) throw new FileNotFoundException("AskKey.slnx was not found.", solution);
         if (!File.Exists(project)) throw new FileNotFoundException("AskKey.WinUI.csproj was not found.", project);
         if (!File.Exists(versionSource)) throw new FileNotFoundException("AskKeyVersion.cs was not found.", versionSource);
@@ -119,7 +119,7 @@ internal static partial class BuildTool
         if (unsigned) buildArgs.Add("-p:AskKeyUnsigned=true");
         Run("dotnet", buildArgs, root);
 
-        var buildRoot = Path.Combine(root, "AskKey.WinUI", "bin", "x64", "Release");
+        var buildRoot = Path.Combine(root, "src", "AskKey.WinUI", "bin", "x64", "Release");
         var buildDir = Directory.EnumerateDirectories(buildRoot)
             .Where(directory => File.Exists(Path.Combine(directory, "AskKey.exe"))
                 && File.Exists(Path.Combine(directory, "App.xbf")))
@@ -228,7 +228,7 @@ internal static partial class BuildTool
             "pack", "--packId", "AskKey", "--packVersion", version, "--packDir", publishDir,
             "--packTitle", "Ask Key", "--packAuthors", "A1mAssist",
             "--mainExe", "AskKey.exe", "--outputDir", releaseDir,
-            "--icon", Path.Combine(root, "AskKey.WinUI", "Assets", "AskKey.ico"),
+            "--icon", Path.Combine(root, "src", "AskKey.WinUI", "Assets", "AskKey.ico"),
             "--msi", "--instLocation", "PerMachine",
             // Show the product icon and plain-text guidance in the installer itself instead
             // of making the user follow LicenseUrl out to the web mid-install.
@@ -278,8 +278,8 @@ internal static partial class BuildTool
         var skipTests = args.Contains("--skip-tests", StringComparer.OrdinalIgnoreCase);
 
         var solution = Path.Combine(root, "AskKey.slnx");
-        var project = Path.Combine(root, "AskKey.Guard.Service", "AskKey.Guard.Service.csproj");
-        var versionSource = Path.Combine(root, "AskKey.Integrations", "AskKeyVersion.cs");
+        var project = Path.Combine(root, "src", "AskKey.Guard.Service", "AskKey.Guard.Service.csproj");
+        var versionSource = Path.Combine(root, "src", "AskKey.Integrations", "AskKeyVersion.cs");
         if (!File.Exists(solution)) throw new FileNotFoundException("AskKey.slnx was not found.", solution);
         if (!File.Exists(project)) throw new FileNotFoundException("AskKey.Guard.Service.csproj was not found.", project);
         if (!File.Exists(versionSource)) throw new FileNotFoundException("AskKeyVersion.cs was not found.", versionSource);
@@ -340,7 +340,7 @@ internal static partial class BuildTool
 
     private static string ReadVersion(string root)
     {
-        var versionSource = Path.Combine(root, "AskKey.Integrations", "AskKeyVersion.cs");
+        var versionSource = Path.Combine(root, "src", "AskKey.Integrations", "AskKeyVersion.cs");
         if (!File.Exists(versionSource)) throw new FileNotFoundException("AskKeyVersion.cs was not found.", versionSource);
         var versionMatch = VersionPattern().Match(File.ReadAllText(versionSource));
         if (!versionMatch.Success)
@@ -385,7 +385,7 @@ internal static partial class BuildTool
     /// <summary>The stock BA theme draws its image at 64x64, so ship the app icon at that size.</summary>
     private static string WriteBundleLogo(string root)
     {
-        var source = Path.Combine(root, "AskKey.WinUI", "Assets", "AppIcon.png");
+        var source = Path.Combine(root, "src", "AskKey.WinUI", "Assets", "AppIcon.png");
         if (!File.Exists(source)) throw new FileNotFoundException("AppIcon.png was not found.", source);
         var path = Path.Combine(root, InstallerTextDirectory, "logo.png");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

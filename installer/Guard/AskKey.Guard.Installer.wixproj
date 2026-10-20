@@ -7,7 +7,7 @@
     <!-- The publish directory is a required input: the default build tree also contains the
          RID-specific intermediate copy of the service, and the harvest below is recursive. -->
     <GuardPublishDir Condition="'$(GuardPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\publish\AskKey.Guard-$(ProductVersion)-win-x64</GuardPublishDir>
-    <IconFile Condition="'$(IconFile)' == ''">$(MSBuildThisFileDirectory)..\..\AskKey.WinUI\Assets\AskKey.ico</IconFile>
+    <IconFile Condition="'$(IconFile)' == ''">$(MSBuildThisFileDirectory)..\..\src\AskKey.WinUI\Assets\AskKey.ico</IconFile>
     <PackageDescription>Ask Key Guard verifies Windows Hello signatures and releases the per-user vault key. It is installed together with Ask Key.</PackageDescription>
     <DefineConstants>ProductVersion=$(ProductVersion);GuardPublishDir=$(GuardPublishDir);IconFile=$(IconFile);PackageDescription=$(PackageDescription)</DefineConstants>
   </PropertyGroup>

@@ -42,13 +42,13 @@ The helper runs the target command with only the credentials selected for that r
 
 | Path | Purpose |
 |---|---|
-| `AskKey.WinUI` | WinUI 3 desktop app, tray menu, onboarding and settings |
-| `AskKey.Broker` | Local approval, policy and delivery broker |
-| `AskKey.Vault` | Encrypted credential store and key management |
-| `AskKey.Helper` | `askkey.exe` MCP helper and command wrapper |
-| `AskKey.Integrations` | Codex, Claude Code, Cursor and Grok client setup |
-| `AskKey.System` | Restricted process and Windows runtime integration |
-| `*.Tests` | Unit and integration tests |
+| `src\AskKey.WinUI` | WinUI 3 desktop app, tray menu, onboarding and settings |
+| `src\AskKey.Broker` | Local approval, policy and delivery broker |
+| `src\AskKey.Vault` | Encrypted credential store and key management |
+| `src\AskKey.Helper` | `askkey.exe` MCP helper and command wrapper |
+| `src\AskKey.Integrations` | Codex, Claude Code, Cursor and Grok client setup |
+| `src\AskKey.System` | Restricted process and Windows runtime integration |
+| `src\*.Tests` | Unit and integration tests |
 | `tools/AskKey.Build` | .NET release tool: helper manifest, build, signing and Velopack packaging |
 
 ## Requirements
@@ -64,7 +64,7 @@ Run these commands from the repository root:
 
 ```text
 dotnet test .\AskKey.slnx
-dotnet run --project .\AskKey.WinUI\AskKey.WinUI.csproj -p:Platform=x64
+dotnet run --project .\src\AskKey.WinUI\AskKey.WinUI.csproj -p:Platform=x64
 ```
 
 Debug builds do not set any environment variable automatically. To use separate development data roots, set `ASKKEY_DEVELOPMENT=1` before launching; otherwise a Debug build uses the normal `%APPDATA%\AskKey` and `%LOCALAPPDATA%\AskKey` paths.
@@ -83,7 +83,7 @@ To sign the host and helper with a certificate from the current user's certifica
 dotnet run --project .\tools\AskKey.Build -- publish --certificate-thumbprint <thumbprint>
 ```
 
-The tool reads the version from `AskKey.Integrations\AskKeyVersion.cs`, runs the tests, builds the self-contained x64 payload, verifies `AskKey.exe` and `Helpers\askkey.exe`, trims satellite resources to `zh-CN`, signs when requested, runs `vpk pack`, publishes the Guard service, builds the Guard MSI, and finally produces `AskKeySetup-<version>.exe` with both the app and Guard.
+The tool reads the version from `src\AskKey.Integrations\AskKeyVersion.cs`, runs the tests, builds the self-contained x64 payload, verifies `AskKey.exe` and `Helpers\askkey.exe`, trims satellite resources to `zh-CN`, signs when requested, runs `vpk pack`, publishes the Guard service, builds the Guard MSI, and finally produces `AskKeySetup-<version>.exe` with both the app and Guard.
 
 The default output is `artifacts\publish\release`:
 
@@ -107,7 +107,7 @@ For development, publish the service separately:
 dotnet run --project .\tools\AskKey.Build -- guard
 ```
 
-`AskKey.Guard.Service\Install-GuardService.ps1` is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the unsigned Guard MSI. After both MSIs exist, `dotnet run --project .\tools\AskKey.Build -- bundle` regenerates `AskKeySetup`. See `docs/guard-msi.md`. A production release still needs code signing.
+`src\AskKey.Guard.Service\Install-GuardService.ps1` is the repair/development path; `installer\Guard\build-guard-msi.ps1 -Unsigned` builds the unsigned Guard MSI. After both MSIs exist, `dotnet run --project .\tools\AskKey.Build -- bundle` regenerates `AskKeySetup`. See `docs/guard-msi.md`. A production release still needs code signing.
 
 Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it before Agent connections. Windows SmartScreen still warns for unsigned downloads. Signed builds require the host and helper to carry signatures from the same publisher.
 
