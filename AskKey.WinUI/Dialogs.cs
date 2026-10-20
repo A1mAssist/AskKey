@@ -68,16 +68,102 @@ internal static class Dialogs
         return result == ContentDialogResult.Primary ? input.Password : null;
     }
 
+    private static readonly object NotificationGate = new();
+    private static readonly List<(string Text, bool Error)> Notifications = new();
+    private static bool _pumping;
+
     // WinRT and COM failures often carry no Message, which would show an empty box.
     public static void ShowError(string message)
-        => MessageBoxW(
-            OwnerHandle(),
-            Loc.T(string.IsNullOrWhiteSpace(message) ? "Something went wrong." : message),
-            Loc.T("Ask Key"),
-            0x00000000 | 0x00000030 | 0x00040000);
+        => Enqueue(string.IsNullOrWhiteSpace(message) ? "Something went wrong." : message, error: true);
 
-    public static void ShowInfo(string message)
-        => MessageBoxW(OwnerHandle(), Loc.T(message), Loc.T("Ask Key"), 0x00000000 | 0x00000040 | 0x00040000);
+    public static void ShowInfo(string message) => Enqueue(message, error: false);
+
+    /// <summary>
+    /// Queues a WinUI dialog. The queue keeps one dialog per XamlRoot and lets the many
+    /// synchronous call sites keep their signature.
+    /// </summary>
+    private static void Enqueue(string message, bool error)
+    {
+        var text = Loc.T(message);
+        lock (NotificationGate)
+        {
+            Notifications.Add((text, error));
+            if (_pumping) return;
+            _pumping = true;
+        }
+        if (App.CurrentWindow?.DispatcherQueue.TryEnqueue(PumpNotifications) != true)
+        {
+            lock (NotificationGate) _pumping = false;
+        }
+    }
+
+    private static async void PumpNotifications()
+    {
+        var attempts = 0;
+        while (true)
+        {
+            (string Text, bool Error) item;
+            lock (NotificationGate)
+            {
+                if (Notifications.Count == 0)
+                {
+                    _pumping = false;
+                    return;
+                }
+                item = Notifications[0];
+            }
+
+            var window = App.CurrentWindow;
+            var root = window?.Content?.XamlRoot;
+            if (window is null || root is null)
+            {
+                DropFirst();
+                ShowNative(item.Text, item.Error);
+                continue;
+            }
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = root,
+                Title = Loc.T(item.Error ? "Something went wrong" : "Ask Key"),
+                Content = new TextBlock { Text = item.Text, TextWrapping = TextWrapping.Wrap },
+                CloseButtonText = Loc.T("OK"),
+                DefaultButton = ContentDialogButton.Close,
+                RequestedTheme = ThemeFor(window),
+            };
+            try
+            {
+                await dialog.ShowAsync();
+                DropFirst();
+                attempts = 0;
+            }
+            catch (Exception)
+            {
+                // Another dialog owns this XamlRoot. Retry after it closes; a broken
+                // root falls back to the native box so no message is lost.
+                if (++attempts < 40)
+                {
+                    await Task.Delay(250);
+                    continue;
+                }
+                DropFirst();
+                ShowNative(item.Text, item.Error);
+                attempts = 0;
+            }
+        }
+    }
+
+    private static void DropFirst()
+    {
+        lock (NotificationGate)
+        {
+            if (Notifications.Count > 0) Notifications.RemoveAt(0);
+        }
+    }
+
+    private static void ShowNative(string text, bool error)
+        => MessageBoxW(OwnerHandle(), text, Loc.T("Ask Key"),
+            0x00000000u | (error ? 0x00000030u : 0x00000040u) | 0x00040000u);
 
     /// <summary>Waits for the user, so the caller can safely quit afterwards.</summary>
     public static async Task InfoAsync(Window? owner, string title, string message)
@@ -89,7 +175,7 @@ internal static class Dialogs
             XamlRoot = root,
             Title = Loc.T(title),
             Content = new TextBlock { Text = Loc.T(message), TextWrapping = TextWrapping.Wrap },
-            CloseButtonText = Loc.T("Close"),
+            CloseButtonText = Loc.T("OK"),
             DefaultButton = ContentDialogButton.Close,
             RequestedTheme = ThemeFor(owner),
         };

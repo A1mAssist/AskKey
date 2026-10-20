@@ -322,6 +322,8 @@ internal static class LocalizationCatalog
         ["Ask Key could not open the Windows identity prompt. Bring the Ask Key window to the foreground and try again."] =
             "请旨无法打开 Windows 身份验证窗口。请将请旨窗口置于前台后重试。",
         ["Something went wrong."] = "出了点问题。",
+        ["Something went wrong"] = "出了点问题",
+        ["OK"] = "确定",
         ["Bring the Ask Key window to the foreground and try again."] = "请将请旨窗口置于前台后重试。",
         ["Windows Hello failed (0x{0:X8}). Try again."] = "Windows Hello 失败（0x{0:X8}），请重试。",
         ["Unlock Ask Key with Windows Hello"] = "使用 Windows Hello 解锁请旨",
