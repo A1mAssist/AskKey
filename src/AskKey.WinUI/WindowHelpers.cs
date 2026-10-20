@@ -76,14 +76,14 @@ internal static class WindowHelpers
     {
         var ownerHandle = owner is null || ReferenceEquals(dialog, owner) ? IntPtr.Zero : Handle(owner);
         var ownerVisible = ownerHandle != IntPtr.Zero && IsWindowVisible(ownerHandle);
-        if (ownerHandle != IntPtr.Zero)
-        {
-            SetOwner(dialog, owner);
-            EnableWindow(ownerHandle, false);
-        }
+        if (ownerHandle != IntPtr.Zero) SetOwner(dialog, owner);
+        WinUiFirstFrameCloak.Attach(dialog);
         try
         {
+            // Let the dialog take activation before the owner becomes disabled. Disabling
+            // an active owner first makes it repaint once while the dialog is still blank.
             dialog.Activate();
+            if (ownerHandle != IntPtr.Zero) EnableWindow(ownerHandle, false);
             return await completion;
         }
         finally
