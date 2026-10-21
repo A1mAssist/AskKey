@@ -63,6 +63,13 @@ public sealed class AgentAccessPolicy
     };
 
     /// <summary>
+    /// True when this library had no policy and now loads paused. That is what an
+    /// upgrade from a build without one looks like, so the UI can explain the pause
+    /// instead of leaving the user to wonder whether something tampered with it.
+    /// </summary>
+    public bool AdoptedFromMissingRecord { get; internal set; }
+
+    /// <summary>
     /// Reads the policy for a store, or the strict defaults when there is none that
     /// authenticates. <paramref name="isNewLibrary"/> lets the very first launch write
     /// defaults without a previous record; everything else must already have one.
@@ -78,7 +85,12 @@ public sealed class AgentAccessPolicy
         {
             // No record yet. Only a brand-new library may proceed on defaults, and only
             // by writing the record that makes the next load verifiable.
-            if (!isNewLibrary) return StrictDefaults();
+            if (!isNewLibrary)
+            {
+                var strict = StrictDefaults();
+                strict.AdoptedFromMissingRecord = true;
+                return strict;
+            }
             var created = NewLibraryDefaults();
             TryWrite(created, writeConfig, vaultKey);
             return created;
@@ -133,5 +145,6 @@ public sealed class AgentAccessPolicy
         TimedAllowanceEnabled = TimedAllowanceEnabled,
         DefaultTimedAllowanceMinutes = DefaultTimedAllowanceMinutes,
         SessionTimeoutSeconds = SessionTimeoutSeconds,
+        AdoptedFromMissingRecord = AdoptedFromMissingRecord,
     };
 }

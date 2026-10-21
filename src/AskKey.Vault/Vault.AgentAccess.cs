@@ -172,6 +172,8 @@ public sealed partial class Vault
             Store.SetConfigValue(AgentAccessPausedConfigKey, null);
             var policy = EffectivePolicy.Copy();
             policy.AgentAccessPaused = false;
+            // The user has now confirmed it is them, so the one-time update notice is spent.
+            policy.AdoptedFromMissingRecord = false;
             PersistPolicy(policy, key);
             BrokerRequests.Resume();
             ApprovalRequests.Resume();

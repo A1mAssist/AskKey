@@ -368,6 +368,23 @@ public sealed class AppHost : IDisposable
         RefreshPendingCount();
         AgentAccessChanged?.Invoke();
         LockStateChanged?.Invoke();
+        ExplainAdoptedPause();
+    }
+
+    /// <summary>
+    /// A library created before the security policy existed loads paused on the first
+    /// launch after the update. Say so, otherwise the pause reads like tampering. The
+    /// flag clears as soon as the user resumes, so this only ever appears once.
+    /// </summary>
+    private void ExplainAdoptedPause()
+    {
+        if (!Vault.EffectivePolicy.AdoptedFromMissingRecord) return;
+        if (!IsAgentAccessPaused) return;
+        _ = Dialogs.InfoAsync(_mainWindow,
+            Loc.T("Agent access is paused after this update"),
+            Loc.T("Ask Key now keeps Agent-access and security settings in an encrypted, "
+                + "authenticated policy, and starts paused until you confirm it is you. "
+                + "Choose Resume Agent access to turn Agent access back on."));
     }
 
     /// <summary>Hello-unlocked path. A cancel stops; any failure falls through to the passphrase.</summary>

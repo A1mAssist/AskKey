@@ -22,7 +22,7 @@ public sealed class McpServerTests
         var rawLines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         var inspection = MCPHelperContract.Inspect(
             string.Join("\n", rawLines.Take(2)), MCPHelperContract.Identity.AskKeyHelper);
-        Assert.Equal("1.0.0", inspection.Version);
+        Assert.Equal("1.0.1", inspection.Version);
         Assert.Equal(19, inspection.Tools.Count);
 
         var tools = lines[1]["result"]!["tools"]!.AsArray();
