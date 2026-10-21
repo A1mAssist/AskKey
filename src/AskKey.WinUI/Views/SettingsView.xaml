@@ -215,6 +215,48 @@
           </StackPanel>
         </Border>
 
+        <TextBlock local:Loc.Key="UPDATES" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
+
+        <Border Style="{StaticResource CardStyle}" Padding="0">
+
+          <StackPanel>
+
+            <Grid Margin="16,14">
+
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+
+              <StackPanel>
+
+                <TextBlock local:Loc.Key="Software update" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+
+                <TextBlock x:Name="UpdateStatusText" Style="{StaticResource SecondaryTextStyle}"
+
+                           Margin="0,3,0,0" TextWrapping="Wrap"/>
+
+              </StackPanel>
+
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                <Button x:Name="UpdateInstallButton" local:Loc.Key="Install and restart"
+
+                        Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0"
+
+                        Visibility="Collapsed" Click="InstallUpdate_Click"/>
+
+                <Button x:Name="CheckUpdateButton" local:Loc.Key="Check for updates"
+
+                        Style="{StaticResource SecondaryButtonStyle}" Click="CheckUpdate_Click"/>
+
+              </StackPanel>
+
+            </Grid>
+
+          </StackPanel>
+
+        </Border>
+
+        
+
         <TextBlock local:Loc.Key="ABOUT" Style="{StaticResource SectionLabelStyle}" Margin="0,24,0,7"/>
         <Button x:Name="AboutCard" Style="{StaticResource CardButtonStyle}" HorizontalAlignment="Stretch" Click="OpenGitHub_Click"
                 local:Loc.ToolTipKey="Open the AskKey repository on GitHub">

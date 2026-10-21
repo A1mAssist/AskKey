@@ -93,16 +93,18 @@ dotnet run --project .\src\AskKey.Build -- publish --certificate-thumbprint <thu
 - `AskKeyGuard-<version>.msi` — 仅 Guard 服务，修复/高级安装使用
 - `AskKey-<version>.sha256` — 其余每个文件的 SHA-256
 
-构建还会产出**不属于发布内容**的文件：`AskKey-win-Setup.exe`（当前用户安装，不含 Guard）、`AskKey-win-Portable.zip`、`AskKey-<version>-full.nupkg`，以及 `assets.win.json` / `releases.win.json` / `RELEASES` 这三个 feed 文件。
+构建还会产出 `AskKey-win-Setup.exe`（当前用户安装，不含 Guard）和 `AskKey-win-Portable.zip`，这两个不要发布：当前用户安装的信任边界更弱，便携版一旦被移动就会被拓扑校验拒绝。
 
-GitHub Release 只上传这四个文件：
+GitHub Release 上传这些文件：
 
 - `AskKeySetup-<version>.exe`
 - `AskKey-win.msi`
 - `AskKeyGuard-<version>.msi`
 - `AskKey-<version>.sha256`
+- `AskKey-<version>-full.nupkg`
+- `releases.win.json`、`assets.win.json`、`RELEASES`
 
-不要发布当前用户安装包和便携版 zip：当前用户安装的信任边界更弱，便携版一旦被移动就会被拓扑校验拒绝。不要手动改 feed 文件。
+前四个供手动安装使用，后四个是 Velopack 更新源：已安装的版本从 GitHub Release 读取它们，缺少这些文件时应用内的**检查更新**永远找不到新版本。不要手动改 feed 文件。
 
 ### Windows Hello Guard 服务
 

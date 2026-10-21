@@ -42,6 +42,7 @@ public sealed class AppHost : IDisposable
     private bool _helloAutoAttempted;
     private bool _disposed;
     private bool _started;
+    private AppUpdateService? _updates;
     private int _pendingCount;
 
     public AppHost(DispatcherQueue dispatcher)
@@ -103,6 +104,7 @@ public sealed class AppHost : IDisposable
             _tray?.UpdatePaused(IsAgentAccessPaused);
             RefreshPendingCount();
             PurgeExpiredCredentials();
+            StartUpdateCheck();
         }
         catch (Exception error)
         {
@@ -736,6 +738,24 @@ public sealed class AppHost : IDisposable
     }
 
     public void ShowError(string message) => Dialogs.ShowError(message);
+
+    public AppUpdateService Updates => _updates ??= new AppUpdateService();
+
+    /// <summary>Runs once at startup, off the UI thread. A published update is worth a tray
+    /// balloon; a failed check is not worth an interruption.</summary>
+    private void StartUpdateCheck()
+    {
+        var updates = Updates;
+        updates.UpdateFound += version => _dispatcher.TryEnqueue(() => _tray?.ShowNotification(
+            Loc.F("Ask Key {0} is available", version),
+            Loc.T("Open Settings to download and install it."),
+            ShowSettings));
+        _ = Task.Run(async () =>
+        {
+            try { await updates.CheckAsync(); }
+            catch (Exception error) { System.Diagnostics.Debug.WriteLine(error); }
+        });
+    }
 
     public void ApplyLanguage(string mode)
     {

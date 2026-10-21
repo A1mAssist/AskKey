@@ -22,6 +22,64 @@ public partial class SettingsView : UserControl
         _host = host;
         InitializeComponent();
         Loaded += (_, _) => Refresh();
+        RefreshUpdateRow();
+    }
+
+    private void RefreshUpdateRow()
+    {
+        var probe = _host.Updates.State;
+        var available = probe.State == UpdateState.Available;
+        UpdateInstallButton.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        CheckUpdateButton.IsEnabled = _host.Updates.IsSupported;
+        UpdateStatusText.Text = probe.State switch
+        {
+            UpdateState.Available => Loc.F("Version {0} is available.", probe.Version),
+            UpdateState.UpToDate => Loc.T("Ask Key is up to date."),
+            _ => Loc.T("This build cannot check for updates. Install the full package to enable them."),
+        };
+    }
+
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        CheckUpdateButton.IsEnabled = false;
+        UpdateStatusText.Text = Loc.T("Checking for updates…");
+        try
+        {
+            var probe = await _host.Updates.CheckAsync();
+            if (probe.State == UpdateState.Unavailable)
+            {
+                UpdateStatusText.Text = Loc.T("Ask Key could not reach the update feed. Try again later.");
+            }
+        }
+        catch (Exception error)
+        {
+            _host.ShowError(error.Message);
+        }
+        finally
+        {
+            RefreshUpdateRow();
+        }
+    }
+
+    private async void InstallUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (!await Dialogs.ConfirmAsync(App.CurrentWindow, Loc.T("Install the update"),
+                Loc.T("Ask Key will close and reopen. Your credentials stay on this PC."),
+                destructive: false)) return;
+        // Velopack reports download progress on a worker thread, so the text must be
+        // marshalled onto the UI thread.
+        void OnProgress(int percent) => DispatcherQueue.TryEnqueue(() =>
+            UpdateStatusText.Text = Loc.F("Downloading the update… {0}%", percent));
+        try
+        {
+            // Applies and exits this process, so nothing may follow it.
+            await _host.Updates.DownloadAndRestartAsync(OnProgress);
+        }
+        catch (Exception error)
+        {
+            _host.ShowError(error.Message);
+            RefreshUpdateRow();
+        }
     }
 
     public void Refresh()
@@ -30,6 +88,7 @@ public partial class SettingsView : UserControl
         try
         {
             AboutVersionText.Text = Loc.F("Ask Key for Windows {0}", AskKeyVersion.Current);
+            RefreshUpdateRow();
             RefreshChoices();
             var preferences = _host.Preferences;
             LaunchToggle.IsChecked = preferences.LaunchAtLogin;

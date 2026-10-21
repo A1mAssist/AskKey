@@ -93,16 +93,18 @@ The default output is `artifacts\publish\release`:
 - `AskKeyGuard-<version>.msi` — Guard only, for repair or advanced deployment
 - `AskKey-<version>.sha256` — SHA-256 of every other asset
 
-The build also produces files that are **not** part of a release: `AskKey-win-Setup.exe` (per-user install without Guard), `AskKey-win-Portable.zip`, `AskKey-<version>-full.nupkg`, and the `assets.win.json` / `releases.win.json` / `RELEASES` feed files.
+The build also produces `AskKey-win-Setup.exe` (per-user install without Guard) and `AskKey-win-Portable.zip`. Do not publish either: the per-user layout is a weaker security boundary, and the topology gate rejects a portable copy once it has been moved.
 
-Upload only these four assets to a GitHub release:
+Upload these assets to a GitHub release:
 
 - `AskKeySetup-<version>.exe`
 - `AskKey-win.msi`
 - `AskKeyGuard-<version>.msi`
 - `AskKey-<version>.sha256`
+- `AskKey-<version>-full.nupkg`
+- `releases.win.json`, `assets.win.json`, `RELEASES`
 
-Do not publish the per-user installer or the portable zip: the per-user layout is a weaker security boundary, and the topology gate rejects a portable copy once it has been moved. Do not hand-edit the feed files.
+The first four are for people who install by hand. The last four are the Velopack update feed: an installed build reads them from the GitHub release, so without them the in-app **Check for updates** button can never find a newer version. Do not hand-edit the feed files.
 
 ### Windows Hello Guard service
 
