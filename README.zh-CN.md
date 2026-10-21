@@ -21,7 +21,7 @@ Ask Key 把凭证加密保存在本机。Agent 只能按名称和元数据发现
 - **查找凭证：** Agent 可以查询凭证名称、用途说明和变量映射，但目录查询不会返回明文值。
 - **控制访问：** 每条凭证可以设为 **允许**、**每次询问** 或 **隐藏**。
 - **审核写入：** 新建、修改、删除和整理凭证都可以要求批准；批准绑定到你看到的那份冻结内容。
-- **值不出本机：** 查看或复制凭证值、查看冻结审批内容前，需要重新进行 Windows Hello 或 PIN 确认；普通管理操作在设置的 5/15 分钟会话内复用确认。
+- **值不出本机：** 查看或复制凭证值、查看冻结审批内容前，需要重新进行 Windows Hello 或 PIN 确认；普通管理操作在设置的会话窗口（5/15/30/60 分钟）内复用确认。
 - **保护审批界面：** 会话锁定、断开或注销时，详细审批会自动收起，恢复后再显示。
 - **快速创建：** 内置 API、SSH、GitHub App、云账号和数据库连接模板。
 
@@ -91,12 +91,18 @@ dotnet run --project .\src\AskKey.Build -- publish --certificate-thumbprint <thu
 - `AskKeySetup-<version>.exe` — **推荐安装器**，一次 UAC 安装应用和 Guard 服务
 - `AskKey-win.msi` — 仅应用，全机器安装到 `%ProgramFiles%\AskKey\current\`
 - `AskKeyGuard-<version>.msi` — 仅 Guard 服务，修复/高级安装使用
-- `AskKey-win-Setup.exe` — 当前用户安装，不含 Guard，不能使用 Hello 解锁
-- `AskKey-win-Portable.zip`
-- `AskKey-<version>-full.nupkg`
-- `assets.win.json`、`releases.win.json`、`RELEASES`
+- `AskKey-<version>.sha256` — 其余每个文件的 SHA-256
 
-发布时请把整套文件一起上传，不要手动改 feed 文件。
+构建还会产出**不属于发布内容**的文件：`AskKey-win-Setup.exe`（当前用户安装，不含 Guard）、`AskKey-win-Portable.zip`、`AskKey-<version>-full.nupkg`，以及 `assets.win.json` / `releases.win.json` / `RELEASES` 这三个 feed 文件。
+
+GitHub Release 只上传这四个文件：
+
+- `AskKeySetup-<version>.exe`
+- `AskKey-win.msi`
+- `AskKeyGuard-<version>.msi`
+- `AskKey-<version>.sha256`
+
+不要发布当前用户安装包和便携版 zip：当前用户安装的信任边界更弱，便携版一旦被移动就会被拓扑校验拒绝。不要手动改 feed 文件。
 
 ### Windows Hello Guard 服务
 
@@ -121,6 +127,14 @@ dotnet run --project .\src\AskKey.Build -- guard
 | `AskKey-win-Setup.exe` | 当前用户，无 Guard | `%LocalAppData%\AskKey\current\` | 不需要 |
 
 从 [Releases](https://github.com/A1mAssist/AskKey/releases) 下载 `AskKeySetup-<version>.exe`，推荐直接运行它。从“应用和功能”卸载时会一起移除应用和 Guard 服务。分离 MSI 只用于修复或高级部署；手动顺序是先应用、后 Guard，卸载时先 Guard。
+
+运行前先验证下载的文件。每个 Release 都带 `AskKey-<version>.sha256`，由发布工具在构建时生成：
+
+```powershell
+Get-FileHash -Algorithm SHA256 .\AskKeySetup-1.0.0.exe
+```
+
+把结果和 `AskKey-1.0.0.sha256` 里对应的那一行比对即可；MSI 的校验值也在同一个文件里。
 
 安装器会把实际程序放在 `current\` 子目录：
 
@@ -160,7 +174,7 @@ Agent 只被部分信任：它可以以你的 Windows 用户身份运行命令�
 - **默认模式** 使用 Windows DPAPI（`CurrentUser`）包裹 vault key。它能保护静态文件，但任何以你的身份运行的程序都可以解开同一个 key。
 - **高安全模式** 使用你设置的口令，通过 PBKDF2-HMAC-SHA256（600,000 次迭代）派生 KEK 包裹 vault key，并删除 DPAPI 副本。安装全机器 AskKey Guard 服务后，首次启动输入一次口令，之后的启动可以用 Windows Hello 解锁；口令始终是恢复路径。没有安装服务时，每次启动都要输入口令。启用此模式会重新包裹现有 key，不会轮换 key；切换前已经获得的 key 或 DPAPI 副本如果仍存在于 Ask Key 之外，依然有效。忘记口令后无法找回。
 - 查看或复制凭证值需要设备确认。Windows Hello 确认一次后，在设置选择的时间窗口（5–60 分钟）内进行应用内管理操作不再重复验证。
-- **重新认证：** 查看或复制凭证值、查看冻结审批内容、批准 Agent 读写请求、把凭证权限提升为 **允许**，以及抹除本机数据，即使在管理会话内也需要重新进行 Windows Hello 或 PIN 确认。普通管理操作在设置的 5/15 分钟会话内复用确认；锁屏、断开和注销会结束该会话。
+- **重新认证：** 查看或复制凭证值、查看冻结审批内容、批准 Agent 读写请求、把凭证权限提升为 **允许**，以及抹除本机数据，即使在管理会话内也需要重新进行 Windows Hello 或 PIN 确认。普通管理操作在设置的会话窗口（5/15/30/60 分钟）内复用确认；锁屏、断开和注销会结束该会话。
 - **进程内存边界：** 凭证库解锁期间，vault key 常驻 Ask Key 进程内存。`Lock()` 会清零它，但锁屏不会锁定凭证库，因为 Broker 仍需继续处理审批。以同一 Windows 用户身份运行的进程可以读取进程内存；这是两种 key 模式共同的限制。
 - **安装与完整性：** 除非提供签名证书，Release 构建仍未签名。未签名构建信任 Host 程序集内嵌的 Helper 清单，因此同一用户对安装目录的写权限仍是信任边界。Program Files 下的全机器 MSI 去掉了这条容易利用的写路径；更强的代码身份边界需要证书。签名构建要求 Host 和 Helper 使用同一发布者。
 - Helper 必须和 Host 一起放在官方安装根目录内；被复制到其他位置的 Helper 会被拒绝。

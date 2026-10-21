@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 
 namespace AskKey.Guard;
 
-/// <summary>32-byte one-time nonces, 60-second lifetime, four pending per SID.</summary>
+/// <summary>32-byte one-time nonces, five-minute lifetime, four pending per SID.</summary>
 public sealed class GuardNonceStore
 {
     // Windows Hello prompts can stay open longer than a minute on slow devices.

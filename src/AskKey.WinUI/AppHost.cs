@@ -230,6 +230,9 @@ public sealed class AppHost : IDisposable
     /// </summary>
     public async Task ForgotPassphraseAsync()
     {
+        // The vault is locked here, so there is no management session to inherit. Still,
+        // a reset destroys data: require Windows Hello exactly like an ordinary erase.
+        if (!_authentication.Confirm(Loc.T("Erase the local Ask Key vault"))) return;
         var reset = await TryResetGuardAsync();
         var language = Loc.Current == AppLanguage.SimplifiedChinese
             ? LocalVaultEraseLanguage.SimplifiedChinese
@@ -272,6 +275,14 @@ public sealed class AppHost : IDisposable
     public bool ConfirmManagement(string reason)
         => !ManagementAuthenticationPolicy.RequiresConfirmation(Vault.HasActiveManagementSession, reason)
             || _authentication.Confirm(Loc.T(reason));
+
+    /// <summary>
+    /// A fresh Windows Hello confirmation that never reuses the management session. Used for
+    /// settings that lower a protection boundary: inside a valid session
+    /// <see cref="ConfirmManagement"/> would make a downgrade a one-click, lasting change.
+    /// </summary>
+    public bool ConfirmSensitiveSetting(string reason)
+        => _authentication.Confirm(Loc.T(reason));
 
     public ManagementAuthenticator ManagementAuthenticator(string _)
         => ManagementAuthenticationPolicy.From(

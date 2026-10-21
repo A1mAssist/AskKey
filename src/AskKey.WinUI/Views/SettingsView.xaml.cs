@@ -248,7 +248,7 @@ public partial class SettingsView : UserControl
                 _loading = false;
                 return;
             }
-            if (!_host.ConfirmManagement("Disable system authentication for read approvals"))
+            if (!_host.ConfirmSensitiveSetting("Disable system authentication for read approvals"))
             {
                 _loading = true;
                 ReadAuthToggle.IsChecked = true;

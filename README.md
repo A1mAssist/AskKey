@@ -91,12 +91,18 @@ The default output is `artifacts\publish\release`:
 - `AskKeySetup-<version>.exe` — **recommended installer**, one UAC prompt for the app and Guard
 - `AskKey-win.msi` — app only, per-machine install in `%ProgramFiles%\AskKey\current\`
 - `AskKeyGuard-<version>.msi` — Guard only, for repair or advanced deployment
-- `AskKey-win-Setup.exe` — per-user install without Guard; Hello unlock is unavailable
-- `AskKey-win-Portable.zip`
-- `AskKey-<version>-full.nupkg`
-- `assets.win.json`, `releases.win.json`, `RELEASES`
+- `AskKey-<version>.sha256` — SHA-256 of every other asset
 
-Upload the complete release set together. Do not hand-edit the feed files.
+The build also produces files that are **not** part of a release: `AskKey-win-Setup.exe` (per-user install without Guard), `AskKey-win-Portable.zip`, `AskKey-<version>-full.nupkg`, and the `assets.win.json` / `releases.win.json` / `RELEASES` feed files.
+
+Upload only these four assets to a GitHub release:
+
+- `AskKeySetup-<version>.exe`
+- `AskKey-win.msi`
+- `AskKeyGuard-<version>.msi`
+- `AskKey-<version>.sha256`
+
+Do not publish the per-user installer or the portable zip: the per-user layout is a weaker security boundary, and the topology gate rejects a portable copy once it has been moved. Do not hand-edit the feed files.
 
 ### Windows Hello Guard service
 
@@ -121,6 +127,14 @@ Unsigned builds embed a SHA-256 manifest of the `Helpers\` payload and verify it
 | `AskKey-win-Setup.exe` | Per-user, no Guard | `%LocalAppData%\AskKey\current\` | No |
 
 Download `AskKeySetup-<version>.exe` from [Releases](https://github.com/A1mAssist/AskKey/releases) and run it for normal installation. Uninstalling it from Apps & Features removes both the app and Guard. Use the split MSIs only for repair or advanced deployment: install the app first and Guard second; uninstall Guard first.
+
+Verify the download before running it. Releases ship `AskKey-<version>.sha256`, which the release tool generates at build time:
+
+```powershell
+Get-FileHash -Algorithm SHA256 .\AskKeySetup-1.0.0.exe
+```
+
+Compare the result with the matching line in `AskKey-1.0.0.sha256`. The file is also where you get the checksum for the MSIs.
 
 The installer extracts the payload behind a `current\` folder:
 

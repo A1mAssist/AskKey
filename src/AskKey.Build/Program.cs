@@ -272,6 +272,24 @@ internal static partial class BuildTool
 
         Console.WriteLine($"Published: {publishDir}");
         Console.WriteLine($"Release:   {releaseDir}");
+
+        // An unsigned release asks for UAC and installs a service, so users need a way to
+        // check what they downloaded. Emit SHA-256 next to every asset.
+        var checksums = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(releaseDir)
+                     .Where(path => !path.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            using var stream = File.OpenRead(file);
+            var digest = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+            checksums.Add($"{digest}  {Path.GetFileName(file)}");
+        }
+        if (checksums.Count > 0)
+        {
+            var checksumPath = Path.Combine(releaseDir, $"AskKey-{version}.sha256");
+            File.WriteAllText(checksumPath, string.Join('\n', checksums) + "\n", new UTF8Encoding(false));
+        }
+
         foreach (var file in Directory.EnumerateFiles(releaseDir).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             Console.WriteLine($"  {Path.GetFileName(file)}");
         if (unsigned)

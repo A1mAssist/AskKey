@@ -134,6 +134,41 @@ public static class OfficialInstallTopology
         return OfficialInstallDecision.Accepted(helper);
     }
 
+    /// <summary>
+    /// True when <paramref name="hostDirectory"/> holds the AskKey.exe that structurally
+    /// belongs to <paramref name="helperPath"/>, and that pair sits in an official install root.
+    ///
+    /// The helper halves are the load-bearing part. <see cref="OfficialAppPaths"/> lists the
+    /// per-user and per-machine roots side by side, so asking only "is this some official
+    /// directory" accepts every root equally: any same-user process could plant an AskKey.exe
+    /// under %LOCALAPPDATA%\AskKey\current and impersonate a per-machine host. A host is ours
+    /// only when it belongs to the install the calling helper actually came from.
+    /// </summary>
+    public static bool IsHostOfHelper(string? hostDirectory, string? helperPath)
+    {
+        if (string.IsNullOrEmpty(hostDirectory) || string.IsNullOrEmpty(helperPath)) return false;
+        var helper = Normalize(helperPath);
+        var helpersDirectory = Path.GetDirectoryName(helper);
+        var hostRoot = helpersDirectory is null ? null : Path.GetDirectoryName(helpersDirectory);
+        if (hostRoot is null) return false;
+        if (!string.Equals(Path.GetFileName(helpersDirectory), HelperDirectoryName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        if (!string.Equals(Path.GetFileName(helper), HelperFileName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        // Strict directory equality: the host's directory is the helper's own directory.
+        if (!string.Equals(Normalize(hostDirectory), hostRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        return AllowsOfficialRuntime(Decide(hostRoot, helper));
+    }
+
     public static bool AllowsOfficialRuntime(OfficialInstallDecision decision)
         => decision.Kind is OfficialInstallDecisionKind.Accepted
             or OfficialInstallDecisionKind.DevelopmentAccepted;
@@ -188,6 +223,10 @@ public static class HelperHostSignatureTrust
     /// Production requires both binaries to carry the same publisher identity.
     /// Development and test builds skip signature trust, matching the macOS ad-hoc
     /// development gate. Unsigned builds opt into the embedded helper manifest.
+    ///
+    /// The <c>allowUnsigned</c> escape hatch is what an unsigned release lives on, and it
+    /// is a real downgrade: with no certificate there is no publisher to compare, so the
+    /// caller is left with whatever identity check it made on paths alone.
     /// </summary>
     public static bool Allows(
         HelperHostSigningFacts helper,

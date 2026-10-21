@@ -174,13 +174,13 @@ public sealed class BrokerSocketServer : IDisposable
             {
                 request = BrokerJson.DecodeRequest(frame.Data!);
             }
-            finally
+            catch
             {
                 global::System.Array.Clear(frame.Data!);
-                // Released here so no decode failure can strand the slot; every later
-                // request from a legitimate client would be refused as resource_exhausted.
                 lease.Release();
+                throw;
             }
+            global::System.Array.Clear(frame.Data!);
             if (request is null)
             {
                 lease.Release();

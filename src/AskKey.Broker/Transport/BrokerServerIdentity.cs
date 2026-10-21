@@ -8,40 +8,58 @@ namespace AskKey.Broker.Transport;
 /// Client-side authenticity gate for the Broker pipe. The pipe DACL only proves the peer
 /// runs as the same user, which every local process does, so a same-user process can squat
 /// the pipe name and impersonate the Broker. Before shipping a request the client resolves
-/// the server process and requires the official host executable.
+/// the server process and requires the AskKey.exe installed beside this helper.
 /// </summary>
 public sealed class BrokerServerIdentity
 {
     private readonly Func<uint, string?>? _imagePath;
-    private readonly Func<string, string?>? _signerSubject;
+    private readonly Func<string, Runtime.HelperHostSigningFacts> _signingFacts;
     private readonly bool _allowUnsigned;
+    private readonly string? _helperPath;
 
-    private BrokerServerIdentity(
+    internal BrokerServerIdentity(
         Func<uint, string?>? imagePath,
-        Func<string, string?>? signerSubject,
-        bool allowUnsigned)
+        Func<string, Runtime.HelperHostSigningFacts> signingFacts,
+        bool allowUnsigned,
+        string? helperPath = null)
     {
         _imagePath = imagePath;
-        _signerSubject = signerSubject;
+        _signingFacts = signingFacts;
         _allowUnsigned = allowUnsigned;
+        _helperPath = helperPath;
     }
 
     /// <summary>
-    /// Production gate: the server process must be the installed AskKey.exe under a known
-    /// install root. An unsigned release (<see cref="Runtime.UnsignedBuild"/>) cannot check
-    /// the signer, so it gets the path check only until the build is signed; a signed release
-    /// additionally requires the Authenticode pass. Development builds skip the gate entirely.
+    /// Production gate: the server process must be the AskKey.exe installed in the very
+    /// install root this helper runs from. Root equality is the part the old path
+    /// whitelist could not express - every official root looked equally valid, so a
+    /// same-user process could plant an AskKey.exe under %LOCALAPPDATA%\AskKey and
+    /// impersonate a per-machine host (or the other way round).
+    /// A signed release additionally requires the host to carry this helper's publisher,
+    /// so any valid signature no longer passes. An unsigned release
+    /// (<see cref="Runtime.UnsignedBuild"/>) has no certificate to compare and therefore
+    /// degrades to the same-install-root path check alone; development builds skip the
+    /// gate entirely.
     /// </summary>
     public static BrokerServerIdentity Production { get; } = new(
         ProcessImagePath,
-        Runtime.AuthenticodeVerifier.Shared.SignerSubject,
-        Runtime.UnsignedBuild.Allowed);
+        Runtime.HelperHostApplication.SigningFacts,
+        Runtime.UnsignedBuild.Allowed,
+        Environment.ProcessPath);
 
     /// <summary>Test seam: a testhost-owned pipe is not AskKey.exe, so tests skip the gate.</summary>
     public static BrokerServerIdentity AlwaysTrusted { get; } =
-        new(imagePath: null, signerSubject: null, allowUnsigned: true);
+        new(imagePath: null, signingFacts: Runtime.HelperHostApplication.SigningFacts, allowUnsigned: true);
 
-
+    /// <summary>
+    /// Test seam: the identity that speaks for a helper at an explicit install path, so the
+    /// policy can be driven for roots a development build cannot occupy.
+    /// </summary>
+    internal static BrokerServerIdentity ForHelper(
+        string helperPath,
+        Func<string, Runtime.HelperHostSigningFacts> signingFacts,
+        bool allowUnsigned)
+        => new(ProcessImagePath, signingFacts, allowUnsigned, helperPath);
 
     /// <summary>False when the peer is not the official Ask Key Broker.</summary>
     public bool IsTrusted(NamedPipeClientStream pipe)
@@ -57,19 +75,13 @@ public sealed class BrokerServerIdentity
         // directory. Only a helper beside AskKey.exe submits requests.
         if (!IsOfficialHelperProcess()) return true;
         if (!TryGetServerProcessId(pipe, out var processId)) return false;
-        var imagePath = _imagePath(processId);
-        if (!IsOfficialHostImage(imagePath)) return false;
-        return _allowUnsigned || _signerSubject?.Invoke(imagePath!) is not null;
+        return IsOfficialHostImage(_imagePath(processId));
 #endif
     }
 
     /// <summary>True when this process is the helper from an official install.</summary>
-    private static bool IsOfficialHelperProcess()
-    {
-        var self = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(self)) return false;
-        return IsOfficialHelperPath(self);
-    }
+    private bool IsOfficialHelperProcess()
+        => _helperPath is not null && IsOfficialHelperPath(_helperPath);
 
     /// <summary>
     /// The helper must sit in <c>Helpers\askkey.exe</c> beside an installed AskKey.exe.
@@ -106,22 +118,28 @@ public sealed class BrokerServerIdentity
 
     /// <summary>
     /// The identity policy on its own, split out so it stays testable in development
-    /// builds where the pipe-time gate above is compiled out.
+    /// builds where the pipe-time gate above is compiled out. The host must be the
+    /// AskKey.exe that structurally belongs to this identity's helper, and that pair must
+    /// sit in an official install root: same root as the caller, not merely any root.
     /// </summary>
-    public static bool IsOfficialHostImage(string? imagePath)
+    public bool IsOfficialHostImage(string? imagePath)
     {
-        if (string.IsNullOrEmpty(imagePath)) return false;
+        if (string.IsNullOrEmpty(imagePath) || _helperPath is null) return false;
+        var image = Path.GetFullPath(imagePath);
         if (!string.Equals(
-                Path.GetFileName(imagePath),
+                Path.GetFileName(image),
                 Runtime.OfficialInstallTopology.HostFileName,
                 StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
-        var directory = Path.GetDirectoryName(Path.GetFullPath(imagePath));
+        var directory = Path.GetDirectoryName(image);
         if (directory is null) return false;
-        return Runtime.OfficialInstallTopology.AllowsOfficialRuntime(
-            Runtime.OfficialInstallTopology.Decide(directory));
+        if (!Runtime.OfficialInstallTopology.IsHostOfHelper(directory, _helperPath)) return false;
+        return Runtime.HelperHostSignatureTrust.Allows(
+            _signingFacts(_helperPath), _signingFacts(image),
+            isDevelopmentBuild: false,
+            allowUnsigned: _allowUnsigned);
     }
 
     private static string? ProcessImagePath(uint id)
