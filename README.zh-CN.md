@@ -108,7 +108,7 @@ GitHub Release 上传这些文件：
 
 ### Windows Hello Guard 服务
 
-正常安装使用 `AskKeySetup-<version>.exe`：它会先安装应用，再安装 Guard 服务；从“应用和功能”卸载时按相反顺序移除。单独的两个 MSI 只用于修复或高级部署；手动安装时先装应用，再装 `AskKeyGuard-<version>.msi`，卸载时先卸 Guard。当前用户安装（`AskKey-win-Setup.exe`）不能使用 Hello 解锁。
+正常安装使用 `AskKeySetup-<version>.exe`：它会先安装应用，再安装 Guard 服务；从“应用和功能”卸载时按相反顺序移除。**升级直接覆盖安装即可**，应用和 Guard 的 MSI 保持固定 UpgradeCode，Windows Installer 会原地替换旧版本；只有从旧的用户级安装迁移时才需要先卸载。单独的两个 MSI 只用于修复或高级部署；手动安装时先装应用，再装 `AskKeyGuard-<version>.msi`，卸载时先卸 Guard。当前用户安装（`AskKey-win-Setup.exe`）不能使用 Hello 解锁。
 
 开发时可单独发布服务：
 

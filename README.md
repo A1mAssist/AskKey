@@ -108,7 +108,7 @@ The first four are for people who install by hand. The last four are the Velopac
 
 ### Windows Hello Guard service
 
-Normal installation uses `AskKeySetup-<version>.exe`: it installs the app first, then Guard, and removes both when uninstalled from Apps & Features. The two standalone MSIs are for repair or advanced deployment; manually install the app first and `AskKeyGuard-<version>.msi` second, and uninstall Guard first. The per-user `AskKey-win-Setup.exe` cannot use Hello unlock.
+Normal installation uses `AskKeySetup-<version>.exe`: it installs the app first, then Guard, and removes both when uninstalled from Apps & Features. Run a newer setup over an existing install to upgrade — the app and Guard MSIs keep a stable UpgradeCode, so Windows Installer replaces them in place. Uninstall first only when moving from the old per-user layout. The two standalone MSIs are for repair or advanced deployment; manually install the app first and `AskKeyGuard-<version>.msi` second, and uninstall Guard first. The per-user `AskKey-win-Setup.exe` cannot use Hello unlock.
 
 For development, publish the service separately:
 
