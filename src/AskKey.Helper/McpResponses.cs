@@ -127,6 +127,10 @@ internal static class McpResponses
         {
             payload["next_step"] = AgentUsageGuide.Rejected;
         }
+        if (brokerCode == BrokerWire.ToWire(BrokerErrorCode.VaultLocked))
+        {
+            payload["next_step"] = AgentUsageGuide.VaultLocked;
+        }
         return ToolError(id, payload.ToJsonString());
     }
 
@@ -141,8 +145,12 @@ internal static class McpResponses
             _ => ("request_failed", null),
         };
 
-    private static string BrokerFailureStatus(BrokerErrorCode code)
-        => code == BrokerErrorCode.UnsupportedVersion ? "protocol_incompatible" : "request_rejected";
+    private static string BrokerFailureStatus(BrokerErrorCode code) => code switch
+    {
+        BrokerErrorCode.UnsupportedVersion => "protocol_incompatible",
+        BrokerErrorCode.VaultLocked => "vault_locked",
+        _ => "request_rejected",
+    };
 
     private static string Encoded(BrokerResponse response)
         => global::System.Text.Encoding.UTF8.GetString(BrokerJson.Encode(response));

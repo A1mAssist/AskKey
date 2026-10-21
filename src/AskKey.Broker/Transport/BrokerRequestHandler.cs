@@ -196,6 +196,7 @@ public sealed class BrokerRequestHandler
                 BrokerProviderError.RequestRejected => BrokerErrorCode.RequestRejected,
                 BrokerProviderError.InvalidRequest => BrokerErrorCode.InvalidRequest,
                 BrokerProviderError.RequestNotFound => BrokerErrorCode.RequestNotFound,
+                BrokerProviderError.VaultLocked => BrokerErrorCode.VaultLocked,
                 _ => BrokerErrorCode.ResourceExhausted,
             });
         }

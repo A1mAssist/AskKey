@@ -7,6 +7,17 @@ internal static class ManagementAuthenticationPolicy
     public static bool RequiresConfirmation(bool hasActiveSession, string reason)
         => !hasActiveSession || Vault.RequiresFreshAuthentication(reason);
 
+    /// <summary>
+    /// A read approval inherits the open management session: the user already proved
+    /// presence with Windows Hello when they unlocked, and the session window is the
+    /// reuse period they chose. A write approval always asks again, because it hands
+    /// an Agent plaintext or grants a lasting permission.
+    /// </summary>
+    public static bool RequiresApprovalConfirmation(
+        bool hasActiveSession, AskKey.Broker.Approval.BrokerAuthenticationPurpose purpose)
+        => purpose != AskKey.Broker.Approval.BrokerAuthenticationPurpose.ReadApproval
+            || !hasActiveSession;
+
     public static ManagementAuthenticator From(Func<string, bool> confirm, Func<bool> hasActiveSession)
     {
         // The authenticator is shared by the UI thread and Broker worker threads,

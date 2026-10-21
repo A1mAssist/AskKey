@@ -225,12 +225,37 @@ internal static class WaitingRunner
         BrokerSocketClient client,
         CancellationBridge cancellation)
     {
-        var result = CliRunner.RunOnce(request, client, cancellation);
         var deadline = DateTimeOffset.UtcNow + WaitDeadline;
         var announced = false;
-        while (result.ResultKind == BrokerTextRunResult.Kind.ApprovalRequired)
+        var announcedUnlock = false;
+        while (true)
         {
             cancellation.Token.ThrowIfCancellationRequested();
+            BrokerTextRunResult result;
+            try
+            {
+                result = CliRunner.RunOnce(request, client, cancellation);
+            }
+            catch (BrokerSocketException error)
+                when (error.Error == BrokerSocketError.BrokerFailure
+                    && error.BrokerFailure == BrokerErrorCode.VaultLocked)
+            {
+                // Ask Key is locked and the user was asked to unlock it. Keep the
+                // command, its cwd and its environment in memory and resume once the
+                // vault opens, so the Agent does not have to retry by hand.
+                if (DateTimeOffset.UtcNow >= deadline)
+                {
+                    throw new HelperWaitException(HelperCopy.WaitExpired);
+                }
+                if (!announcedUnlock)
+                {
+                    HelperIO.WriteError(HelperCopy.WaitingForUnlock);
+                    announcedUnlock = true;
+                }
+                cancellation.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(500));
+                continue;
+            }
+            if (result.ResultKind != BrokerTextRunResult.Kind.ApprovalRequired) return result;
             if (result.OperationId != request.OperationId || result.Tickets.Count == 0)
             {
                 throw new HelperWaitException(HelperCopy.WaitInvalid);
@@ -279,9 +304,7 @@ internal static class WaitingRunner
                 if (allApproved) break;
                 cancellation.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(500));
             }
-            result = CliRunner.RunOnce(request, client, cancellation);
         }
-        return result;
     }
 }
 

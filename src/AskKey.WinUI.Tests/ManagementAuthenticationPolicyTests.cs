@@ -1,3 +1,4 @@
+using AskKey.Broker.Approval;
 using AskKey.Vault;
 
 namespace AskKeyApp.Tests;
@@ -44,6 +45,24 @@ public sealed class ManagementAuthenticationPolicyTests
         active = false;
         Assert.True(authenticator.Confirm(CredentialManagementCopy.RevealReason));
         Assert.Equal(3, prompts);
+    }
+
+    /// <summary>
+    /// A read approval inside the session window must not ask again: the user already
+    /// proved presence when they unlocked. A write approval always asks, because it
+    /// hands an Agent plaintext.
+    /// </summary>
+    [Fact]
+    public void AReadApprovalReusesTheSessionButAWriteApprovalDoesNot()
+    {
+        Assert.False(ManagementAuthenticationPolicy.RequiresApprovalConfirmation(
+            hasActiveSession: true, BrokerAuthenticationPurpose.ReadApproval));
+        Assert.True(ManagementAuthenticationPolicy.RequiresApprovalConfirmation(
+            hasActiveSession: false, BrokerAuthenticationPurpose.ReadApproval));
+        Assert.True(ManagementAuthenticationPolicy.RequiresApprovalConfirmation(
+            hasActiveSession: true, BrokerAuthenticationPurpose.WriteApproval));
+        Assert.True(ManagementAuthenticationPolicy.RequiresApprovalConfirmation(
+            hasActiveSession: false, BrokerAuthenticationPurpose.WriteApproval));
     }
 
     [Fact]

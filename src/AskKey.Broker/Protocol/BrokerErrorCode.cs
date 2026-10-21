@@ -13,4 +13,7 @@ public enum BrokerErrorCode
     InternalError,
     AgentAccessPaused,
     RequestRejected,
+    /// <summary>The vault is locked, so no credential data could be read or written.
+    /// The request was not executed; retry it after the user unlocks Ask Key.</summary>
+    VaultLocked,
 }

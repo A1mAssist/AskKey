@@ -76,6 +76,11 @@ internal static class AgentUsageGuide
         _ => "Execution outcome is unknown. Do not automatically retry or create a new operation ID; first verify whether the target started or changed anything.",
     };
 
+    public const string VaultLocked =
+        "Ask Key is locked, so nothing ran. Ask Key brought its unlock screen to the front for the user. " +
+        "Wait for the user to unlock it, then retry the same request with the same operation_id and identical payload. " +
+        "Do not create a new operation ID, and do not report the task as blocked before the user has had a chance to unlock.";
+
     public const string Rejected =
         "The request was rejected. This does not reveal whether a credential exists or is hidden. " +
         "For credential use, check list_credentials and supply a visible name (not credentialID), with valid delivery mappings. " +

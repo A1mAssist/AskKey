@@ -17,6 +17,7 @@ public static class BrokerWire
         BrokerErrorCode.InternalError => "internal_error",
         BrokerErrorCode.AgentAccessPaused => "agent_access_paused",
         BrokerErrorCode.RequestRejected => "request_rejected",
+        BrokerErrorCode.VaultLocked => "vault_locked",
         _ => throw new ArgumentOutOfRangeException(nameof(code)),
     };
 
@@ -34,6 +35,7 @@ public static class BrokerWire
             case "internal_error": code = BrokerErrorCode.InternalError; return true;
             case "agent_access_paused": code = BrokerErrorCode.AgentAccessPaused; return true;
             case "request_rejected": code = BrokerErrorCode.RequestRejected; return true;
+            case "vault_locked": code = BrokerErrorCode.VaultLocked; return true;
             default: code = default; return false;
         }
     }

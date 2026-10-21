@@ -40,6 +40,9 @@ public sealed class AppHost : IDisposable
     private bool _sessionLocked;
     private bool _lockedApprovalReminderPosted;
     private bool _helloAutoAttempted;
+    private int _unlockInProgress;
+    private readonly object _unlockCooldownGate = new();
+    private DateTimeOffset _unlockCooldownUntil;
     private bool _disposed;
     private bool _started;
     private AppUpdateService? _updates;
@@ -59,6 +62,16 @@ public sealed class AppHost : IDisposable
 
     /// <summary>True when high security mode prevented the automatic unlock at startup.</summary>
     public bool IsLockedAtStartup { get; private set; }
+
+    /// <summary>True while the unlock prompt is up because an Agent request arrived
+    /// while the vault was locked. The request that triggered it already failed;
+    /// the Agent retries once the user approves.</summary>
+    internal bool IsUnlockInProgress => Volatile.Read(ref _unlockInProgress) != 0;
+
+    /// <summary>How long to wait before asking again after the user dismissed the
+    /// prompt. A waiting Agent retries in a loop, and a prompt per retry would be
+    /// an unanswerable wall of dialogs.</summary>
+    private static readonly TimeSpan UnlockRetryCooldown = TimeSpan.FromSeconds(30);
 
     public event Action? PendingChanged;
     public event Action? CredentialsChanged;
@@ -137,7 +150,91 @@ public sealed class AppHost : IDisposable
     public void PromptHelloIfAvailable()
     {
         if (!Vault.IsLocked || _helloAutoAttempted || !Vault.IsGuardUnlockEnabled) return;
+        // An Agent request already opened a prompt; a second one would race it.
+        if (IsUnlockInProgress) return;
         _ = UnlockWithHelloAsync();
+    }
+
+    /// <summary>
+    /// An Agent request arrived while the vault was locked. Bring the user to the
+    /// unlock prompt so they do not have to hunt for the tray icon, and let the
+    /// request retry. Windows Hello needs an owner window, so the main window comes
+    /// forward with it; there is no way to ask for user presence silently.
+    /// </summary>
+    private void RequestUnlockForAgent()
+    {
+        if (Interlocked.CompareExchange(ref _unlockInProgress, 1, 0) != 0) return;
+        if (!_dispatcher.TryEnqueue(() =>
+            {
+                _mainWindow ??= new MainWindow(this);
+                // ShowFromTray, not ShowMainWindow: ShowMainWindow would also prompt
+                // for Hello, and that would race the prompt this request started.
+                _mainWindow.ShowFromTray();
+                if (!Vault.IsGuardUnlockEnabled)
+                {
+                    // No Hello enrollment: the lock screen owns the passphrase entry.\n                    // Bring it forward so the user can type it. The cooldown applies\n                    // here too: a waiting Agent retries in a loop, and re-activating\n                    // the window on every retry would fight the user's own work.
+                    _mainWindow.FocusLock();
+                    CooldownUnlockForAgent();
+                    Interlocked.Exchange(ref _unlockInProgress, 0);
+                    return;
+                }
+                _ = UnlockForAgentRequestAsync();
+            }))
+        {
+            Interlocked.Exchange(ref _unlockInProgress, 0);
+        }
+    }
+
+    /// <summary>
+    /// The user dismissed the prompt, so wait before asking again. A waiting Agent
+    /// retries in a loop, and a prompt per retry would be an unanswerable wall of
+    /// dialogs.
+    /// </summary>
+    private void CooldownUnlockForAgent()
+    {
+        var until = DateTimeOffset.UtcNow + UnlockRetryCooldown;
+        lock (_unlockCooldownGate)
+        {
+            if (until > _unlockCooldownUntil) _unlockCooldownUntil = until;
+        }
+    }
+
+    private bool UnlockCooldownActive()
+    {
+        lock (_unlockCooldownGate)
+        {
+            return DateTimeOffset.UtcNow < _unlockCooldownUntil;
+        }
+    }
+
+    private async Task UnlockForAgentRequestAsync()
+    {
+        var unlocked = false;
+        try
+        {
+            unlocked = await UnlockWithHelloAsync();
+            if (!unlocked) CooldownUnlockForAgent();
+        }
+        finally
+        {
+            // A cancelled or failed prompt must not stop the next Agent request from
+            // trying again. A successful unlock keeps the flag, so the lock screen
+            // does not prompt a second time.
+            if (!unlocked) _helloAutoAttempted = false;
+            Interlocked.Exchange(ref _unlockInProgress, 0);
+        }
+    }
+
+    /// <summary>
+    /// Fails an Agent request closed while the vault is locked, after asking the user
+    /// to unlock. The request is never executed in this state, so the Agent can retry
+    /// the identical request once the unlock succeeds.
+    /// </summary>
+    private void EnsureUnlockedForAgent()
+    {
+        if (!Vault.IsLocked) return;
+        if (!UnlockCooldownActive()) RequestUnlockForAgent();
+        throw new BrokerProviderException(BrokerProviderError.VaultLocked);
     }
 
     public void ShowPendingRequests()
@@ -852,10 +949,7 @@ public sealed class AppHost : IDisposable
 
     private void ConfigureApprovals()
     {
-        Vault.ApprovalRequests.ConfigureAuthentication(purpose =>
-            _authentication.Confirm(Loc.T(purpose == BrokerAuthenticationPurpose.ReadApproval
-                ? "Approve this Agent read request"
-                : global::AskKey.Vault.CredentialManagementCopy.AgentWriteApprovalReason)));
+        Vault.ApprovalRequests.ConfigureAuthentication(ConfirmAgentApproval);
         Vault.ApprovalRequests.ConfigureObservers(
             _ => _dispatcher.TryEnqueue(() =>
             {
@@ -868,6 +962,24 @@ public sealed class AppHost : IDisposable
                 RefreshPendingCount();
                 NotifyCredentialsChanged();
             }));
+    }
+
+    /// <summary>
+    /// A read approval inherits the open management session: the user already proved
+    /// presence with Windows Hello when they unlocked, and the session window is the
+    /// reuse period they chose. A write approval always asks again, because it hands
+    /// an Agent plaintext or grants a lasting permission.
+    /// </summary>
+    private bool ConfirmAgentApproval(BrokerAuthenticationPurpose purpose)
+    {
+        if (!ManagementAuthenticationPolicy.RequiresApprovalConfirmation(
+                Vault.HasActiveManagementSession, purpose))
+        {
+            return true;
+        }
+        return _authentication.Confirm(Loc.T(purpose == BrokerAuthenticationPurpose.ReadApproval
+            ? "Approve this Agent read request"
+            : global::AskKey.Vault.CredentialManagementCopy.AgentWriteApprovalReason));
     }
 
     private async void PresentNextApproval()
@@ -963,10 +1075,14 @@ public sealed class AppHost : IDisposable
             completedFileCommit: (requestId, capability, digest) =>
                 Vault.CompletedAgentFileWrite(requestId, capability, digest));
         _textRuntime = new BrokerTextRuntime((request, cancellation) =>
-            MapProvider(() => Vault.BrokerTextCredentials(request, cancellation)));
+            MapProvider(() => Vault.BrokerTextCredentials(request, cancellation)),
+            beforeRequest: EnsureUnlockedForAgent);
         var handler = new BrokerRequestHandler(
             catalog: cancellation =>
             {
+                // Outside the try: a locked vault is not a denied read, so it must not
+                // be recorded as one.
+                EnsureUnlockedForAgent();
                 try
                 {
                     var catalog = Vault.BrokerCredentialCatalog(cancellation);
@@ -985,8 +1101,15 @@ public sealed class AppHost : IDisposable
             },
             requestStatus: (requestId, capability) =>
             {
-                if (Vault.CommittedAgentFileWriteStatus(requestId, capability) is { } completed)
+                // The file-write receipt lives in the encrypted store, so it needs the
+                // key; the approval state machine does not. A locked vault must still
+                // answer a status poll, or a waiting Agent could never learn that its
+                // request was denied.
+                if (!Vault.IsLocked
+                    && Vault.CommittedAgentFileWriteStatus(requestId, capability) is { } completed)
+                {
                     return completed;
+                }
                 try
                 {
                     return Vault.ApprovalRequests.Status(requestId, capability);
@@ -1011,18 +1134,21 @@ public sealed class AppHost : IDisposable
             textRun: (request, channel, cancellation) => _textRuntime.Run(request, channel, cancellation),
             fileWrite: request =>
             {
-                if (Vault.IsLocked)
-                    throw new BrokerFileWriteException(BrokerFileWriteError.AuthenticationFailed);
+                EnsureUnlockedForAgent();
                 return _fileWrites.Handle(request);
             },
             submitTextWrite: (request, cancellation) =>
             {
                 cancellation.Check();
+                EnsureUnlockedForAgent();
                 return MapProvider(() => Vault.RequestAgentTextWrite(request,
                     reference => _fileWrites.ResolveComponent(reference, request.OperationId)));
             },
             commitTextWrite: (request, requestId, capability) =>
-                MapProvider(() => Vault.CommitAgentTextWrite(request, requestId, capability)),
+            {
+                EnsureUnlockedForAgent();
+                return MapProvider(() => Vault.CommitAgentTextWrite(request, requestId, capability));
+            },
             cancelTextWrite: (operationId, requestId, capability) =>
                 MapProvider(() => Vault.CancelAgentTextWrite(operationId, requestId, capability)));
 
@@ -1044,6 +1170,7 @@ public sealed class AppHost : IDisposable
             throw new BrokerProviderException(error.Code switch
             {
                 VaultErrorCode.AgentAccessPaused => BrokerProviderError.AgentAccessPaused,
+                VaultErrorCode.VaultLocked => BrokerProviderError.VaultLocked,
                 VaultErrorCode.CredentialUnavailable or VaultErrorCode.CredentialNotFound
                     => BrokerProviderError.RequestRejected,
                 VaultErrorCode.CredentialNameConflict or VaultErrorCode.InvalidCredentialName

@@ -7,6 +7,9 @@ public enum BrokerProviderError
     InvalidRequest,
     RequestNotFound,
     ResourceExhausted,
+    /// <summary>The vault is locked. The request was not executed and can be retried
+    /// once the user unlocks Ask Key.</summary>
+    VaultLocked,
 }
 
 public sealed class BrokerProviderException : Exception

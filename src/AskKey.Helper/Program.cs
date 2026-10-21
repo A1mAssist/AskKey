@@ -175,6 +175,9 @@ internal static class HelperCopy
     public const string WaitStoppedFormat =
         "Ask Key approval wait stopped ({0}); the command was not resumed.";
 
+    public const string WaitingForUnlock =
+        "Ask Key is locked. Its unlock screen was brought to the front for the user; this process will continue once it does.";
+
     public const string WaitExpired =
         "Ask Key approval wait expired; the command was not resumed.";
 

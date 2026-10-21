@@ -169,6 +169,7 @@ public sealed class BrokerTextRuntime
     private readonly BrokerRuntimeOperations _operations;
     private readonly CredentialResolver _resolveCredentials;
     private readonly ExecutableResolver _resolveExecutable;
+    private readonly Action _beforeRequest;
     private readonly Action _beforeSpawn;
     private readonly Action _afterAuthorization;
     private readonly Action _beforeSystemSpawn;
@@ -185,10 +186,12 @@ public sealed class BrokerTextRuntime
         TimeSpan? terminationGrace = null,
         TimeSpan? forceKillGrace = null,
         int receiptCapacity = BrokerLimits.MaximumRuntimeReceiptCount,
-        ExecutableResolver? resolveExecutable = null)
+        ExecutableResolver? resolveExecutable = null,
+        Action? beforeRequest = null)
     {
         _operations = new BrokerRuntimeOperations(receiptCapacity);
         _resolveCredentials = resolveCredentials;
+        _beforeRequest = beforeRequest ?? (() => { });
         // Default: resolve against the request's own inherited PATH, so a bare name
         // cannot be reinterpreted later from a different environment.
         _resolveExecutable = resolveExecutable ?? ((name, request) =>
@@ -296,6 +299,10 @@ public sealed class BrokerTextRuntime
         {
             throw new BrokerTextRuntimeException(BrokerTextRuntimeError.UnresolvedExecutable);
         }
+        // The preflight runs before the receipt is created: a locked vault must not
+        // poison this operation ID, or the retry after the user unlocks would replay
+        // the failure instead of running the command.
+        _beforeRequest();
         return _operations.Perform(request, cancellation, () => RunOnce(request, channel, cancellation));
     }
 
@@ -655,8 +662,18 @@ internal sealed class BrokerRuntimeOperations
         }
         lock (_lock)
         {
-            entry.Result = result;
-            entry.Error = failure;
+            // A locked vault is not a completed operation: the Agent retries the same
+            // operation ID after the user unlocks, so the receipt must not remember
+            // this failure or the retry would replay it forever.
+            if (failure is BrokerProviderException { Error: BrokerProviderError.VaultLocked })
+            {
+                _entries.Remove(identifier);
+            }
+            else
+            {
+                entry.Result = result;
+                entry.Error = failure;
+            }
             entry.InFlight = false;
             _inFlightCount--;
             Monitor.PulseAll(_lock);
