@@ -415,6 +415,9 @@ internal static class LocalizationCatalog
         [" · {0} waiting"] = " · {0} 个等待",
         ["1 credential"] = "1 个凭证",
         ["Add at least one component."] = "请至少添加一项组件。",
+        ["Agent access is paused after this update"] = "本次更新后 Agent 访问已暂停",
+        ["Ask Key now keeps Agent-access and security settings in an encrypted, authenticated policy, and starts paused until you confirm it is you. Choose Resume Agent access to turn Agent access back on."] =
+            "请旨现在把 Agent 访问和安全设置保存在一份加密、经过认证的策略里，在你确认身份之前会先暂停。选择「恢复 Agent 访问」即可重新开启。",
         ["Agent access is paused"] = "Agent 访问已暂停",
         ["Agent access paused"] = "Agent 访问已暂停",
         ["Allow for {0} minutes"] = "允许 {0} 分钟",
