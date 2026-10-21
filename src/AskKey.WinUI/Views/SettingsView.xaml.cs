@@ -34,6 +34,9 @@ public partial class SettingsView : UserControl
         UpdateStatusText.Text = probe.State switch
         {
             UpdateState.Available => Loc.F("Version {0} is available.", probe.Version),
+            // "Off" outranks a stale probe result: with auto-check off, a cached
+            // UpToDate says nothing about what Ask Key is currently doing.
+            _ when !_host.Preferences.AutoCheckUpdates => Loc.T("Automatic update checks are off."),
             UpdateState.UpToDate => Loc.T("Ask Key is up to date."),
             _ => Loc.T("This build cannot check for updates. Install the full package to enable them."),
         };
@@ -92,6 +95,7 @@ public partial class SettingsView : UserControl
             RefreshChoices();
             var preferences = _host.Preferences;
             LaunchToggle.IsChecked = preferences.LaunchAtLogin;
+            AutoCheckUpdatesToggle.IsChecked = preferences.AutoCheckUpdates;
             HotkeyCombo.SelectedItem = HotkeyCombo.Items.OfType<HotkeyOption>()
                 .FirstOrDefault(option => option.Id == preferences.HotkeyShortcut);
             AllowanceCombo.SelectedItem = AllowanceCombo.Items.OfType<AllowanceOption>()
@@ -104,6 +108,8 @@ public partial class SettingsView : UserControl
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ReadAuthToggle,
                 Loc.T("Confirm before reading a credential"));
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(HighSecurityToggle, Loc.T("High security mode"));
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AutoCheckUpdatesToggle,
+                Loc.T("Check for updates automatically"));
             SelectTag(AppearanceCombo, preferences.AppearanceMode);
             SelectTag(LanguageCombo, preferences.LanguageMode);
             ErasePromptText.Text = Loc.F("Type {0} to confirm", EraseConfirmation);
@@ -164,6 +170,16 @@ public partial class SettingsView : UserControl
         _host.Preferences.Save();
         try { StartupRegistration.Apply(enabled); }
         catch (Exception error) { _host.ShowError(error.Message); }
+    }
+
+    private void AutoCheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        var enabled = AutoCheckUpdatesToggle.IsChecked == true;
+        _host.Preferences.AutoCheckUpdates = enabled;
+        _host.Preferences.Save();
+        // Turning it on should not wait for the next launch.
+        if (enabled) _host.CheckUpdatesQuietly();
     }
 
     private void Hotkey_SelectionChanged(object sender, SelectionChangedEventArgs e)

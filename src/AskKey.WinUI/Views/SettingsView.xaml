@@ -222,6 +222,17 @@
           <StackPanel>
 
             <Grid Margin="16,14">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock local:Loc.Key="Check for updates automatically" Style="{StaticResource HeadlineStyle}" FontSize="13"/>
+                <TextBlock local:Loc.Key="Ask Key checks for a new release when it starts."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <ToggleButton x:Name="AutoCheckUpdatesToggle" Grid.Column="1" Style="{StaticResource SettingsSwitchStyle}"
+                            Click="AutoCheckUpdates_Click"/>
+            </Grid>
+            <Border Height="1" Background="{ThemeResource LineBrush}"/>
+            <Grid Margin="16,14">
 
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
 

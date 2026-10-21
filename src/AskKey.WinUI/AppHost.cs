@@ -741,8 +741,8 @@ public sealed class AppHost : IDisposable
 
     public AppUpdateService Updates => _updates ??= new AppUpdateService();
 
-    /// <summary>Runs once at startup, off the UI thread. A published update is worth a tray
-    /// balloon; a failed check is not worth an interruption.</summary>
+    /// <summary>A published update is worth a tray balloon; a failed check is not worth
+    /// an interruption. The manual button checks whether or not auto-check is on.</summary>
     private void StartUpdateCheck()
     {
         var updates = Updates;
@@ -750,12 +750,17 @@ public sealed class AppHost : IDisposable
             Loc.F("Ask Key {0} is available", version),
             Loc.T("Open Settings to download and install it."),
             ShowSettings));
-        _ = Task.Run(async () =>
-        {
-            try { await updates.CheckAsync(); }
-            catch (Exception error) { System.Diagnostics.Debug.WriteLine(error); }
-        });
+        if (!Preferences.AutoCheckUpdates) return;
+        CheckUpdatesQuietly(updates);
     }
+
+    internal void CheckUpdatesQuietly() => CheckUpdatesQuietly(Updates);
+
+    private void CheckUpdatesQuietly(AppUpdateService updates) => _ = Task.Run(async () =>
+    {
+        try { await updates.CheckAsync(); }
+        catch (Exception error) { System.Diagnostics.Debug.WriteLine(error); }
+    });
 
     public void ApplyLanguage(string mode)
     {

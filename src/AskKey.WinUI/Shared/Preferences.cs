@@ -16,9 +16,9 @@ public sealed class Preferences
     private readonly string _path;
     private readonly object _lock = new();
 
-    public Preferences()
+    public Preferences(string? directory = null)
     {
-        var root = VaultConfiguration.Default.LocalApplicationDataDirectory;
+        var root = directory ?? VaultConfiguration.Default.LocalApplicationDataDirectory;
         Directory.CreateDirectory(root);
         _path = Path.Combine(root, "settings.json");
         Load();
@@ -33,6 +33,7 @@ public sealed class Preferences
     public string LanguageMode { get; set; } = "system";
     public string AppearanceMode { get; set; } = "system";
     public bool LaunchAtLogin { get; set; } = true;
+    public bool AutoCheckUpdates { get; set; } = true;
 
     /// <summary>
     /// Takes the security-relevant values from the authenticated vault policy. These four
@@ -78,6 +79,7 @@ public sealed class Preferences
         public string? LanguageMode { get; set; } = "system";
         public string? AppearanceMode { get; set; } = "system";
         public bool LaunchAtLogin { get; set; } = true;
+        public bool AutoCheckUpdates { get; set; } = true;
     }
 
     public void Save()
@@ -102,6 +104,7 @@ public sealed class Preferences
             LanguageMode = string.IsNullOrWhiteSpace(loaded.LanguageMode) ? "system" : loaded.LanguageMode;
             AppearanceMode = string.IsNullOrWhiteSpace(loaded.AppearanceMode) ? "system" : loaded.AppearanceMode;
             LaunchAtLogin = loaded.LaunchAtLogin;
+            AutoCheckUpdates = loaded.AutoCheckUpdates;
         }
         catch (Exception)
         {
