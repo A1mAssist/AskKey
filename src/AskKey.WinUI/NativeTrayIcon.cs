@@ -22,6 +22,7 @@ public sealed class NativeTrayIcon : IDisposable
     private const uint NiifInfo = 0x00000001;
     private const uint WmContextMenu = 0x007B;
     private const uint WmTimer = 0x0113;
+    private const uint WmLeftButtonUp = 0x0202;
     private const uint WmLeftButtonDoubleClick = 0x0203;
     private const uint WmRightButtonUp = 0x0205;
     private const uint NinBalloonUserClick = 0x0405;
@@ -174,7 +175,9 @@ public sealed class NativeTrayIcon : IDisposable
         else if (message == CallbackMessage)
         {
             var notification = unchecked((uint)lParam.ToInt64()) & 0xFFFF;
-            if (notification == WmLeftButtonDoubleClick)
+            // A single left click opens the window; the double-click notification is kept
+            // so the second click of a double press still lands somewhere harmless.
+            if (notification is WmLeftButtonUp or WmLeftButtonDoubleClick)
             {
                 ShowRequested?.Invoke();
             }
