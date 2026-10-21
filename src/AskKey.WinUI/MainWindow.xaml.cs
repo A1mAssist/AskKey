@@ -89,6 +89,9 @@ public partial class MainWindow : Window
         AppWindow.Show();
         WindowHelpers.EnableRoundedCorners(this);
         Activate();
+        // Activate() is only a request; the foreground lock ignores it when the user is
+        // working in another app, which would leave a waiting Agent's prompt unnoticed.
+        WindowHelpers.BringToFront(this);
         RefreshLock();
         if (_initialShow)
         {

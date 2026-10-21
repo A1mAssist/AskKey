@@ -133,9 +133,12 @@ public sealed class AppHost : IDisposable
         if (!showWindow)
         {
             // A background start must not pop a dialog, but the user should know why
-            // Agent requests fail until they open the app.
-            _tray?.ShowNotification("Ask Key is locked",
-                "Open Ask Key to unlock it with Windows Hello or your passphrase.", ShowMainWindow);
+            // Agent requests fail until they open the app. Name only the method this
+            // vault actually has, or the lock screen contradicts the notification.
+            var hint = Vault.IsGuardUnlockEnabled
+                ? Loc.T("Open Ask Key to unlock it with Windows Hello or your passphrase.")
+                : Loc.T("Open Ask Key and enter your passphrase to unlock.");
+            _tray?.ShowNotification(Loc.T("Ask Key is locked"), hint, ShowMainWindow);
         }
     }
 

@@ -152,6 +152,7 @@ internal static class LocalizationCatalog
         ["Enter your passphrase"] = "输入口令",
         ["Ask Key is locked"] = "请旨已锁定",
         ["Open Ask Key and enter your passphrase to unlock."] = "打开请旨并输入口令解锁。",
+        ["Open Ask Key to unlock it with Windows Hello or your passphrase."] = "打开请旨，用 Windows Hello 或口令解锁。",
         ["Enter your passphrase to unlock Ask Key."] = "输入口令以解锁请旨。",
         ["Click Unlock to open Ask Key."] = "点击“解锁”打开请旨。",
         ["The passphrase is wrong. Try again."] = "口令不正确，请重试。",

@@ -72,6 +72,40 @@ internal static class WindowHelpers
         DwmSetWindowAttribute(handle, DwmWindowCornerPreference, ref corners, sizeof(int));
     }
 
+    /// <summary>
+    /// Brings the window to the foreground when something other than the user asked for
+    /// it (an Agent request or a tray click). Activate() alone is routinely denied by the
+    /// foreground lock, which leaves the window behind whatever the user is doing; attach
+    /// to the foreground thread to take the right, and flash the taskbar button if that
+    /// still fails so the request is never silent.
+    /// </summary>
+    public static void BringToFront(Window window)
+    {
+        var handle = Handle(window);
+        if (handle == IntPtr.Zero) return;
+        var foreground = GetForegroundWindow();
+        if (foreground == handle) return;
+        var foregroundThread = GetWindowThreadProcessId(foreground, out _);
+        var currentThread = GetCurrentThreadId();
+        var attached = foregroundThread != 0 && foregroundThread != currentThread
+            && AttachThreadInput(currentThread, foregroundThread, true);
+        try
+        {
+            BringWindowToTop(handle);
+            SetForegroundWindow(handle);
+        }
+        finally
+        {
+            if (attached) AttachThreadInput(currentThread, foregroundThread, false);
+        }
+        if (GetForegroundWindow() == handle) return;
+        var flash = new FlashInfo
+        {
+            Size = Marshal.SizeOf<FlashInfo>(), Window = handle, Flags = FlashAll, Count = 3,
+        };
+        FlashWindowEx(ref flash);
+    }
+
     public static async Task<T> ShowDialogAsync<T>(Window dialog, Window? owner, Task<T> completion)
     {
         var ownerHandle = owner is null || ReferenceEquals(dialog, owner) ? IntPtr.Zero : Handle(owner);
@@ -194,4 +228,37 @@ internal static class WindowHelpers
 
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
     private static extern IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr value);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FlashInfo
+    {
+        public int Size;
+        public IntPtr Window;
+        public uint Flags;
+        public uint Count;
+        public uint Timeout;
+    }
+
+    public const uint FlashAll = 3;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    private static extern bool AttachThreadInput(uint attach, uint attachTo, bool attachOrDetach);
+
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll", EntryPoint = "FlashWindowEx")]
+    private static extern bool FlashWindowEx(ref FlashInfo info);
 }
