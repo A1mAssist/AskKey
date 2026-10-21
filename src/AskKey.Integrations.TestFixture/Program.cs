@@ -94,7 +94,7 @@ static int Helper(string[] arguments)
             result = new
             {
                 protocolVersion,
-                serverInfo = new { name = "askkey", version = "1.0.1" },
+                serverInfo = new { name = "askkey", version = "1.0.2" },
             },
         });
         var tools = JsonSerializer.Serialize(new
