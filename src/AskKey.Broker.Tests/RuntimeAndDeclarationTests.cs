@@ -65,11 +65,15 @@ public sealed class BrokerTextRunDeclarationTests
             ["SystemRoot"] = "C:\\Windows",
             ["ComSpec"] = "C:\\Windows\\System32\\cmd.exe",
             ["PATHEXT"] = ".COM;.EXE",
+            ["ProgramData"] = "C:\\ProgramData",
             ["LC_ALL"] = "C",
             ["ASKKEY_SECRET"] = "no",
         });
-        Assert.Equal(9, inherited.Count);
+        Assert.Equal(10, inherited.Count);
         Assert.Equal("C:\\Windows", inherited["SystemRoot"]);
+        // Win32-OpenSSH resolves its crypto config under ProgramData and exits 255
+        // without this key, so a run that cannot reach ssh looks like a spawn failure.
+        Assert.Equal("C:\\ProgramData", inherited["ProgramData"]);
         Assert.False(inherited.ContainsKey("ASKKEY_SECRET"));
     }
 

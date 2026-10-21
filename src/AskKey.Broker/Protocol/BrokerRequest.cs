@@ -97,7 +97,10 @@ public sealed class BrokerTextRunRequest : IEquatable<BrokerTextRunRequest>
     {
         "HOME", "PATH", "TMPDIR", "LANG", "TERM", "SHELL", "USER", "LOGNAME",
         // Windows process baseline: the Swift list has no Windows equivalents.
+        // ProgramData is machine-wide (C:\ProgramData) and carries no credential, but
+        // Win32-OpenSSH resolves its crypto-config there and exits 255 without it.
         "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "TEMP", "TMP", "SystemRoot", "ComSpec", "PATHEXT",
+        "ProgramData",
     };
 
     // Windows environment names are case-insensitive; PowerShell exposes Path, not PATH.
