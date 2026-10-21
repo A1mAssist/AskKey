@@ -34,15 +34,46 @@ public sealed class Preferences
     public string AppearanceMode { get; set; } = "system";
     public bool LaunchAtLogin { get; set; } = true;
 
+    /// <summary>
+    /// Takes the security-relevant values from the authenticated vault policy. These four
+    /// are no longer read from settings.json, because that file is user-writable and a
+    /// hand edit there would bypass the confirmation the UI requires.
+    /// </summary>
+    public void AdoptSecurityPolicy(AskKey.Vault.AgentAccessPolicy policy)
+    {
+        lock (_lock)
+        {
+            ReadApprovalAuthenticationEnabled = policy.ReadApprovalAuthenticationEnabled;
+            TimedAllowanceEnabled = policy.TimedAllowanceEnabled;
+            DefaultTimedAllowanceMinutes = policy.DefaultTimedAllowanceMinutes;
+            SessionTimeoutSeconds = policy.SessionTimeoutSeconds;
+        }
+    }
+
+    /// <summary>
+    /// Applies a confirmed settings change to the authenticated policy. The caller has
+    /// already obtained Windows Hello for the parts that weaken a setting.
+    /// </summary>
+    public void SaveSecuritySettings(AppHost host, string reason)
+    {
+        AdoptSecurityPolicy(host.Vault.EffectivePolicy);
+        host.Vault.SaveSecuritySettings(
+            host.AuthenticateAndBeginManagement(reason),
+            ReadApprovalAuthenticationEnabled,
+            TimedAllowanceEnabled,
+            DefaultTimedAllowanceMinutes,
+            SessionTimeoutSeconds);
+        AdoptSecurityPolicy(host.Vault.EffectivePolicy);
+    }
+
     // Deserialization must not run the Preferences constructor: it loads this
     // same file and would recurse until the stack overflows.
     private sealed class PreferencesFile
     {
         public bool HasCompletedOnboarding { get; set; }
-        public int DefaultTimedAllowanceMinutes { get; set; } = 30;
-        public bool TimedAllowanceEnabled { get; set; } = true;
-        public bool ReadApprovalAuthenticationEnabled { get; set; } = true;
-        public int SessionTimeoutSeconds { get; set; } = 300;
+        // The four security settings used to live here. They now come from the
+        // authenticated vault policy; leftover fields in an old file are ignored and
+        // dropped on the next save.
         public string? HotkeyShortcut { get; set; } = "ctrlShiftSpace";
         public string? LanguageMode { get; set; } = "system";
         public string? AppearanceMode { get; set; } = "system";
@@ -67,10 +98,6 @@ public sealed class Preferences
             var loaded = JsonSerializer.Deserialize<PreferencesFile>(File.ReadAllText(_path), JsonOptions);
             if (loaded is null) return;
             HasCompletedOnboarding = loaded.HasCompletedOnboarding;
-            DefaultTimedAllowanceMinutes = loaded.DefaultTimedAllowanceMinutes > 0 ? loaded.DefaultTimedAllowanceMinutes : 30;
-            TimedAllowanceEnabled = loaded.TimedAllowanceEnabled;
-            ReadApprovalAuthenticationEnabled = loaded.ReadApprovalAuthenticationEnabled;
-            SessionTimeoutSeconds = loaded.SessionTimeoutSeconds > 0 ? loaded.SessionTimeoutSeconds : 300;
             HotkeyShortcut = string.IsNullOrWhiteSpace(loaded.HotkeyShortcut) ? "ctrlShiftSpace" : loaded.HotkeyShortcut;
             LanguageMode = string.IsNullOrWhiteSpace(loaded.LanguageMode) ? "system" : loaded.LanguageMode;
             AppearanceMode = string.IsNullOrWhiteSpace(loaded.AppearanceMode) ? "system" : loaded.AppearanceMode;

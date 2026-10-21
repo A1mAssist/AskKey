@@ -7,13 +7,56 @@ public sealed partial class Vault
 {
     internal const string AgentAccessPausedConfigKey = "agent_access_paused";
 
+    /// <summary>
+    /// Writes the authenticated policy. Only the vault, only with the unlocked key, so a
+    /// hand-edited database or settings.json cannot reach these values.
+    /// </summary>
+    private void PersistPolicy(AgentAccessPolicy policy, byte[] key)
+    {
+        if (!AgentAccessPolicy.TryWrite(policy, Store.SetConfigValue, key))
+            throw VaultException.Database("Could not save the security policy.");
+        lock (_stateLock) _policy = policy;
+    }
+
+    /// <summary>Applies the timed-allowance window from the authenticated policy.</summary>
     public void UpdateDefaultTimedAllowanceMinutes(int minutes)
     {
-        var seconds = minutes > 0 && minutes <= int.MaxValue / 60
-            ? TimeSpan.FromSeconds(minutes * 60)
-            : TimeSpan.FromSeconds(30 * 60);
-        ApprovalRequests.UpdateDefaultTimedAllowance(seconds);
+        var clamped = minutes is >= 1 and <= AgentAccessPolicy.MaximumTimedAllowanceMinutes
+            ? minutes
+            : AgentAccessPolicy.FallbackTimedAllowanceMinutes;
+        ApprovalRequests.UpdateDefaultTimedAllowance(TimeSpan.FromSeconds(clamped * 60));
         NotifySnapshotRelevantChange();
+    }
+
+    /// <summary>
+    /// Persists the security-relevant settings the UI confirmed. Values outside the range
+    /// Settings can produce fall back to the strict defaults rather than being stored.
+    /// </summary>
+    public void SaveSecuritySettings(
+        ManagementAuthenticator authenticator,
+        bool readApprovalAuthenticationEnabled,
+        bool timedAllowanceEnabled,
+        int defaultTimedAllowanceMinutes,
+        int sessionTimeoutSeconds)
+    {
+        AuthorizeManagement(authenticator, CredentialManagementCopy.ManageReason);
+        var key = RequireKey();
+        var policy = EffectivePolicy.Copy();
+        policy.ReadApprovalAuthenticationEnabled = readApprovalAuthenticationEnabled;
+        policy.TimedAllowanceEnabled = timedAllowanceEnabled;
+        policy.DefaultTimedAllowanceMinutes =
+            defaultTimedAllowanceMinutes is >= 1 and <= AgentAccessPolicy.MaximumTimedAllowanceMinutes
+                ? defaultTimedAllowanceMinutes
+                : AgentAccessPolicy.FallbackTimedAllowanceMinutes;
+        policy.SessionTimeoutSeconds =
+            sessionTimeoutSeconds is >= 60 and <= AgentAccessPolicy.MaximumSessionTimeoutSeconds
+                ? sessionTimeoutSeconds
+                : AgentAccessPolicy.DefaultSessionTimeoutSeconds;
+        PersistPolicy(policy, key);
+
+        ApprovalRequests.SetReadAuthenticationEnabled(policy.ReadApprovalAuthenticationEnabled);
+        UpdateDefaultTimedAllowanceMinutes(policy.DefaultTimedAllowanceMinutes);
+        SetManagementSessionIdleLimit(TimeSpan.FromSeconds(policy.SessionTimeoutSeconds));
     }
 
     public void ValidateStoreAvailability() => _ = BootstrapState();
@@ -77,19 +120,10 @@ public sealed partial class Vault
 
     internal void SynchronizeAgentAccessState()
     {
-        bool paused;
-        switch (Store.ConfigValue(AgentAccessPausedConfigKey))
-        {
-            case null:
-                paused = false;
-                break;
-            case "true":
-                paused = true;
-                break;
-            default:
-                AgentAccessGate.Invalidate();
-                throw VaultException.Database("Agent access pause state is invalid.");
-        }
+        // Pause state comes from the authenticated policy, not from a plain config row. A
+        // missing or unverifiable record reads as paused, so deleting the row pauses Agent
+        // access instead of granting it.
+        var paused = EffectivePolicy.AgentAccessPaused;
         AgentAccessGate.Synchronize(paused);
         if (paused)
         {
@@ -108,11 +142,14 @@ public sealed partial class Vault
     public void PauseAgentAccess(ManagementAuthenticator authenticator)
     {
         AuthorizeManagement(authenticator, CredentialManagementCopy.PauseReason);
-        _ = RequireKey();
+        var key = RequireKey();
         var wasPaused = AgentAccessGate.BeginExclusiveChange();
         try
         {
-            Store.SetConfigValue(AgentAccessPausedConfigKey, "true");
+            Store.SetConfigValue(AgentAccessPausedConfigKey, null);
+            var policy = EffectivePolicy.Copy();
+            policy.AgentAccessPaused = true;
+            PersistPolicy(policy, key);
             BrokerRequests.PauseAndCancelAll();
             ApprovalRequests.PauseAndCancelAll();
             CleanupRuntimeFileDeliveries();
@@ -128,11 +165,14 @@ public sealed partial class Vault
     public void ResumeAgentAccess(ManagementAuthenticator authenticator)
     {
         AuthorizeManagement(authenticator, CredentialManagementCopy.ResumeReason);
-        _ = RequireKey();
+        var key = RequireKey();
         var wasPaused = AgentAccessGate.BeginExclusiveChange();
         try
         {
             Store.SetConfigValue(AgentAccessPausedConfigKey, null);
+            var policy = EffectivePolicy.Copy();
+            policy.AgentAccessPaused = false;
+            PersistPolicy(policy, key);
             BrokerRequests.Resume();
             ApprovalRequests.Resume();
             AgentAccessGate.EndExclusiveChange(paused: false);

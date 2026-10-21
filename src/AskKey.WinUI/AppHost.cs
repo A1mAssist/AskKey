@@ -86,6 +86,9 @@ public sealed class AppHost : IDisposable
                 // until the user enters the passphrase. Agent requests fail closed until then.
                 IsLockedAtStartup = true;
             }
+            // The authenticated policy owns these; settings.json no longer does, so a hand-edited
+            // file cannot lengthen a session or switch off read authentication.
+            _preferences.AdoptSecurityPolicy(Vault.EffectivePolicy);
             Vault.SetManagementSessionIdleLimit(TimeSpan.FromSeconds(_preferences.SessionTimeoutSeconds));
             Vault.UpdateDefaultTimedAllowanceMinutes(_preferences.DefaultTimedAllowanceMinutes);
             Vault.ApprovalRequests.SetReadAuthenticationEnabled(_preferences.ReadApprovalAuthenticationEnabled);

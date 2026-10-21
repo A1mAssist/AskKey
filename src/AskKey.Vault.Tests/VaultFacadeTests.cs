@@ -35,6 +35,9 @@ public sealed class VaultFacadeTests
                 Root.Combine("deliveries"), configuration, keyStore);
             Vault.ManagementSessionIdleLimit = idleLimit ?? TimeSpan.FromMinutes(5);
             Vault.BeginManagementSession(ManagementAuthenticator.Allow);
+            // A library with no verifiable policy loads paused, which is the fail-closed rule.
+                        // These tests exercise the normal path, so clear it through the authenticated Resume.
+                        Vault.ResumeAgentAccess(ManagementAuthenticator.Allow);
         }
 
         public void Dispose()

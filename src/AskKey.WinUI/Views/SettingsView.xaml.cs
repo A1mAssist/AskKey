@@ -119,16 +119,14 @@ public partial class SettingsView : UserControl
         var enabled = option.Minutes > 0;
         _host.Preferences.TimedAllowanceEnabled = enabled;
         if (enabled) _host.Preferences.DefaultTimedAllowanceMinutes = option.Minutes;
-        _host.Preferences.Save();
-        if (enabled) _host.Vault.UpdateDefaultTimedAllowanceMinutes(option.Minutes);
+        _host.Preferences.SaveSecuritySettings(_host, "Manage timed allowances");
     }
 
     private void UnlockDuration_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_loading || UnlockDurationCombo.SelectedItem is not UnlockDurationOption option) return;
         _host.Preferences.SessionTimeoutSeconds = option.Minutes * 60;
-        _host.Preferences.Save();
-        _host.Vault.SetManagementSessionIdleLimit(TimeSpan.FromMinutes(option.Minutes));
+        _host.Preferences.SaveSecuritySettings(_host, "Manage the management session window");
     }
 
     private void Appearance_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -257,8 +255,7 @@ public partial class SettingsView : UserControl
             }
         }
         _host.Preferences.ReadApprovalAuthenticationEnabled = enabled;
-        _host.Preferences.Save();
-        _host.Vault.ApprovalRequests.SetReadAuthenticationEnabled(enabled);
+        _host.Preferences.SaveSecuritySettings(_host, "Manage read approval authentication");
     }
 
     private void OpenAccessRecords_Click(object sender, RoutedEventArgs e)

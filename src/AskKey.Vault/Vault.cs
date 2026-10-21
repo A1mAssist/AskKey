@@ -130,6 +130,24 @@ public sealed partial class Vault : IDisposable
 
     internal void NotifySnapshotRelevantChange() => SnapshotChanged?.Invoke();
 
+    /// <summary>
+    /// The authenticated policy that owns Agent-access pause state and the settings deciding
+    /// how much authentication an Agent request gets. Loaded once per unlock; null before then.
+    /// </summary>
+    private AgentAccessPolicy? _policy;
+
+    /// <summary>
+    /// The authenticated policy, or the strict defaults when the vault is locked. Callers
+    /// on the settings path read this instead of trusting settings.json.
+    /// </summary>
+    public AgentAccessPolicy EffectivePolicy
+    {
+        get
+        {
+            lock (_stateLock) return _policy ?? AgentAccessPolicy.StrictDefaults();
+        }
+    }
+
     /// <summary>Raised after any change that affects the Agent-visible credential snapshot.</summary>
     public event Action? SnapshotChanged;
 
@@ -483,6 +501,16 @@ public sealed partial class Vault : IDisposable
         if (previous is not null && !ReferenceEquals(previous, store)) previous.Dispose();
         try
         {
+            // A library with no credentials has never been used, so it gets defaults; every
+            // other library must already carry a verifiable policy or it fails closed.
+            var isNewLibrary = store.ScalarLong("SELECT COUNT(*) FROM credentials;") == 0
+                && store.ConfigValue(AgentAccessPolicy.ConfigKey) is null;
+            var policy = AgentAccessPolicy.Load(
+                store.ConfigValue,
+                (name, value) => store.SetConfigValue(name, value),
+                key,
+                isNewLibrary);
+            lock (_stateLock) _policy = policy;
             SynchronizeAgentAccessState();
         }
         catch
