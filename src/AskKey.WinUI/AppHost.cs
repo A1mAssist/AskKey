@@ -155,7 +155,17 @@ public sealed class AppHost : IDisposable
         if (!Vault.IsLocked || _helloAutoAttempted || !Vault.IsGuardUnlockEnabled) return;
         // An Agent request already opened a prompt; a second one would race it.
         if (IsUnlockInProgress) return;
-        _ = UnlockWithHelloAsync();
+        _ = AutoUnlockAsync();
+    }
+
+    /// <summary>
+    /// Auto-prompt path. A failed Hello — no PIN configured, or the container not ready
+    /// right after resume — must not leave the passphrase hidden behind one dead button.
+    /// </summary>
+    private async Task AutoUnlockAsync()
+    {
+        if (await UnlockWithHelloAsync()) return;
+        _mainWindow?.RevealPassphrase();
     }
 
     /// <summary>
@@ -216,7 +226,11 @@ public sealed class AppHost : IDisposable
         try
         {
             unlocked = await UnlockWithHelloAsync();
-            if (!unlocked) CooldownUnlockForAgent();
+            if (!unlocked)
+            {
+                CooldownUnlockForAgent();
+                _mainWindow?.RevealPassphrase();
+            }
         }
         finally
         {
@@ -426,6 +440,7 @@ public sealed class AppHost : IDisposable
         if (!Vault.IsLocked) return true;
         if (await UnlockWithHelloAsync()) return true;
         // Keep the workspace covered; the lock screen is the only way in.
+        _mainWindow?.RevealPassphrase();
         LockStateChanged?.Invoke();
         return false;
     }

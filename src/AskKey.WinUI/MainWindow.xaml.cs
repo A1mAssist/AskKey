@@ -193,6 +193,17 @@ public partial class MainWindow : Window
     public void FocusLock()
         => DispatcherQueue.TryEnqueue(() => LockPassphrase.Focus(FocusState.Programmatic));
 
+    /// <summary>
+    /// Windows Hello can fail for reasons the vault cannot see — most often the
+    /// container is not ready in the seconds after Modern Standby resumes. Focusing the
+    /// hidden passphrase box would leave one dead button, so reveal it instead.
+    /// </summary>
+    public void RevealPassphrase() => DispatcherQueue.TryEnqueue(() =>
+    {
+        _showPassphrase = true;
+        RefreshLock();
+    });
+
     private void UsePassphrase_Click(object sender, RoutedEventArgs e)
     {
         _showPassphrase = true;
@@ -227,7 +238,7 @@ public partial class MainWindow : Window
             if (!await _host.UnlockWithHelloAsync())
             {
                 ShowLockError("Windows Hello could not unlock Ask Key.");
-                FocusLock();
+                RevealPassphrase();
             }
         }
         finally
