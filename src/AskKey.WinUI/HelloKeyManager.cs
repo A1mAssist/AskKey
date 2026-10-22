@@ -23,6 +23,9 @@ internal static class HelloKeyManager
         }
     }
 
+    /// <summary>How long to let the Hello container finish starting before asking again.</summary>
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(3);
+
     /// <summary>Shows the Hello prompt owned by the Ask Key window.</summary>
     public static async Task<(bool Ok, bool Canceled, string? Error)> VerifyAsync(string reason)
     {
@@ -33,6 +36,20 @@ internal static class HelloKeyManager
         }
 
         var message = Loc.T(reason);
+        var first = await RequestOnceAsync(owner, message);
+        if (first.Ok || first.Canceled) return first;
+
+        // Right after Modern Standby the Hello container can still be starting up; the
+        // same prompt succeeds a few seconds later. Retry once, but only while Hello
+        // still reports itself available — otherwise the account simply has no PIN.
+        await Task.Delay(RetryDelay);
+        if (!await IsSupportedAsync()) return first;
+        return await RequestOnceAsync(owner, message);
+    }
+
+    private static async Task<(bool Ok, bool Canceled, string? Error)> RequestOnceAsync(
+        IntPtr owner, string message)
+    {
         try
         {
             // The interop call runs off the UI thread, the same way ManagementPrompt
