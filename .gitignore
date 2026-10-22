@@ -1,3 +1,6 @@
+# Promo videos live in the repo folder but are not part of the app source.
+/videos/
+
 # Build output
 **/bin/
 **/obj/
