@@ -8,6 +8,7 @@
     <AssemblyName>AskKey.Guard.Service</AssemblyName>
     <RootNamespace>AskKey.Guard.Service</RootNamespace>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <ApplicationIcon>..\AskKey.WinUI\Assets\AskKey.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
