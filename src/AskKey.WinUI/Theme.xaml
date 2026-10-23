@@ -787,39 +787,6 @@
     <Setter Property="SecondaryButtonStyle" Value="{StaticResource SecondaryButtonStyle}" />
     <Setter Property="CloseButtonStyle" Value="{StaticResource SecondaryButtonStyle}" />
   </Style>
-  <!-- Editable ComboBox hosts its own TextBox; keep the outer ComboBox as the only frame. -->
-  <Style x:Key="InlineComboBoxTextBoxStyle" TargetType="TextBox"
-         BasedOn="{StaticResource DefaultTextBoxStyle}">
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="TextBox">
-          <Grid>
-            <ScrollViewer x:Name="ContentElement"
-                          Margin="0"
-                          Padding="{TemplateBinding Padding}"
-                          HorizontalScrollMode="{TemplateBinding ScrollViewer.HorizontalScrollMode}"
-                          HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
-                          VerticalScrollMode="{TemplateBinding ScrollViewer.VerticalScrollMode}"
-                          VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
-                          IsHorizontalRailEnabled="{TemplateBinding ScrollViewer.IsHorizontalRailEnabled}"
-                          IsVerticalRailEnabled="{TemplateBinding ScrollViewer.IsVerticalRailEnabled}"
-                          IsDeferredScrollingEnabled="{TemplateBinding ScrollViewer.IsDeferredScrollingEnabled}"
-                          IsTabStop="False"
-                          ZoomMode="Disabled" />
-            <TextBlock x:Name="PlaceholderTextContentPresenter"
-                       Foreground="{Binding PlaceholderForeground, RelativeSource={RelativeSource TemplatedParent}, TargetNullValue={ThemeResource TextControlPlaceholderForeground}}"
-                       Margin="0"
-                       Padding="{TemplateBinding Padding}"
-                       Text="{TemplateBinding PlaceholderText}"
-                       TextAlignment="{TemplateBinding TextAlignment}"
-                       TextWrapping="{TemplateBinding TextWrapping}"
-                       IsHitTestVisible="False" />
-          </Grid>
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
-  </Style>
   <Style x:Key="FormComboBoxStyle" TargetType="ComboBox">
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
@@ -830,7 +797,6 @@
     <Setter Property="Padding" Value="8,6" />
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="TextBoxStyle" Value="{StaticResource InlineComboBoxTextBoxStyle}" />
     <Setter Property="ItemContainerStyle" Value="{StaticResource FormComboBoxItemStyle}" />
     <Setter Property="local:ComboBoxPopup.ConstrainToRoot" Value="True" />
   </Style>
